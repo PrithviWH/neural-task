@@ -224,6 +224,7 @@ public class ProcessListViewModel : ViewModelBase
         _lastSnapshots = snapshots;
         var incomingPids = new HashSet<int>(snapshots.Count);
         int? previouslySelectedPid = _selectedProcess?.Pid;
+        bool listStructureChanged = false;
 
         // 1. Update existing items in place & add new items
         foreach (var snap in snapshots)
@@ -236,6 +237,7 @@ public class ProcessListViewModel : ViewModelBase
             }
             else
             {
+                listStructureChanged = true;
                 var newItem = new ProcessItemViewModel(snap);
                 if (_heuristicCache.TryGetValue(snap.Pid, out var cached))
                 {
@@ -243,9 +245,13 @@ public class ProcessListViewModel : ViewModelBase
                 }
                 else
                 {
-                    var eval = _heuristicEngine.EvaluateSingle(snap);
-                    _heuristicCache[snap.Pid] = eval;
-                    newItem.UpdateHeuristics(eval);
+                    // Evaluate heuristics asynchronously on background thread to prevent UI thread pauses
+                    _ = Task.Run(() =>
+                    {
+                        var eval = _heuristicEngine.EvaluateSingle(snap);
+                        _heuristicCache[snap.Pid] = eval;
+                        newItem.UpdateHeuristics(eval);
+                    });
                 }
 
                 _allProcessesMap[snap.Pid] = newItem;
@@ -259,6 +265,7 @@ public class ProcessListViewModel : ViewModelBase
             var item = _allProcessesList[i];
             if (!incomingPids.Contains(item.Pid))
             {
+                listStructureChanged = true;
                 _allProcessesMap.Remove(item.Pid);
                 _heuristicCache.Remove(item.Pid);
                 _allProcessesList.RemoveAt(i);
@@ -268,7 +275,11 @@ public class ProcessListViewModel : ViewModelBase
         TotalCount = _allProcessesList.Count;
 
         // 3. Apply active search filter and sort
-        ApplyFilterAndSort();
+        // Only realign collection if processes were added/removed or initial load
+        if (listStructureChanged || FilteredProcesses.Count == 0)
+        {
+            ApplyFilterAndSort();
+        }
 
         // 4. Restore selection if process is still alive
         if (previouslySelectedPid.HasValue && _allProcessesMap.TryGetValue(previouslySelectedPid.Value, out var selected))

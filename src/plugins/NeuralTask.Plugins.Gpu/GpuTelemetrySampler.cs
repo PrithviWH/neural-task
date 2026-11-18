@@ -90,12 +90,12 @@ public class GpuTelemetrySampler : IDisposable
                 var category = new PerformanceCounterCategory("GPU Engine");
                 var instanceNames = category.GetInstanceNames();
 
-                // Select representative 3D, Compute, and Video engines
+                // Select representative 3D, Compute, and Video engines (top 12 instances)
                 var targetInstances = instanceNames
                     .Where(i => i.Contains("engtype_3D", StringComparison.OrdinalIgnoreCase) ||
                                 i.Contains("engtype_VideoDecode", StringComparison.OrdinalIgnoreCase) ||
                                 i.Contains("engtype_Compute", StringComparison.OrdinalIgnoreCase))
-                    .Take(40)
+                    .Take(12)
                     .ToList();
 
                 foreach (var inst in targetInstances)

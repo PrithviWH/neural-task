@@ -82,11 +82,11 @@ public class HeuristicFlagEngine : IHeuristicFlagEngine
         // =========================================================================
         int handleThreshold = CalculateHandlePercentileThreshold(snapshots, 0.95);
 
-        var results = new Dictionary<int, ProcessHeuristicResult>(snapshots.Count);
-        foreach (var snapshot in snapshots)
+        var results = new System.Collections.Concurrent.ConcurrentDictionary<int, ProcessHeuristicResult>();
+        System.Threading.Tasks.Parallel.ForEach(snapshots, snapshot =>
         {
             results[snapshot.Pid] = EvaluateSingle(snapshot, handleThreshold);
-        }
+        });
 
         return results;
     }

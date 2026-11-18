@@ -32,16 +32,22 @@ public class GpuPanel : INeuralTaskPanel
         _sampler = new GpuTelemetrySampler();
         _viewModel = new GpuPanelViewModel();
 
-        // Perform initial baseline hardware sample
-        try
+        // Perform initial baseline hardware sample asynchronously on a background thread
+        _ = System.Threading.Tasks.Task.Run(() =>
         {
-            var initialMetrics = _sampler.Sample();
-            _viewModel.ApplyMetrics(initialMetrics);
-        }
-        catch
-        {
-            // Sampler handles missing counters gracefully
-        }
+            try
+            {
+                var initialMetrics = _sampler.Sample();
+                if (Application.Current != null && Application.Current.Dispatcher != null)
+                {
+                    Application.Current.Dispatcher.BeginInvoke(() => _viewModel?.ApplyMetrics(initialMetrics));
+                }
+            }
+            catch
+            {
+                // Sampler handles missing counters gracefully
+            }
+        });
     }
 
     public FrameworkElement CreateView()

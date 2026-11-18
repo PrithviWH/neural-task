@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Runtime.InteropServices;
 
@@ -7,11 +8,13 @@ namespace NeuralTask.Core.Services;
 /// <summary>
 /// Verifies PE file digital signatures locally using the native Windows WinVerifyTrust API.
 /// Runs 100% offline with zero network CRL lookups per PRD §7 security requirements.
-/// Properly validates full Authenticode PKCS#7 certificate chains and Microsoft catalog components.
+/// High-performance thread-safe path caching ensures zero redundant disk/crypto I/O.
 /// </summary>
 public class AuthenticodeSignatureVerifier : ISignatureVerifier
 {
     public static readonly AuthenticodeSignatureVerifier Instance = new();
+
+    private readonly ConcurrentDictionary<string, SignatureStatus> _cache = new(StringComparer.OrdinalIgnoreCase);
 
     private static readonly Guid ActionGenericVerifyV2 = new("00AAC56B-CD44-11d0-8CC2-00C04FC295EE");
 
@@ -75,6 +78,11 @@ public class AuthenticodeSignatureVerifier : ISignatureVerifier
             return SignatureStatus.Unknown;
         }
 
+        return _cache.GetOrAdd(filePath, VerifySignatureDirect);
+    }
+
+    private SignatureStatus VerifySignatureDirect(string filePath)
+    {
         try
         {
             if (!File.Exists(filePath))

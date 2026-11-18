@@ -105,7 +105,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         // 4. Update System Tray Icon live mini-graph & tooltip
         _trayIconService.UpdateMetrics(update.Processes, update.SystemMetrics);
 
-        // 5. Dispatch telemetry tick to loaded plugins
+        // 5. Dispatch telemetry tick to loaded plugins on background thread
         var pluginContext = new NeuralTask.Contracts.PluginTelemetryContext(
             update.SystemMetrics.CpuPercent,
             update.SystemMetrics.TotalMemoryBytes,
@@ -113,7 +113,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
             update.SystemMetrics.AvailableMemoryBytes,
             update.Processes.Count,
             DateTime.UtcNow);
-        _pluginManager.DispatchTelemetryTick(pluginContext);
+        _ = Task.Run(() => _pluginManager.DispatchTelemetryTick(pluginContext));
 
         // 6. Update Header Status
         StatusBadgeText = $"SYS.NODE: ONLINE // {update.Processes.Count} TASKS";

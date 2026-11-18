@@ -18,7 +18,6 @@
         ShowInTaskbar="True"
         ExtendsContentIntoTitleBar="True"
         WindowBackdropType="None"
-        Topmost="True"
         Background="{DynamicResource BrushBackgroundBase}">
 
     <ui:FluentWindow.Resources>

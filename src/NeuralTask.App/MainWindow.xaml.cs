@@ -72,7 +72,6 @@ public partial class MainWindow : FluentWindow
         Loaded += async (_, _) =>
         {
             WindowState = WindowState.Normal;
-            Topmost = true;
             Activate();
             Focus();
 
@@ -115,7 +114,6 @@ public partial class MainWindow : FluentWindow
         WindowState = WindowState.Normal;
         Activate();
         Focus();
-        Topmost = true;
 
         var handle = new System.Windows.Interop.WindowInteropHelper(this).Handle;
         if (handle != IntPtr.Zero)

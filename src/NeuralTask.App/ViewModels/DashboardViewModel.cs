@@ -60,7 +60,6 @@ public class DashboardViewModel : ViewModelBase
     private DateTimeOffset _lastLiveTimestamp = DateTimeOffset.Now;
     private SystemMetricsSnapshot? _latestSystemMetrics;
     private IReadOnlyList<ProcessSnapshot> _latestProcesses = Array.Empty<ProcessSnapshot>();
-    private IReadOnlyDictionary<int, ProcessHeuristicResult>? _latestHeuristicResults;
 
     public double CpuPercent
     {
@@ -265,16 +264,10 @@ public class DashboardViewModel : ViewModelBase
     {
         _latestProcesses = processes;
         _latestSystemMetrics = system;
-
-        if (_heuristicEngine != null)
-        {
-            _latestHeuristicResults = _heuristicEngine.Evaluate(processes);
-        }
-
         _lastLiveTimestamp = DateTimeOffset.Now;
 
         // 1. Ingest into historical store
-        _historyStore.AddSample(_lastLiveTimestamp, system, processes, _latestHeuristicResults);
+        _historyStore.AddSample(_lastLiveTimestamp, system, processes);
         HasHistoricalSamples = _historyStore.SampleCount > 1;
 
         // 2. Rolling Waveforms (always buffer live telemetry)
@@ -435,12 +428,16 @@ public class DashboardViewModel : ViewModelBase
 
         try
         {
+            var heuristicMap = _heuristicEngine != null
+                ? await Task.Run(() => _heuristicEngine.Evaluate(_latestProcesses))
+                : null;
+
             await _exportService.ExportToFileAsync(
                 targetPath,
                 format,
                 _latestSystemMetrics,
                 _latestProcesses,
-                _latestHeuristicResults
+                heuristicMap
             );
             ExportStatusMessage = $"Exported {format} -> {Path.GetFileName(targetPath)}";
         }
