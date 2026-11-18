@@ -42,7 +42,9 @@ public partial class App : Application
         }
         else
         {
+            this.MainWindow = mainWindow;
             mainWindow.Show();
+            mainWindow.Activate();
         }
     }
 

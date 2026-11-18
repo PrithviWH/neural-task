@@ -15,7 +15,8 @@
         MinWidth="880"
         WindowStartupLocation="CenterScreen"
         ExtendsContentIntoTitleBar="True"
-        WindowBackdropType="Mica"
+        WindowBackdropType="None"
+        Topmost="True"
         Background="{DynamicResource BrushBackgroundBase}">
 
     <ui:FluentWindow.Resources>
@@ -47,7 +48,7 @@
         </Style>
     </ui:FluentWindow.Resources>
 
-    <Grid>
+    <Grid Background="{DynamicResource BrushBackgroundBase}">
         <!-- 0. Ambient Background Animation Layer (GPU Composited) -->
         <Canvas x:Name="AmbientAnimationCanvas" IsHitTestVisible="False" ClipToBounds="True">
             <!-- Subtle diagonal data stream lines -->

@@ -38,6 +38,10 @@ public partial class MainWindow : FluentWindow
 
         Loaded += async (_, _) =>
         {
+            WindowState = WindowState.Normal;
+            Topmost = true;
+            Activate();
+            Focus();
             try
             {
                 await ViewModel.StartMonitoringAsync();
