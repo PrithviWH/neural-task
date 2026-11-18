@@ -98,6 +98,22 @@ public partial class ProcessListView : UserControl
         }
     }
 
+    private async void OnCopyInfoClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (ViewModel != null)
+        {
+            await ViewModel.CopyProcessInfoAsync();
+        }
+    }
+
+    private async void OnContextMenuCopyInfoClick(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel != null)
+        {
+            await ViewModel.CopyProcessInfoAsync();
+        }
+    }
+
     private async void OnContextMenuKillTreeClick(object sender, RoutedEventArgs e)
     {
         if (ViewModel != null)

@@ -20,6 +20,7 @@ public static class AppHost
         services.AddSingleton<IProcessMonitorService, ProcessMonitorService>();
         services.AddSingleton<ISystemMetricsService, SystemMetricsService>();
         services.AddSingleton<IProcessActionService, ProcessActionService>();
+        services.AddSingleton<IProcessInfoService, ProcessInfoService>();
         services.AddSingleton<IStartupScoreEngine, StartupScoreEngine>();
         services.AddSingleton<IHeuristicFlagEngine, HeuristicFlagEngine>();
 

@@ -18,7 +18,7 @@
                         <Border x:Name="ToggleBorder"
                                 Width="48" Height="24"
                                 CornerRadius="12"
-                                Background="#1A2230"
+                                Background="{DynamicResource BrushTableHover}"
                                 BorderBrush="{DynamicResource BrushAccentPrimary}"
                                 BorderThickness="1.5"
                                 Padding="2">
@@ -42,7 +42,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="ToggleBorder" Property="Background" Value="#0A3030" />
+                                <Setter TargetName="ToggleBorder" Property="Background" Value="{DynamicResource BrushTableSelected}" />
                                 <Setter TargetName="ToggleBorder" Property="BorderBrush" Value="{DynamicResource BrushAccentPrimary}" />
                                 <Setter TargetName="ToggleThumb" Property="Fill" Value="{DynamicResource BrushAccentPrimary}" />
                                 <Setter TargetName="ToggleThumb" Property="HorizontalAlignment" Value="Right" />
@@ -96,7 +96,7 @@
 
         <!-- Warning Button Style -->
         <Style x:Key="HudWarningButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#251800" />
+            <Setter Property="Background" Value="{DynamicResource BrushSurfaceCallout}" />
             <Setter Property="BorderBrush" Value="{DynamicResource BrushAccentWarning}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Foreground" Value="{DynamicResource BrushAccentWarning}" />
@@ -118,7 +118,8 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Border" Property="Background" Value="#452C00" />
+                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource BrushWarning}" />
+                                <Setter Property="Foreground" Value="{DynamicResource BrushButtonTextOnAccent}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -287,7 +288,7 @@
         <!-- 2. Administrative Elevation Banner (PRD §7) -->
         <Border Grid.Row="2"
                 Margin="0,0,0,16"
-                Background="#1E1605"
+                Background="{DynamicResource BrushSurfaceCallout}"
                 BorderBrush="{DynamicResource BrushAccentWarning}"
                 BorderThickness="1.5"
                 CornerRadius="8"
@@ -498,7 +499,7 @@
 
                                             <!-- Source Badge -->
                                             <Border Margin="10,0,0,0"
-                                                    Background="#102535"
+                                                    Background="{DynamicResource BrushTableHover}"
                                                     BorderBrush="{DynamicResource BrushAccentPrimary}"
                                                     BorderThickness="1"
                                                     CornerRadius="4"
@@ -512,8 +513,8 @@
 
                                             <!-- Live Running Indicator -->
                                             <Border Margin="6,0,0,0"
-                                                    Background="#0A3018"
-                                                    BorderBrush="#00E599"
+                                                    Background="{DynamicResource BrushPanelSurface}"
+                                                    BorderBrush="{DynamicResource BrushAccentSuccess}"
                                                     BorderThickness="1"
                                                     CornerRadius="4"
                                                     Padding="6,2"
@@ -523,7 +524,7 @@
                                                            FontSize="8"
                                                            FontWeight="Bold"
                                                            FontFamily="{DynamicResource FontFamilyNumeric}"
-                                                           Foreground="#00E599" />
+                                                           Foreground="{DynamicResource BrushAccentSuccess}" />
                                             </Border>
                                         </StackPanel>
 
@@ -578,7 +579,7 @@
                                                 Width="180"
                                                 HorizontalAlignment="Left"
                                                 CornerRadius="3"
-                                                Background="#111B24"
+                                                Background="{DynamicResource BrushSurfaceElevated}"
                                                 ClipToBounds="True">
                                             <StackPanel Orientation="Horizontal">
                                                 <!-- Time Component (Cyan) -->

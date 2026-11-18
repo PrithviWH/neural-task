@@ -147,18 +147,29 @@ public class TrayIconService : IDisposable
             g.SmoothingMode = SmoothingMode.None;
             g.PixelOffsetMode = PixelOffsetMode.None;
 
-            // Base obsidian HUD background
-            using var bgBrush = new SolidBrush(System.Drawing.Color.FromArgb(255, 10, 14, 20));
+            bool isLight = NeuralTask.Theming.ThemeManager.CurrentTheme == NeuralTask.Theming.ThemeMode.Light;
+
+            // Theme-adaptive background & border
+            var bgColor = isLight
+                ? System.Drawing.Color.FromArgb(255, 241, 245, 249)
+                : System.Drawing.Color.FromArgb(255, 10, 14, 20);
+
+            var borderColor = isLight
+                ? System.Drawing.Color.FromArgb(200, 203, 213, 225)
+                : System.Drawing.Color.FromArgb(120, 0, 229, 255);
+
+            using var bgBrush = new SolidBrush(bgColor);
             g.FillRectangle(bgBrush, 0, 0, size, size);
 
-            // Subtle border
-            using var borderPen = new System.Drawing.Pen(System.Drawing.Color.FromArgb(120, 0, 229, 255), 1);
+            using var borderPen = new System.Drawing.Pen(borderColor, 1);
             g.DrawRectangle(borderPen, 0, 0, size - 1, size - 1);
 
-            // Color scheme based on metric: Electric Cyan (#00E5FF) for CPU, Magenta (#B14EFF) for RAM
+            // Theme-adaptive metric colors:
+            // Light: Deep Teal (#00758A) for CPU, Royal Violet (#6D28D9) for RAM
+            // Dark: Electric Cyan (#00E5FF) for CPU, Neon Magenta (#B14EFF) for RAM
             var barColor = isCpu
-                ? System.Drawing.Color.FromArgb(255, 0, 229, 255)
-                : System.Drawing.Color.FromArgb(255, 177, 78, 255);
+                ? (isLight ? System.Drawing.Color.FromArgb(255, 0, 117, 138) : System.Drawing.Color.FromArgb(255, 0, 229, 255))
+                : (isLight ? System.Drawing.Color.FromArgb(255, 109, 40, 217) : System.Drawing.Color.FromArgb(255, 177, 78, 255));
 
             using var barPen = new System.Drawing.Pen(barColor, 1);
 

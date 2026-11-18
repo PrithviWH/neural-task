@@ -269,6 +269,10 @@ public partial class MainWindow : FluentWindow
 
         // 2. Dark Theme - Processes (Live processes & Heuristic Flags)
         SelectTab(1);
+        if (ViewModel.ProcessList.FilteredProcesses.Count > 0)
+        {
+            ViewModel.ProcessList.SelectedProcess = ViewModel.ProcessList.FilteredProcesses[0];
+        }
         ViewModel.ProcessList.TriggerReScan();
         await Task.Delay(400);
         SaveBitmap(Path.Combine(outputDir, "screen_processes_dark.png"));
@@ -288,19 +292,38 @@ public partial class MainWindow : FluentWindow
         await Task.Delay(400);
         SaveBitmap(Path.Combine(outputDir, "screen_settings_dark.png"));
 
-        // 5. Light Theme - Dashboard
+        // 5. Dark Theme - Kill-Tree Dialog Neural Topology Screenshot
+        var dummyRootDark = new ProcessSnapshot(12480, "parent_service.exe", 0, 4.2, 250_000_000, 1024, 0, DateTime.Now, null, false);
+        var dummyChildrenDark = new List<ProcessSnapshot>
+        {
+            new ProcessSnapshot(12481, "worker_node_1.exe", 12480, 2.1, 120_000_000, 512, 0, DateTime.Now, null, false),
+            new ProcessSnapshot(12482, "worker_node_2.exe", 12480, 1.8, 115_000_000, 512, 0, DateTime.Now, null, false),
+            new ProcessSnapshot(12483, "telemetry_agent.exe", 12480, 0.4, 45_000_000, 128, 0, DateTime.Now, null, false)
+        };
+        var killDialogDark = new KillTreeDialog(dummyRootDark, dummyChildrenDark) { Width = 680, Height = 540 };
+        killDialogDark.Show();
+        await Task.Delay(300);
+        SaveElementBitmap(killDialogDark, Path.Combine(outputDir, "screen_kill_tree_dialog.png"));
+        SaveElementBitmap(killDialogDark, Path.Combine(outputDir, "screen_kill_tree_dialog_dark.png"));
+        killDialogDark.Close();
+
+        // 6. Light Theme - Dashboard
         ThemeManager.ApplyTheme(ThemeMode.Light);
         SelectTab(0);
         await Task.Delay(400);
         SaveBitmap(Path.Combine(outputDir, "screen_dashboard_light.png"));
 
-        // 6. Light Theme - Processes
+        // 7. Light Theme - Processes
         SelectTab(1);
+        if (ViewModel.ProcessList.FilteredProcesses.Count > 0)
+        {
+            ViewModel.ProcessList.SelectedProcess = ViewModel.ProcessList.FilteredProcesses[0];
+        }
         ViewModel.ProcessList.TriggerReScan();
         await Task.Delay(400);
         SaveBitmap(Path.Combine(outputDir, "screen_processes_light.png"));
 
-        // 7. Light Theme - Startup
+        // 8. Light Theme - Startup
         SelectTab(2);
         if (ViewModel.Startup.FilteredEntries.Count > 0)
         {
@@ -309,24 +332,24 @@ public partial class MainWindow : FluentWindow
         await Task.Delay(400);
         SaveBitmap(Path.Combine(outputDir, "screen_startup_light.png"));
 
-        // 8. Light Theme - Settings
+        // 9. Light Theme - Settings
         SelectTab(3);
         await Task.Delay(400);
         SaveBitmap(Path.Combine(outputDir, "screen_settings_light.png"));
 
-        // 7. Kill-Tree Dialog Neural Topology Screenshot
-        var dummyRoot = new ProcessSnapshot(12480, "parent_service.exe", 0, 4.2, 250_000_000, 1024, 0, DateTime.Now, null, false);
-        var dummyChildren = new List<ProcessSnapshot>
+        // 10. Light Theme - Kill-Tree Dialog
+        var dummyRootLight = new ProcessSnapshot(12480, "parent_service.exe", 0, 4.2, 250_000_000, 1024, 0, DateTime.Now, null, false);
+        var dummyChildrenLight = new List<ProcessSnapshot>
         {
             new ProcessSnapshot(12481, "worker_node_1.exe", 12480, 2.1, 120_000_000, 512, 0, DateTime.Now, null, false),
             new ProcessSnapshot(12482, "worker_node_2.exe", 12480, 1.8, 115_000_000, 512, 0, DateTime.Now, null, false),
             new ProcessSnapshot(12483, "telemetry_agent.exe", 12480, 0.4, 45_000_000, 128, 0, DateTime.Now, null, false)
         };
-        var killDialog = new KillTreeDialog(dummyRoot, dummyChildren) { Width = 680, Height = 540 };
-        killDialog.Show();
+        var killDialogLight = new KillTreeDialog(dummyRootLight, dummyChildrenLight) { Width = 680, Height = 540 };
+        killDialogLight.Show();
         await Task.Delay(300);
-        SaveElementBitmap(killDialog, Path.Combine(outputDir, "screen_kill_tree_dialog.png"));
-        killDialog.Close();
+        SaveElementBitmap(killDialogLight, Path.Combine(outputDir, "screen_kill_tree_dialog_light.png"));
+        killDialogLight.Close();
 
         // Revert to Dark
         ThemeManager.ApplyTheme(ThemeMode.Dark);

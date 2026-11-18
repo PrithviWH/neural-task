@@ -80,4 +80,13 @@
         M 12,12 L 21,3
     </Geometry>
 
+    <!-- Copy / Telemetry Report Clipboard Icon -->
+    <Geometry x:Key="IconCopyGeometry">
+        M 16,3 L 8,3 C 6.9,3 6,3.9 6,5 L 6,17 L 8,17 L 8,5 L 16,5 Z
+        M 18,7 L 11,7 C 9.9,7 9,7.9 9,9 L 9,21 C 9,22.1 9.9,23 11,23 L 18,23 C 19.1,23 20,22.1 20,21 L 20,9 C 20,7.9 19.1,7 18,7 Z
+        M 12,11 L 17,11
+        M 12,14 L 17,14
+        M 12,17 L 15,17
+    </Geometry>
+
 </ResourceDictionary>

@@ -62,6 +62,31 @@
                     </StackPanel>
                 </Border>
 
+                <!-- Copy Process Telemetry Info Button (PRD §6.2) -->
+                <Border Background="{DynamicResource BrushPanelSurface}"
+                        BorderBrush="{DynamicResource BrushAccentPrimary}"
+                        BorderThickness="1"
+                        CornerRadius="6"
+                        Padding="12,6"
+                        Margin="0,0,10,0"
+                        Cursor="Hand"
+                        ToolTip="Copy Structured Process Telemetry Report (Ctrl+C)"
+                        MouseDown="OnCopyInfoClick">
+                    <StackPanel Orientation="Horizontal">
+                        <Path Data="{StaticResource IconCopyGeometry}"
+                              Stroke="{DynamicResource BrushAccentPrimary}"
+                              StrokeThickness="1.5"
+                              Width="14" Height="14"
+                              Stretch="Uniform"
+                              Margin="0,0,6,0" />
+                        <TextBlock Text="COPY INFO"
+                                   FontSize="11"
+                                   FontWeight="SemiBold"
+                                   FontFamily="{DynamicResource FontFamilyNumeric}"
+                                   Foreground="{DynamicResource BrushAccentPrimary}" />
+                    </StackPanel>
+                </Border>
+
                 <!-- Kill Single Process Button -->
                 <Border Background="{DynamicResource BrushPanelSurface}"
                         BorderBrush="{DynamicResource BrushAccentPrimary}"
@@ -146,7 +171,7 @@
 
             <!-- Search Bar -->
             <Border Background="{DynamicResource BrushPanelSurface}"
-                    BorderBrush="{DynamicResource BrushAccentPrimary}"
+                    BorderBrush="{DynamicResource BrushPanelBorder}"
                     BorderThickness="1"
                     CornerRadius="6"
                     Padding="12,8">
@@ -218,7 +243,7 @@
         <!-- 3. Process Table Structure -->
         <Border Grid.Row="2"
                 Background="{DynamicResource BrushPanelSurface}"
-                BorderBrush="{DynamicResource BrushAccentPrimary}"
+                BorderBrush="{DynamicResource BrushPanelBorder}"
                 BorderThickness="1"
                 CornerRadius="8"
                 Padding="0">
@@ -232,7 +257,7 @@
                 <Border Grid.Row="0"
                         Background="{DynamicResource BrushBackgroundBase}"
                         CornerRadius="8,8,0,0"
-                        BorderBrush="{DynamicResource BrushAccentPrimary}"
+                        BorderBrush="{DynamicResource BrushTableBorder}"
                         BorderThickness="0,0,0,1"
                         Padding="20,0,20,0">
                     <Grid>
@@ -310,10 +335,19 @@
                           BorderThickness="0"
                           Padding="0"
                           SelectionMode="Single">
+                    <ListView.InputBindings>
+                        <KeyBinding Key="C" Modifiers="Control" Command="{Binding CopyProcessInfoCommand}" />
+                        <KeyBinding Key="C" Modifiers="Control+Shift" Command="{Binding CopyProcessInfoCommand}" />
+                    </ListView.InputBindings>
                     <ListView.ContextMenu>
                         <ContextMenu Background="{DynamicResource BrushBackgroundBase}"
                                      BorderBrush="{DynamicResource BrushAccentPrimary}"
                                      BorderThickness="1">
+                            <MenuItem Header="Copy Process Info"
+                                      InputGestureText="Ctrl+C"
+                                      Foreground="{DynamicResource BrushAccentPrimary}"
+                                      Click="OnContextMenuCopyInfoClick" />
+                            <Separator Background="{DynamicResource BrushTextSecondary}" Opacity="0.3" Margin="0,4" />
                             <MenuItem Header="Kill Process"
                                       Foreground="{DynamicResource BrushTextPrimary}"
                                       Click="OnContextMenuKillClick" />
@@ -328,7 +362,7 @@
                             <Setter Property="Padding" Value="0" />
                             <Setter Property="Margin" Value="0" />
                             <Setter Property="BorderThickness" Value="0,0,0,0.5" />
-                            <Setter Property="BorderBrush" Value="{DynamicResource BrushTextSecondary}" />
+                            <Setter Property="BorderBrush" Value="{DynamicResource BrushTableBorder}" />
                             <Setter Property="Background" Value="Transparent" />
                             <Setter Property="Template">
                                 <Setter.Value>
@@ -342,11 +376,11 @@
                                         </Border>
                                         <ControlTemplate.Triggers>
                                             <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource BrushBackgroundBase}" />
-                                                <Setter TargetName="ItemBorder" Property="Opacity" Value="0.9" />
+                                                <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource BrushTableHover}" />
+                                                <Setter TargetName="ItemBorder" Property="Opacity" Value="0.95" />
                                             </Trigger>
                                             <Trigger Property="IsSelected" Value="True">
-                                                <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource BrushPanelSurface}" />
+                                                <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource BrushTableSelected}" />
                                                 <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource BrushAccentPrimary}" />
                                                 <Setter TargetName="ItemBorder" Property="BorderThickness" Value="2,0,0,0.5" />
                                             </Trigger>

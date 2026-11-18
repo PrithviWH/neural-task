@@ -12,6 +12,7 @@ public class ProcessListViewModel : ViewModelBase
 {
     private readonly IProcessActionService _actionService;
     private readonly IHeuristicFlagEngine _heuristicEngine;
+    private readonly IProcessInfoService _processInfoService;
     private readonly Dictionary<int, ProcessItemViewModel> _allProcessesMap = new();
     private readonly List<ProcessItemViewModel> _allProcessesList = new();
     private readonly Dictionary<int, ProcessHeuristicResult> _heuristicCache = new();
@@ -35,6 +36,7 @@ public class ProcessListViewModel : ViewModelBase
     public event Action? RequestScannerSweep;
 
     public System.Windows.Input.ICommand ReScanCommand { get; }
+    public System.Windows.Input.ICommand CopyProcessInfoCommand { get; }
 
     public string SearchText
     {
@@ -119,12 +121,44 @@ public class ProcessListViewModel : ViewModelBase
 
     public ProcessListViewModel(
         IProcessActionService? actionService = null,
-        IHeuristicFlagEngine? heuristicEngine = null)
+        IHeuristicFlagEngine? heuristicEngine = null,
+        IProcessInfoService? processInfoService = null)
     {
         _actionService = actionService ?? new ProcessActionService();
         _heuristicEngine = heuristicEngine ?? new HeuristicFlagEngine();
+        _processInfoService = processInfoService ?? ProcessInfoService.Instance;
 
         ReScanCommand = new RelayCommand(TriggerReScan);
+        CopyProcessInfoCommand = new RelayCommand(async () => await CopyProcessInfoAsync());
+    }
+
+    public async Task CopyProcessInfoAsync(ProcessItemViewModel? target = null)
+    {
+        var item = target ?? SelectedProcess;
+        if (item == null)
+        {
+            ShowStatus("NO PROCESS SELECTED // SELECT A ROW TO COPY TELEMETRY", true);
+            return;
+        }
+
+        var snapshot = _lastSnapshots.FirstOrDefault(s => s.Pid == item.Pid)
+                       ?? new ProcessSnapshot(item.Pid, item.Name, item.ParentPid, item.CpuPercent, item.RamBytes, 0, 0, item.StartTime, item.ExecutablePath, false);
+
+        ShowStatus($"COMPUTING SHA-256 AND TELEMETRY REPORT FOR {item.Name} (PID {item.Pid})...", false);
+
+        try
+        {
+            var report = await _processInfoService.GenerateReportAsync(snapshot);
+
+            System.Windows.Clipboard.SetText(report.FormattedText);
+
+            string shortHash = report.Sha256Hash.Length >= 8 ? report.Sha256Hash[..8] : report.Sha256Hash;
+            ShowStatus($"COPIED REPORT TO CLIPBOARD // {item.Name} [PID {item.Pid}] // SHA-256: {shortHash}...", false);
+        }
+        catch (Exception ex)
+        {
+            ShowStatus($"FAILED TO COPY TELEMETRY: {ex.Message}", true);
+        }
     }
 
     public void TriggerReScan()

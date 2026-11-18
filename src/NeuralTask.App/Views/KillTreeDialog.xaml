@@ -79,7 +79,7 @@
             <!-- 3. Connected Neural Graph Canvas -->
             <Border Grid.Row="2"
                     Background="{DynamicResource BrushPanelSurface}"
-                    BorderBrush="{DynamicResource BrushAccentPrimary}"
+                    BorderBrush="{DynamicResource BrushPanelBorder}"
                     BorderThickness="1"
                     CornerRadius="8"
                     Padding="16"
@@ -118,7 +118,7 @@
                 <Button Grid.Column="0"
                         x:Name="ButtonTerminateTree"
                         Background="{DynamicResource BrushWarning}"
-                        Foreground="#FF0A0E14"
+                        Foreground="{DynamicResource BrushButtonTextOnAccent}"
                         BorderThickness="0"
                         FontWeight="Bold"
                         FontFamily="{DynamicResource FontFamilyNumeric}"

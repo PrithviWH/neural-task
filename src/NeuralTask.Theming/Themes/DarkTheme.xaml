@@ -8,20 +8,38 @@
     <!-- Base Colors -->
     <Color x:Key="ColorBackgroundBase">#FF0A0E14</Color>
     <Color x:Key="ColorPanelSurface">#A610141E</Color>
+    <Color x:Key="ColorPanelBorder">#FF00E5FF</Color>
     <Color x:Key="ColorAccentPrimary">#FF00E5FF</Color>
     <Color x:Key="ColorAccentSecondary">#FFB14EFF</Color>
+    <Color x:Key="ColorAccentSuccess">#FF00E599</Color>
     <Color x:Key="ColorWarning">#FFFFB020</Color>
     <Color x:Key="ColorTextPrimary">#FFE8F1FF</Color>
     <Color x:Key="ColorTextSecondary">#FF8FA3B8</Color>
+    <Color x:Key="ColorTableBorder">#338FA3B8</Color>
+    <Color x:Key="ColorTableHover">#2610141E</Color>
+    <Color x:Key="ColorTableSelected">#3300E5FF</Color>
+    <Color x:Key="ColorTitleBarForeground">#FFE8F1FF</Color>
+    <Color x:Key="ColorSurfaceCallout">#FF1E1605</Color>
+    <Color x:Key="ColorSurfaceElevated">#FF111B24</Color>
+    <Color x:Key="ColorButtonTextOnAccent">#FF0A0E14</Color>
 
     <!-- Solid Color Brushes -->
     <SolidColorBrush x:Key="BrushBackgroundBase" Color="{StaticResource ColorBackgroundBase}" />
     <SolidColorBrush x:Key="BrushPanelSurface" Color="{StaticResource ColorPanelSurface}" />
+    <SolidColorBrush x:Key="BrushPanelBorder" Color="{StaticResource ColorPanelBorder}" />
     <SolidColorBrush x:Key="BrushAccentPrimary" Color="{StaticResource ColorAccentPrimary}" />
     <SolidColorBrush x:Key="BrushAccentSecondary" Color="{StaticResource ColorAccentSecondary}" />
+    <SolidColorBrush x:Key="BrushAccentSuccess" Color="{StaticResource ColorAccentSuccess}" />
     <SolidColorBrush x:Key="BrushWarning" Color="{StaticResource ColorWarning}" />
     <SolidColorBrush x:Key="BrushTextPrimary" Color="{StaticResource ColorTextPrimary}" />
     <SolidColorBrush x:Key="BrushTextSecondary" Color="{StaticResource ColorTextSecondary}" />
+    <SolidColorBrush x:Key="BrushTableBorder" Color="{StaticResource ColorTableBorder}" />
+    <SolidColorBrush x:Key="BrushTableHover" Color="{StaticResource ColorTableHover}" />
+    <SolidColorBrush x:Key="BrushTableSelected" Color="{StaticResource ColorTableSelected}" />
+    <SolidColorBrush x:Key="BrushTitleBarForeground" Color="{StaticResource ColorTitleBarForeground}" />
+    <SolidColorBrush x:Key="BrushSurfaceCallout" Color="{StaticResource ColorSurfaceCallout}" />
+    <SolidColorBrush x:Key="BrushSurfaceElevated" Color="{StaticResource ColorSurfaceElevated}" />
+    <SolidColorBrush x:Key="BrushButtonTextOnAccent" Color="{StaticResource ColorButtonTextOnAccent}" />
 
     <!-- Typography Tokens -->
     <FontFamily x:Key="FontFamilyNumeric">Cascadia Code, JetBrains Mono, Consolas</FontFamily>
