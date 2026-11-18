@@ -12,6 +12,52 @@ public class SettingsViewModel : ViewModelBase
     private ThemeMode _selectedTheme;
     private int _selectedIntervalMs;
     private bool _isAmbientAnimationEnabled;
+    private bool _isMinimizeToTrayEnabled;
+    private string _trayIconMetric = "CPU";
+
+    public bool IsMinimizeToTrayEnabled
+    {
+        get => _isMinimizeToTrayEnabled;
+        set
+        {
+            if (SetProperty(ref _isMinimizeToTrayEnabled, value))
+            {
+                Persist();
+            }
+        }
+    }
+
+    public string TrayIconMetric
+    {
+        get => _trayIconMetric;
+        set
+        {
+            if (SetProperty(ref _trayIconMetric, value))
+            {
+                Persist();
+                OnPropertyChanged(nameof(IsTrayMetricCpu));
+                OnPropertyChanged(nameof(IsTrayMetricRam));
+            }
+        }
+    }
+
+    public bool IsTrayMetricCpu
+    {
+        get => _trayIconMetric.Equals("CPU", StringComparison.OrdinalIgnoreCase);
+        set
+        {
+            if (value) TrayIconMetric = "CPU";
+        }
+    }
+
+    public bool IsTrayMetricRam
+    {
+        get => _trayIconMetric.Equals("RAM", StringComparison.OrdinalIgnoreCase);
+        set
+        {
+            if (value) TrayIconMetric = "RAM";
+        }
+    }
 
     public ThemeMode SelectedTheme
     {
@@ -116,6 +162,8 @@ public class SettingsViewModel : ViewModelBase
         _selectedTheme = initial.Theme;
         _selectedIntervalMs = initial.RefreshIntervalMs;
         _isAmbientAnimationEnabled = initial.IsAmbientAnimationEnabled;
+        _isMinimizeToTrayEnabled = initial.IsMinimizeToTrayEnabled;
+        _trayIconMetric = initial.TrayIconMetric;
 
         // Apply loaded initial settings
         ThemeManager.ApplyTheme(_selectedTheme);
@@ -127,7 +175,9 @@ public class SettingsViewModel : ViewModelBase
         _settingsService.SaveSettings(new AppSettings(
             Theme: _selectedTheme,
             RefreshIntervalMs: _selectedIntervalMs,
-            IsAmbientAnimationEnabled: _isAmbientAnimationEnabled
+            IsAmbientAnimationEnabled: _isAmbientAnimationEnabled,
+            IsMinimizeToTrayEnabled: _isMinimizeToTrayEnabled,
+            TrayIconMetric: _trayIconMetric
         ));
     }
 }

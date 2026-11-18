@@ -1,0 +1,167 @@
+<Window x:Class="NeuralTask.App.Views.KillTreeDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="NEURAL TOPOLOGY // CONFIRM KILL-TREE"
+        Height="540" Width="680"
+        MinHeight="460" MinWidth="580"
+        WindowStartupLocation="CenterOwner"
+        Topmost="True"
+        WindowStyle="None"
+        AllowsTransparency="False"
+        Background="{DynamicResource BrushBackgroundBase}">
+
+    <Border BorderBrush="{DynamicResource BrushAccentSecondary}" BorderThickness="1.5">
+        <Grid Margin="24">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- 1. Header with Glow Motif -->
+            <Grid Grid.Row="0" Margin="0,0,0,16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Ellipse Width="10" Height="10" Fill="{DynamicResource BrushWarning}" Margin="0,0,8,0">
+                            <Ellipse.Effect>
+                                <DropShadowEffect BlurRadius="8" ShadowDepth="0" Color="{DynamicResource ColorWarning}" Opacity="0.9" />
+                            </Ellipse.Effect>
+                        </Ellipse>
+                        <TextBlock Text="NEURAL TOPOLOGY // KILL-TREE CONFIRMATION"
+                                   FontSize="15"
+                                   FontWeight="Bold"
+                                   FontFamily="{DynamicResource FontFamilyNumeric}"
+                                   Foreground="{DynamicResource BrushTextPrimary}" />
+                    </StackPanel>
+                    <TextBlock Text="VERIFIED DESCENDANT RELATIONSHIPS // START-TIME CHECKED"
+                               FontSize="10"
+                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                               Foreground="{DynamicResource BrushTextSecondary}"
+                               Margin="18,3,0,0" />
+                </StackPanel>
+
+                <Button Grid.Column="1"
+                        Content="✕"
+                        FontSize="14"
+                        Foreground="{DynamicResource BrushTextSecondary}"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Cursor="Hand"
+                        Click="OnCancelClick" />
+            </Grid>
+
+            <!-- 2. Warning Description -->
+            <Border Grid.Row="1"
+                    Background="{DynamicResource BrushPanelSurface}"
+                    BorderBrush="{DynamicResource BrushWarning}"
+                    BorderThickness="1"
+                    CornerRadius="6"
+                    Padding="12,10"
+                    Margin="0,0,0,16">
+                <TextBlock x:Name="TextWarningSummary"
+                           Text="Process has active child tasks. Terminating the root without terminating its children may leave orphaned processes running in the background."
+                           FontSize="11"
+                           FontFamily="{DynamicResource FontFamilyUI}"
+                           Foreground="{DynamicResource BrushTextPrimary}"
+                           TextWrapping="Wrap" />
+            </Border>
+
+            <!-- 3. Connected Neural Graph Canvas -->
+            <Border Grid.Row="2"
+                    Background="{DynamicResource BrushPanelSurface}"
+                    BorderBrush="{DynamicResource BrushAccentPrimary}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="16"
+                    Margin="0,0,0,16">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel x:Name="GraphContainer">
+                        <!-- Dynamically populated connected node tree -->
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+            <!-- 4. Descendants List Table -->
+            <Border Grid.Row="3"
+                    Background="{DynamicResource BrushBackgroundBase}"
+                    BorderBrush="{DynamicResource BrushTextSecondary}"
+                    BorderThickness="1"
+                    CornerRadius="6"
+                    Padding="12,8"
+                    Margin="0,0,0,20">
+                <TextBlock x:Name="TextTargetList"
+                           Text="Target Processes: "
+                           FontSize="10"
+                           FontFamily="{DynamicResource FontFamilyNumeric}"
+                           Foreground="{DynamicResource BrushTextSecondary}"
+                           TextWrapping="Wrap" />
+            </Border>
+
+            <!-- 5. Action Buttons -->
+            <Grid Grid.Row="4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <Button Grid.Column="0"
+                        x:Name="ButtonTerminateTree"
+                        Background="{DynamicResource BrushWarning}"
+                        Foreground="#FF0A0E14"
+                        BorderThickness="0"
+                        FontWeight="Bold"
+                        FontFamily="{DynamicResource FontFamilyNumeric}"
+                        FontSize="11"
+                        Padding="16,8"
+                        Cursor="Hand"
+                        HorizontalAlignment="Left"
+                        Click="OnTerminateTreeClick">
+                    <Button.Effect>
+                        <DropShadowEffect BlurRadius="8" ShadowDepth="0" Color="{DynamicResource ColorWarning}" Opacity="0.5" />
+                    </Button.Effect>
+                    <TextBlock Text="TERMINATE ENTIRE TREE" />
+                </Button>
+
+                <Button Grid.Column="1"
+                        Background="Transparent"
+                        Foreground="{DynamicResource BrushAccentPrimary}"
+                        BorderBrush="{DynamicResource BrushAccentPrimary}"
+                        BorderThickness="1"
+                        FontWeight="SemiBold"
+                        FontFamily="{DynamicResource FontFamilyNumeric}"
+                        FontSize="11"
+                        Padding="14,8"
+                        Margin="10,0"
+                        Cursor="Hand"
+                        Click="OnTerminateRootOnlyClick">
+                    <TextBlock Text="KILL ROOT ONLY" />
+                </Button>
+
+                <Button Grid.Column="2"
+                        Background="Transparent"
+                        Foreground="{DynamicResource BrushTextSecondary}"
+                        BorderBrush="{DynamicResource BrushTextSecondary}"
+                        BorderThickness="1"
+                        FontWeight="Normal"
+                        FontFamily="{DynamicResource FontFamilyNumeric}"
+                        FontSize="11"
+                        Padding="14,8"
+                        Cursor="Hand"
+                        Click="OnCancelClick">
+                    <TextBlock Text="ABORT" />
+                </Button>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>

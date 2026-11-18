@@ -37,7 +37,7 @@
             </StackPanel>
 
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                <!-- Column Picker Stub Button -->
+                <!-- Kill Single Process Button -->
                 <Border Background="{DynamicResource BrushPanelSurface}"
                         BorderBrush="{DynamicResource BrushAccentPrimary}"
                         BorderThickness="1"
@@ -45,30 +45,31 @@
                         Padding="12,6"
                         Margin="0,0,10,0"
                         Cursor="Hand"
-                        ToolTip="Configure Visible Columns (Phase 4)">
+                        ToolTip="Terminate Selected Process"
+                        MouseDown="OnKillClick">
                     <StackPanel Orientation="Horizontal">
-                        <Path Data="{StaticResource IconColumnsGeometry}"
-                              Stroke="{DynamicResource BrushAccentPrimary}"
-                              StrokeThickness="1.5"
-                              Width="14" Height="14"
-                              Stretch="Uniform"
-                              Margin="0,0,6,0" />
-                        <TextBlock Text="COLUMNS"
+                        <TextBlock Text="✕"
+                                   FontSize="11"
+                                   FontWeight="Bold"
+                                   Foreground="{DynamicResource BrushAccentPrimary}"
+                                   Margin="0,0,6,0" />
+                        <TextBlock Text="KILL PROCESS"
                                    FontSize="11"
                                    FontWeight="SemiBold"
                                    FontFamily="{DynamicResource FontFamilyNumeric}"
-                                   Foreground="{DynamicResource BrushTextPrimary}" />
+                                   Foreground="{DynamicResource BrushAccentPrimary}" />
                     </StackPanel>
                 </Border>
 
-                <!-- Terminate Stub Button -->
+                <!-- Terminate Tree Button -->
                 <Border Background="{DynamicResource BrushPanelSurface}"
                         BorderBrush="{DynamicResource BrushAccentSecondary}"
                         BorderThickness="1"
                         CornerRadius="6"
                         Padding="12,6"
                         Cursor="Hand"
-                        ToolTip="Kill-Tree Termination (Phase 4)">
+                        ToolTip="Kill Entire Process Tree"
+                        MouseDown="OnTerminateTreeClick">
                     <StackPanel Orientation="Horizontal">
                         <Path Data="{StaticResource IconKillGeometry}"
                               Stroke="{DynamicResource BrushAccentSecondary}"
@@ -86,48 +87,79 @@
             </StackPanel>
         </Grid>
 
-        <!-- 2. Search & Filter Bar -->
-        <Border Grid.Row="1"
-                Background="{DynamicResource BrushPanelSurface}"
-                BorderBrush="{DynamicResource BrushAccentPrimary}"
-                BorderThickness="1"
-                CornerRadius="6"
-                Padding="12,8"
-                Margin="0,0,0,16">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
+        <!-- 2. Search & Filter Bar + Inline Status Banner -->
+        <StackPanel Grid.Row="1" Margin="0,0,0,16">
+            <!-- Inline Status Banner (Alert Notification) -->
+            <Border Visibility="{Binding IsStatusBannerVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
+                    Background="{DynamicResource BrushBackgroundBase}"
+                    BorderBrush="{DynamicResource BrushWarning}"
+                    BorderThickness="1"
+                    CornerRadius="6"
+                    Padding="14,8"
+                    Margin="0,0,0,10">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="{Binding StatusBannerMessage}"
+                               FontSize="11"
+                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                               Foreground="{DynamicResource BrushTextPrimary}"
+                               VerticalAlignment="Center" />
+                    <Button Grid.Column="1"
+                            Content="✕"
+                            Foreground="{DynamicResource BrushTextSecondary}"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            FontSize="12"
+                            Cursor="Hand"
+                            Click="OnDismissBannerClick"
+                            Margin="8,0,0,0" />
+                </Grid>
+            </Border>
 
-                <Path Grid.Column="0"
-                      Data="{StaticResource IconSearchGeometry}"
-                      Stroke="{DynamicResource BrushTextSecondary}"
-                      StrokeThickness="1.5"
-                      Width="14" Height="14"
-                      Stretch="Uniform"
-                      Margin="0,0,10,0"
-                      VerticalAlignment="Center" />
+            <!-- Search Bar -->
+            <Border Background="{DynamicResource BrushPanelSurface}"
+                    BorderBrush="{DynamicResource BrushAccentPrimary}"
+                    BorderThickness="1"
+                    CornerRadius="6"
+                    Padding="12,8">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
 
-                <TextBox Grid.Column="1"
-                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                         FontSize="12"
-                         FontFamily="{DynamicResource FontFamilyNumeric}"
-                         Foreground="{DynamicResource BrushTextPrimary}"
-                         CaretBrush="{DynamicResource BrushAccentPrimary}"
-                         Background="Transparent"
-                         BorderThickness="0"
-                         VerticalAlignment="Center" />
+                    <Path Grid.Column="0"
+                          Data="{StaticResource IconSearchGeometry}"
+                          Stroke="{DynamicResource BrushTextSecondary}"
+                          StrokeThickness="1.5"
+                          Width="14" Height="14"
+                          Stretch="Uniform"
+                          Margin="0,0,10,0"
+                          VerticalAlignment="Center" />
 
-                <TextBlock Grid.Column="2"
-                           Text="{Binding ProcessCountDisplay}"
-                           FontSize="10"
-                           FontFamily="{DynamicResource FontFamilyNumeric}"
-                           Foreground="{DynamicResource BrushTextSecondary}"
-                           VerticalAlignment="Center" />
-            </Grid>
-        </Border>
+                    <TextBox Grid.Column="1"
+                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                             FontSize="12"
+                             FontFamily="{DynamicResource FontFamilyNumeric}"
+                             Foreground="{DynamicResource BrushTextPrimary}"
+                             CaretBrush="{DynamicResource BrushAccentPrimary}"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             VerticalAlignment="Center" />
+
+                    <TextBlock Grid.Column="2"
+                               Text="{Binding ProcessCountDisplay}"
+                               FontSize="10"
+                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                               Foreground="{DynamicResource BrushTextSecondary}"
+                               VerticalAlignment="Center" />
+                </Grid>
+            </Border>
+        </StackPanel>
 
         <!-- 3. Process Table Structure -->
         <Border Grid.Row="2"
@@ -224,6 +256,18 @@
                           BorderThickness="0"
                           Padding="0"
                           SelectionMode="Single">
+                    <ListView.ContextMenu>
+                        <ContextMenu Background="{DynamicResource BrushBackgroundBase}"
+                                     BorderBrush="{DynamicResource BrushAccentPrimary}"
+                                     BorderThickness="1">
+                            <MenuItem Header="Kill Process"
+                                      Foreground="{DynamicResource BrushTextPrimary}"
+                                      Click="OnContextMenuKillClick" />
+                            <MenuItem Header="Kill Process Tree (Topology)"
+                                      Foreground="{DynamicResource BrushAccentSecondary}"
+                                      Click="OnContextMenuKillTreeClick" />
+                        </ContextMenu>
+                    </ListView.ContextMenu>
                     <ListView.ItemContainerStyle>
                         <Style TargetType="ListViewItem">
                             <Setter Property="HorizontalContentAlignment" Value="Stretch" />

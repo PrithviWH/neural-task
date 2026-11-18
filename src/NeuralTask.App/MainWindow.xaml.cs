@@ -9,6 +9,8 @@ using System.Windows.Media.Imaging;
 using Microsoft.Extensions.DependencyInjection;
 using NeuralTask.App.Services;
 using NeuralTask.App.ViewModels;
+using NeuralTask.App.Views;
+using NeuralTask.Core.Models;
 using NeuralTask.Theming;
 using Wpf.Ui.Controls;
 
@@ -18,6 +20,7 @@ public partial class MainWindow : FluentWindow
 {
     private int _currentTabIndex = 0;
     private Storyboard? _ambientStoryboard;
+    private bool _isExplicitExit = false;
 
     public MainWindowViewModel ViewModel { get; }
 
@@ -35,6 +38,26 @@ public partial class MainWindow : FluentWindow
         SetupAmbientAnimation();
         ViewModel.Settings.PropertyChanged += OnSettingsPropertyChanged;
         ThemeManager.ThemeChanged += OnThemeChanged;
+
+        ViewModel.RequestRestoreWindow += RestoreAndShowWindow;
+        ViewModel.RequestExitApplication += ExitApplication;
+
+        StateChanged += (s, e) =>
+        {
+            if (WindowState == WindowState.Minimized && ViewModel.Settings.IsMinimizeToTrayEnabled)
+            {
+                Hide();
+            }
+        };
+
+        Closing += (s, e) =>
+        {
+            if (!_isExplicitExit && ViewModel.Settings.IsMinimizeToTrayEnabled)
+            {
+                e.Cancel = true;
+                Hide();
+            }
+        };
 
         Loaded += async (_, _) =>
         {
@@ -63,6 +86,22 @@ public partial class MainWindow : FluentWindow
         };
 
         SelectTab(0);
+    }
+
+    public void RestoreAndShowWindow()
+    {
+        Show();
+        WindowState = WindowState.Normal;
+        Activate();
+        Focus();
+        Topmost = true;
+    }
+
+    public void ExitApplication()
+    {
+        _isExplicitExit = true;
+        Close();
+        Application.Current.Shutdown();
     }
 
     private void OnSettingsPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -225,9 +264,39 @@ public partial class MainWindow : FluentWindow
         await Task.Delay(400);
         SaveBitmap(Path.Combine(outputDir, "screen_settings_light.png"));
 
+        // 7. Kill-Tree Dialog Neural Topology Screenshot
+        var dummyRoot = new ProcessSnapshot(12480, "parent_service.exe", 0, 4.2, 250_000_000, 1024, 0, DateTime.Now, null, false);
+        var dummyChildren = new List<ProcessSnapshot>
+        {
+            new ProcessSnapshot(12481, "worker_node_1.exe", 12480, 2.1, 120_000_000, 512, 0, DateTime.Now, null, false),
+            new ProcessSnapshot(12482, "worker_node_2.exe", 12480, 1.8, 115_000_000, 512, 0, DateTime.Now, null, false),
+            new ProcessSnapshot(12483, "telemetry_agent.exe", 12480, 0.4, 45_000_000, 128, 0, DateTime.Now, null, false)
+        };
+        var killDialog = new KillTreeDialog(dummyRoot, dummyChildren) { Width = 680, Height = 540 };
+        killDialog.Show();
+        await Task.Delay(300);
+        SaveElementBitmap(killDialog, Path.Combine(outputDir, "screen_kill_tree_dialog.png"));
+        killDialog.Close();
+
         // Revert to Dark
         ThemeManager.ApplyTheme(ThemeMode.Dark);
         SelectTab(0);
+    }
+
+    private void SaveElementBitmap(FrameworkElement element, string filePath)
+    {
+        element.UpdateLayout();
+        var width = (int)Math.Max(element.ActualWidth, 680);
+        var height = (int)Math.Max(element.ActualHeight, 540);
+
+        var rtb = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
+        rtb.Render(element);
+
+        var encoder = new PngBitmapEncoder();
+        encoder.Frames.Add(BitmapFrame.Create(rtb));
+
+        using var stream = File.Create(filePath);
+        encoder.Save(stream);
     }
 
     private void SaveBitmap(string filePath)

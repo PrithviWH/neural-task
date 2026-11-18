@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using NeuralTask.App.Services;
+using NeuralTask.Core.Services;
 
 namespace NeuralTask.App.ViewModels;
 
@@ -9,6 +10,8 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
 {
     private readonly ProcessMonitorCoordinator _coordinator;
     private readonly ISettingsService _settingsService;
+    private readonly IProcessActionService _actionService;
+    private readonly TrayIconService _trayIconService;
     private string _statusBadgeText = "SYS.NODE: ONLINE";
     private int _selectedTabIndex = 0;
 
@@ -16,6 +19,9 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     public ProcessListViewModel ProcessList { get; }
     public PerformanceViewModel Performance { get; }
     public SettingsViewModel Settings { get; }
+
+    public event Action? RequestRestoreWindow;
+    public event Action? RequestExitApplication;
 
     public string StatusBadgeText
     {
@@ -31,17 +37,24 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
 
     public MainWindowViewModel(
         ProcessMonitorCoordinator coordinator,
-        ISettingsService settingsService)
+        ISettingsService settingsService,
+        IProcessActionService actionService,
+        TrayIconService trayIconService)
     {
         _coordinator = coordinator ?? throw new ArgumentNullException(nameof(coordinator));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+        _actionService = actionService ?? throw new ArgumentNullException(nameof(actionService));
+        _trayIconService = trayIconService ?? throw new ArgumentNullException(nameof(trayIconService));
 
         Dashboard = new DashboardViewModel();
-        ProcessList = new ProcessListViewModel();
+        ProcessList = new ProcessListViewModel(_actionService);
         Performance = new PerformanceViewModel();
         Settings = new SettingsViewModel(_settingsService, _coordinator);
 
         _coordinator.UpdateReceived += OnMonitoringUpdateReceived;
+
+        _trayIconService.RestoreRequested += () => RequestRestoreWindow?.Invoke();
+        _trayIconService.ExitRequested += () => RequestExitApplication?.Invoke();
     }
 
     public async Task StartMonitoringAsync(CancellationToken cancellationToken = default)
@@ -65,7 +78,10 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         // 3. Update Performance Charts
         Performance.ApplyMetrics(update.SystemMetrics);
 
-        // 4. Update Header Status
+        // 4. Update System Tray Icon live mini-graph & tooltip
+        _trayIconService.UpdateMetrics(update.Processes, update.SystemMetrics);
+
+        // 5. Update Header Status
         StatusBadgeText = $"SYS.NODE: ONLINE // {update.Processes.Count} TASKS";
     }
 
@@ -73,5 +89,6 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     {
         _coordinator.UpdateReceived -= OnMonitoringUpdateReceived;
         _coordinator.Dispose();
+        _trayIconService.Dispose();
     }
 }

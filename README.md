@@ -87,10 +87,26 @@ dotnet test NeuralTask.sln
 
 ---
 
+### 3. Process Management & Termination (`ProcessActionService`)
+* **Kill-Tree Verification:** NeuralTask validates parent/child start-time relationships before termination. If a parent process terminates and Windows recycles its PID, children spawned after the parent's exit are classified as orphans and never terminated by an unrelated recycled PID.
+* **Neural Topology Graph:** For processes with child descendants, a specialized modal confirmation dialog visualizes the connected parent-child hierarchy with glowing neural node indicators before executing termination.
+* **Non-Alarming Error Handling:** Terminations of protected system processes (e.g. `csrss.exe`, `System`) return structured `AccessDenied` results and present clean inline notification banners rather than throwing raw exception dialogs.
+
+### 4. Fuzzy Subsequence Search
+* **Gap-Tolerant Matching:** The search engine in `NeuralTask.Core` (`FuzzyMatcher`) performs sequential subsequence matching with gap tolerance (e.g. typing "chr" matches `chrome.exe`, "nt" matches `NeuralTask.App.exe`), alongside direct PID matching.
+* **Zero UI Lag:** Filtering runs instantaneously across 300+ processes with in-place recycled UI synchronization.
+
+### 5. System Tray Engine & Live Mini-Graph
+* **Sub-Millisecond GDI+ Rendering:** Every sampling tick, `TrayIconService` draws an in-memory 16x16 sparkline bitmap displaying real-time CPU % (electric cyan) or RAM % (neon magenta) in under 0.2ms, recycling Win32 `HICON` handles with zero GDI leaks.
+* **Hover Telemetry:** Hovering the tray icon displays a live summary tooltip with current CPU %, physical RAM consumed, and top-2 ranked processes.
+* **Minimize-to-Tray:** Closing or minimizing the HUD window hides it to the notification area; clicking the tray icon restores and brings the window forward.
+
+---
+
 ## Roadmap Overview
-* **v0.1 (Current Skeleton -> MVP):** Core theme, live process table (`NtQuerySystemInformation`), safe kill-tree with creation timestamp checks, real-time hardware graphs.
+* **v0.1 (Released / Public RC):** Core holographic & holo-glass themes, live process table with multi-column sorting, fuzzy search, safe kill-tree with creation timestamp checks, neural topology dialog, real-time hardware graphs, and persistent system tray mini-graph.
 * **v0.2:** Event-Log-based startup impact score and local suspicious process heuristics.
-* **v0.3:** Light "Holo-Glass" lab theme and process tree visualizer.
+* **v0.3:** Deep process tree visualizer and advanced telemetry history.
 * **v0.4+:** Historical telemetry capture, JSON/CSV export, and plugin architecture.
 
 ---

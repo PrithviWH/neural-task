@@ -2,14 +2,18 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
 using NeuralTask.Core.Models;
+using NeuralTask.Core.Services;
 
 namespace NeuralTask.App.ViewModels;
 
 public class ProcessListViewModel : ViewModelBase
 {
+    private readonly IProcessActionService _actionService;
     private readonly Dictionary<int, ProcessItemViewModel> _allProcessesMap = new();
     private readonly List<ProcessItemViewModel> _allProcessesList = new();
+    private IReadOnlyList<ProcessSnapshot> _lastSnapshots = Array.Empty<ProcessSnapshot>();
 
     private string _searchText = string.Empty;
     private string _sortColumn = "CpuPercent";
@@ -18,7 +22,13 @@ public class ProcessListViewModel : ViewModelBase
     private int _totalCount;
     private int _filteredCount;
 
+    private bool _isStatusBannerVisible;
+    private string _statusBannerMessage = string.Empty;
+    private bool _statusBannerIsError;
+
     public ObservableCollection<ProcessItemViewModel> FilteredProcesses { get; } = new();
+
+    public Func<ProcessSnapshot, IReadOnlyList<ProcessSnapshot>, Task<(bool confirmed, bool entireTree)>>? ConfirmKillTreeCallback { get; set; }
 
     public string SearchText
     {
@@ -79,6 +89,42 @@ public class ProcessListViewModel : ViewModelBase
             ? $"ACTIVE: {_totalCount} PROCESSES"
             : $"FILTERED: {_filteredCount} OF {_totalCount} PROCESSES";
 
+    public bool IsStatusBannerVisible
+    {
+        get => _isStatusBannerVisible;
+        set => SetProperty(ref _isStatusBannerVisible, value);
+    }
+
+    public string StatusBannerMessage
+    {
+        get => _statusBannerMessage;
+        set => SetProperty(ref _statusBannerMessage, value);
+    }
+
+    public bool StatusBannerIsError
+    {
+        get => _statusBannerIsError;
+        set => SetProperty(ref _statusBannerIsError, value);
+    }
+
+    public ProcessListViewModel(IProcessActionService? actionService = null)
+    {
+        _actionService = actionService ?? new ProcessActionService();
+    }
+
+    public void ShowStatus(string message, bool isError = false)
+    {
+        StatusBannerMessage = message;
+        StatusBannerIsError = isError;
+        IsStatusBannerVisible = true;
+    }
+
+    public void DismissStatus()
+    {
+        IsStatusBannerVisible = false;
+        StatusBannerMessage = string.Empty;
+    }
+
     public void SortBy(string column)
     {
         if (_sortColumn.Equals(column, StringComparison.OrdinalIgnoreCase))
@@ -101,6 +147,7 @@ public class ProcessListViewModel : ViewModelBase
 
     public void ApplySnapshot(IReadOnlyList<ProcessSnapshot> snapshots)
     {
+        _lastSnapshots = snapshots;
         var incomingPids = new HashSet<int>(snapshots.Count);
         int? previouslySelectedPid = _selectedProcess?.Pid;
 
@@ -144,11 +191,76 @@ public class ProcessListViewModel : ViewModelBase
         }
     }
 
+    public async Task TerminateSelectedAsync()
+    {
+        if (_selectedProcess == null)
+        {
+            ShowStatus("Please select a target process from the matrix first.", isError: true);
+            return;
+        }
+
+        int targetPid = _selectedProcess.Pid;
+        string targetName = _selectedProcess.Name;
+
+        if (targetPid <= 4)
+        {
+            ShowStatus($"Access Denied: Protected System process '{targetName}' (PID: {targetPid}) cannot be terminated.", isError: true);
+            return;
+        }
+
+        // Check if process has descendants
+        var tree = _actionService.BuildTree(_lastSnapshots);
+        var descendantPids = tree.GetDescendantPids(targetPid);
+
+        if (descendantPids.Count > 0 && ConfirmKillTreeCallback != null)
+        {
+            var rootSnap = _lastSnapshots.FirstOrDefault(s => s.Pid == targetPid)
+                           ?? new ProcessSnapshot(targetPid, targetName, 0, 0, 0, 0, 0, null, null, false);
+            var childSnaps = _lastSnapshots.Where(s => descendantPids.Contains(s.Pid)).ToList();
+
+            var (confirmed, entireTree) = await ConfirmKillTreeCallback(rootSnap, childSnaps);
+            if (!confirmed)
+            {
+                return;
+            }
+
+            if (entireTree)
+            {
+                var treeResult = await _actionService.TerminateTreeAsync(targetPid, _lastSnapshots);
+                if (treeResult.OverallSuccess)
+                {
+                    ShowStatus($"[KILL-TREE COMPLETED] Successfully terminated {treeResult.ProcessResults.Count} processes in '{targetName}' topology.", isError: false);
+                }
+                else
+                {
+                    var failed = treeResult.ProcessResults.Where(r => r.Status != ProcessTerminationStatus.Success && r.Status != ProcessTerminationStatus.AlreadyExited).ToList();
+                    ShowStatus($"[PARTIAL TERMINATION] Terminated {treeResult.ProcessResults.Count - failed.Count} processes. {failed.Count} protected processes could not be terminated.", isError: true);
+                }
+                return;
+            }
+        }
+
+        // Single process termination
+        var result = await _actionService.TerminateProcessAsync(targetPid);
+        if (result.Status == ProcessTerminationStatus.Success)
+        {
+            ShowStatus($"[SUCCESS] {result.Message}", isError: false);
+        }
+        else if (result.Status == ProcessTerminationStatus.AlreadyExited)
+        {
+            ShowStatus($"[INFO] {result.Message}", isError: false);
+        }
+        else
+        {
+            ShowStatus($"[TERMINATION FAILED] {result.Message}", isError: true);
+        }
+    }
+
     private void ApplyFilterAndSort()
     {
         IEnumerable<ProcessItemViewModel> items = _allProcessesList;
 
-        // Fuzzy filter
+        // Centralized Fuzzy Filter
         if (!string.IsNullOrWhiteSpace(_searchText))
         {
             var query = _searchText.Trim();
@@ -180,23 +292,8 @@ public class ProcessListViewModel : ViewModelBase
             return true;
         }
 
-        // 2. Substring match
-        if (item.Name.Contains(query, StringComparison.OrdinalIgnoreCase))
-        {
-            return true;
-        }
-
-        // 3. Sub-sequence fuzzy match (e.g. "chr" matches "chrome.exe")
-        int queryIdx = 0;
-        for (int i = 0; i < item.Name.Length && queryIdx < query.Length; i++)
-        {
-            if (char.ToLowerInvariant(item.Name[i]) == char.ToLowerInvariant(query[queryIdx]))
-            {
-                queryIdx++;
-            }
-        }
-
-        return queryIdx == query.Length;
+        // 2. High-performance subsequence fuzzy matcher (with gap handling)
+        return FuzzyMatcher.IsMatch(item.Name, query);
     }
 
     private static void SyncObservableCollection<T>(ObservableCollection<T> target, IList<T> source)

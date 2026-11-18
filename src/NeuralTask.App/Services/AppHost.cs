@@ -19,10 +19,12 @@ public static class AppHost
         // 1. Core Services (Singletons)
         services.AddSingleton<IProcessMonitorService, ProcessMonitorService>();
         services.AddSingleton<ISystemMetricsService, SystemMetricsService>();
+        services.AddSingleton<IProcessActionService, ProcessActionService>();
 
         // 2. Application Services
         services.AddSingleton<ISettingsService, JsonSettingsService>();
         services.AddSingleton<ProcessMonitorCoordinator>();
+        services.AddSingleton<TrayIconService>();
 
         // 3. ViewModels
         services.AddSingleton<MainWindowViewModel>();

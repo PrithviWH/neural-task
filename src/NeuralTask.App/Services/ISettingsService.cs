@@ -6,7 +6,9 @@ namespace NeuralTask.App.Services;
 public record AppSettings(
     ThemeMode Theme = ThemeMode.Dark,
     int RefreshIntervalMs = 1000,
-    bool IsAmbientAnimationEnabled = true
+    bool IsAmbientAnimationEnabled = true,
+    bool IsMinimizeToTrayEnabled = true,
+    string TrayIconMetric = "CPU"
 );
 
 public interface ISettingsService

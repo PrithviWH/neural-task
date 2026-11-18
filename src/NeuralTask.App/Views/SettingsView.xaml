@@ -16,6 +16,7 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
             <!-- 1. Header -->
@@ -209,8 +210,70 @@
                 </StackPanel>
             </Border>
 
-            <!-- 5. Privacy & Platform Attribution -->
+            <!-- 5. System Tray Engine & Mini-Graph -->
             <Border Grid.Row="4"
+                    Margin="0,0,0,20"
+                    Background="{DynamicResource BrushPanelSurface}"
+                    BorderBrush="{DynamicResource BrushAccentPrimary}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="24,20">
+                <StackPanel>
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="SYSTEM TRAY ENGINE // MINIMIZE-TO-TRAY"
+                                       FontSize="13"
+                                       FontWeight="SemiBold"
+                                       FontFamily="{DynamicResource FontFamilyNumeric}"
+                                       Foreground="{DynamicResource BrushAccentPrimary}"
+                                       Margin="0,0,0,4" />
+                            <TextBlock Text="Hides HUD to the Windows taskbar system tray on minimize or close. Clicking the tray icon restores the window."
+                                       FontSize="12"
+                                       FontFamily="{DynamicResource FontFamilyUI}"
+                                       Foreground="{DynamicResource BrushTextSecondary}"
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+                        <CheckBox Grid.Column="1"
+                                  IsChecked="{Binding IsMinimizeToTrayEnabled, Mode=TwoWay}"
+                                  Content="ENABLED"
+                                  FontSize="12"
+                                  FontWeight="Bold"
+                                  FontFamily="{DynamicResource FontFamilyNumeric}"
+                                  Foreground="{DynamicResource BrushAccentPrimary}"
+                                  VerticalAlignment="Center" />
+                    </Grid>
+
+                    <TextBlock Text="LIVE TRAY ICON MINI-GRAPH METRIC"
+                               FontSize="11"
+                               FontWeight="SemiBold"
+                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                               Foreground="{DynamicResource BrushTextSecondary}"
+                               Margin="0,8,0,8" />
+
+                    <StackPanel Orientation="Horizontal">
+                        <RadioButton Content="CPU Load (Electric Cyan)"
+                                     GroupName="TrayMetricGroup"
+                                     IsChecked="{Binding IsTrayMetricCpu, Mode=TwoWay}"
+                                     FontSize="12"
+                                     FontFamily="{DynamicResource FontFamilyNumeric}"
+                                     Foreground="{DynamicResource BrushAccentPrimary}"
+                                     Margin="0,0,24,0" />
+                        <RadioButton Content="RAM Load (Neon Magenta)"
+                                     GroupName="TrayMetricGroup"
+                                     IsChecked="{Binding IsTrayMetricRam, Mode=TwoWay}"
+                                     FontSize="12"
+                                     FontFamily="{DynamicResource FontFamilyNumeric}"
+                                     Foreground="{DynamicResource BrushAccentSecondary}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- 6. Privacy & Platform Attribution -->
+            <Border Grid.Row="5"
                     Background="{DynamicResource BrushPanelSurface}"
                     BorderBrush="{DynamicResource BrushAccentPrimary}"
                     BorderThickness="1"
