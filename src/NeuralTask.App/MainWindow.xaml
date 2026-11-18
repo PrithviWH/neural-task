@@ -168,6 +168,32 @@
                                 </Button>
                             </Grid>
 
+                            <!-- Startup Impact Button -->
+                            <Grid>
+                                <Rectangle x:Name="IndicatorStartup"
+                                           HorizontalAlignment="Left"
+                                           Width="3" Height="28"
+                                           Fill="{DynamicResource BrushAccentPrimary}"
+                                           RadiusX="1.5" RadiusY="1.5"
+                                           Margin="-8,0,0,0"
+                                           Visibility="Collapsed">
+                                    <Rectangle.Effect>
+                                        <DropShadowEffect BlurRadius="8" ShadowDepth="0" Color="{DynamicResource ColorAccentPrimary}" Opacity="0.8" />
+                                    </Rectangle.Effect>
+                                </Rectangle>
+                                <Button x:Name="NavButtonStartup"
+                                        Style="{StaticResource NavRailButtonStyle}"
+                                        ToolTip="Startup Impact Matrix (PRD §8.3)"
+                                        Click="OnNavStartupClick">
+                                    <Path x:Name="IconStartup"
+                                          Data="{StaticResource IconStartupGeometry}"
+                                          Stroke="{DynamicResource BrushTextSecondary}"
+                                          StrokeThickness="1.5"
+                                          Width="22" Height="22"
+                                          Stretch="Uniform" />
+                                </Button>
+                            </Grid>
+
                             <!-- Settings Button -->
                             <Grid>
                                 <Rectangle x:Name="IndicatorSettings"
@@ -202,7 +228,7 @@
                                     <DropShadowEffect BlurRadius="6" ShadowDepth="0" Color="{DynamicResource ColorAccentPrimary}" Opacity="0.8" />
                                 </Ellipse.Effect>
                             </Ellipse>
-                            <TextBlock Text="v0.1"
+                            <TextBlock Text="v0.2"
                                        FontSize="9"
                                        FontWeight="SemiBold"
                                        FontFamily="{DynamicResource FontFamilyNumeric}"
@@ -216,6 +242,7 @@
                 <Grid Grid.Column="1" x:Name="ViewportContainer" Background="Transparent">
                     <views:DashboardView x:Name="ViewDashboard" Visibility="Visible" />
                     <views:ProcessListView x:Name="ViewProcesses" Visibility="Collapsed" />
+                    <views:StartupView x:Name="ViewStartup" Visibility="Collapsed" />
                     <views:SettingsView x:Name="ViewSettings" Visibility="Collapsed" />
                 </Grid>
             </Grid>

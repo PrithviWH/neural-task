@@ -103,10 +103,45 @@ dotnet test NeuralTask.sln
 
 ---
 
+## Startup Impact Scoring Engine (Phase 5 / Tier 2)
+
+### 1. Explainable 0–100 Impact Scoring (PRD §8.3)
+Traditional Task Manager labels startup applications with subjective, opaque ratings ("Low", "Medium", "High") with no verifiable telemetry. NeuralTask replaces this with an objective, normalized **0–100 impact score** accompanied by a complete **Time vs. Resource decomposition**:
+* **Time Score ($0-50$ points):** Measures process initialization duration and boot-contention delay during the post-logon window ($N=45$s). Early boot-phase launches incur a contention multiplier reflecting competition for storage cache and CPU scheduling:
+  $$S_{\text{time}} = \min\left(50, \frac{\text{Duration}_{\text{active}}}{N} \times 40 \times M_{\text{contention}}\right)$$
+* **Resource Score ($0-50$ points):** Measures physical hardware utilization, decomposed into CPU time ($0-30$ points) and cumulative disk/storage I/O ($0-20$ points):
+  $$S_{\text{resource}} = \min\left(30, \frac{\text{CpuTimeSeconds}}{N \times 0.15} \times 30\right) + \min\left(20, \frac{\text{IoBytes}}{80\text{ MB}} \times 20\right)$$
+* **Explainable Decomposition:** Every startup item provides an expandable breakdown displaying:
+  * Two-tone proportional split meter (Cyan for Time, Violet/Magenta for Resource)
+  * Initialization duration and boot delay in seconds
+  * Process CPU core time consumption
+  * Cumulative disk/file I/O throughput in MB
+  * Plain-English explanation sentence (e.g. *"Active for 28.0s during logon window (5.0s post-boot delay), consuming 3.8s CPU time and 81.1 MB I/O."*)
+
+### 2. Comprehensive Multi-Source Enumeration
+The `StartupScoreEngine` aggregates and deduplicates startup hooks across:
+1. `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`
+2. `HKLM\Software\Microsoft\Windows\CurrentVersion\Run`
+3. `HKLM\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Run`
+4. User Startup Folder (`%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup`)
+5. Common Startup Folder (`%PROGRAMDATA%\Microsoft\Windows\Start Menu\Programs\Startup`)
+6. WMI `Win32_StartupCommand` (supplemental discovery)
+
+### 3. Native Task Manager Binary Compatibility & State Toggling
+* **Binary Flag Integration:** Enable/disable states are managed directly in Windows' native binary format at `HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run` and `HKLM\...` (`0x02` enabled, `0x03` disabled), maintaining 100% interoperability with Windows Task Manager without deleting registry entries.
+* **Privilege & Elevation Handling (PRD §7):** NeuralTask operates smoothly under standard user privileges. Modifying machine-wide entries (HKLM) triggers a non-alarming administrative banner with a one-click **"RELAUNCH AS ADMIN"** action (`runas`).
+
+### 4. Technical Architecture: v0.2 Fallback vs. Future ETW Boot Trace (PRD §11)
+Per the explicit fallback in **PRD §11 (Technical Risks)**:
+* In **v0.2**, startup impact is computed via active process correlation, uptime boot timing, and CPU/IO sampling measurement.
+* A future **v0.3** upgrade will incorporate an optional offline `Microsoft-Windows-Kernel-Process` ETW session across reboots for kernel-exact boot trace metrics.
+
+---
+
 ## Roadmap Overview
 * **v0.1 (Released / Public RC):** Core holographic & holo-glass themes, live process table with multi-column sorting, fuzzy search, safe kill-tree with creation timestamp checks, neural topology dialog, real-time hardware graphs, and persistent system tray mini-graph.
-* **v0.2:** Event-Log-based startup impact score and local suspicious process heuristics.
-* **v0.3:** Deep process tree visualizer and advanced telemetry history.
+* **v0.2 (Current):** Explainable 0-100 startup impact scoring with Time vs. Resource split, multi-source enumeration, binary `StartupApproved` toggle, and admin elevation handling.
+* **v0.3:** Deep process tree visualizer, local suspicious process heuristics, and ETW boot-trace capture.
 * **v0.4+:** Historical telemetry capture, JSON/CSV export, and plugin architecture.
 
 ---

@@ -33,6 +33,7 @@ public partial class MainWindow : FluentWindow
 
         ViewDashboard.DataContext = ViewModel.Dashboard;
         ViewProcesses.DataContext = ViewModel.ProcessList;
+        ViewStartup.DataContext = ViewModel.Startup;
         ViewSettings.DataContext = ViewModel.Settings;
 
         SetupAmbientAnimation();
@@ -162,7 +163,8 @@ public partial class MainWindow : FluentWindow
 
     private void OnNavDashboardClick(object sender, RoutedEventArgs e) => SelectTab(0);
     private void OnNavProcessesClick(object sender, RoutedEventArgs e) => SelectTab(1);
-    private void OnNavSettingsClick(object sender, RoutedEventArgs e) => SelectTab(2);
+    private void OnNavStartupClick(object sender, RoutedEventArgs e) => SelectTab(2);
+    private void OnNavSettingsClick(object sender, RoutedEventArgs e) => SelectTab(3);
 
     public void SelectTab(int index)
     {
@@ -172,7 +174,8 @@ public partial class MainWindow : FluentWindow
         // Reset all indicators
         IndicatorDashboard.Visibility = index == 0 ? Visibility.Visible : Visibility.Collapsed;
         IndicatorProcesses.Visibility = index == 1 ? Visibility.Visible : Visibility.Collapsed;
-        IndicatorSettings.Visibility = index == 2 ? Visibility.Visible : Visibility.Collapsed;
+        IndicatorStartup.Visibility = index == 2 ? Visibility.Visible : Visibility.Collapsed;
+        IndicatorSettings.Visibility = index == 3 ? Visibility.Visible : Visibility.Collapsed;
 
         // Apply theme-driven accent stroke & glow to active icon
         var activeBrush = (Brush)FindResource("BrushAccentPrimary");
@@ -193,8 +196,11 @@ public partial class MainWindow : FluentWindow
         IconProcesses.Stroke = index == 1 ? activeBrush : inactiveBrush;
         IconProcesses.Effect = index == 1 ? activeGlow : null;
 
-        IconSettings.Stroke = index == 2 ? activeBrush : inactiveBrush;
-        IconSettings.Effect = index == 2 ? activeGlow : null;
+        IconStartup.Stroke = index == 2 ? activeBrush : inactiveBrush;
+        IconStartup.Effect = index == 2 ? activeGlow : null;
+
+        IconSettings.Stroke = index == 3 ? activeBrush : inactiveBrush;
+        IconSettings.Effect = index == 3 ? activeGlow : null;
 
         // Switch View with smooth fade-in
         SwitchView(index);
@@ -206,13 +212,15 @@ public partial class MainWindow : FluentWindow
         {
             0 => ViewDashboard,
             1 => ViewProcesses,
-            2 => ViewSettings,
+            2 => ViewStartup,
+            3 => ViewSettings,
             _ => ViewDashboard
         };
 
         ViewDashboard.Visibility = index == 0 ? Visibility.Visible : Visibility.Collapsed;
         ViewProcesses.Visibility = index == 1 ? Visibility.Visible : Visibility.Collapsed;
-        ViewSettings.Visibility = index == 2 ? Visibility.Visible : Visibility.Collapsed;
+        ViewStartup.Visibility = index == 2 ? Visibility.Visible : Visibility.Collapsed;
+        ViewSettings.Visibility = index == 3 ? Visibility.Visible : Visibility.Collapsed;
 
         var fadeIn = new DoubleAnimation
         {
@@ -243,24 +251,43 @@ public partial class MainWindow : FluentWindow
         await Task.Delay(400);
         SaveBitmap(Path.Combine(outputDir, "screen_processes_dark.png"));
 
-        // 3. Dark Theme - Settings
+        // 3. Dark Theme - Startup (PRD §8.3 Matrix)
         SelectTab(2);
+        await ViewModel.Startup.LoadEntriesAsync();
+        if (ViewModel.Startup.FilteredEntries.Count > 0)
+        {
+            ViewModel.Startup.FilteredEntries[0].IsExpanded = true;
+        }
+        await Task.Delay(400);
+        SaveBitmap(Path.Combine(outputDir, "screen_startup_dark.png"));
+
+        // 4. Dark Theme - Settings
+        SelectTab(3);
         await Task.Delay(400);
         SaveBitmap(Path.Combine(outputDir, "screen_settings_dark.png"));
 
-        // 4. Light Theme - Dashboard
+        // 5. Light Theme - Dashboard
         ThemeManager.ApplyTheme(ThemeMode.Light);
         SelectTab(0);
         await Task.Delay(400);
         SaveBitmap(Path.Combine(outputDir, "screen_dashboard_light.png"));
 
-        // 5. Light Theme - Processes
+        // 6. Light Theme - Processes
         SelectTab(1);
         await Task.Delay(400);
         SaveBitmap(Path.Combine(outputDir, "screen_processes_light.png"));
 
-        // 6. Light Theme - Settings
+        // 7. Light Theme - Startup
         SelectTab(2);
+        if (ViewModel.Startup.FilteredEntries.Count > 0)
+        {
+            ViewModel.Startup.FilteredEntries[0].IsExpanded = true;
+        }
+        await Task.Delay(400);
+        SaveBitmap(Path.Combine(outputDir, "screen_startup_light.png"));
+
+        // 8. Light Theme - Settings
+        SelectTab(3);
         await Task.Delay(400);
         SaveBitmap(Path.Combine(outputDir, "screen_settings_light.png"));
 

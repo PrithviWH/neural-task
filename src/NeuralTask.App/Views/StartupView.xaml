@@ -1,0 +1,751 @@
+<UserControl x:Class="NeuralTask.App.Views.StartupView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:vm="clr-namespace:NeuralTask.App.ViewModels"
+             mc:Ignorable="d" 
+             d:DataContext="{d:DesignInstance Type=vm:StartupViewModel}"
+             d:DesignHeight="750" d:DesignWidth="980">
+
+    <UserControl.Resources>
+        <!-- Toggle CheckBox HUD Style -->
+        <Style x:Key="HudToggleStyle" TargetType="CheckBox">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <Border x:Name="ToggleBorder"
+                                Width="48" Height="24"
+                                CornerRadius="12"
+                                Background="#1A2230"
+                                BorderBrush="{DynamicResource BrushAccentPrimary}"
+                                BorderThickness="1.5"
+                                Padding="2">
+                            <Grid>
+                                <Ellipse x:Name="ToggleThumb"
+                                         Width="16" Height="16"
+                                         Fill="{DynamicResource BrushTextSecondary}"
+                                         HorizontalAlignment="Left"
+                                         VerticalAlignment="Center"
+                                         Margin="2,0,0,0" />
+                                <TextBlock x:Name="ToggleLabel"
+                                           Text="OFF"
+                                           FontSize="8"
+                                           FontWeight="Bold"
+                                           FontFamily="{DynamicResource FontFamilyNumeric}"
+                                           Foreground="{DynamicResource BrushTextSecondary}"
+                                           HorizontalAlignment="Right"
+                                           VerticalAlignment="Center"
+                                           Margin="0,0,6,0" />
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="ToggleBorder" Property="Background" Value="#0A3030" />
+                                <Setter TargetName="ToggleBorder" Property="BorderBrush" Value="{DynamicResource BrushAccentPrimary}" />
+                                <Setter TargetName="ToggleThumb" Property="Fill" Value="{DynamicResource BrushAccentPrimary}" />
+                                <Setter TargetName="ToggleThumb" Property="HorizontalAlignment" Value="Right" />
+                                <Setter TargetName="ToggleThumb" Property="Margin" Value="0,0,2,0" />
+                                <Setter TargetName="ToggleLabel" Property="Text" Value="ON" />
+                                <Setter TargetName="ToggleLabel" Property="Foreground" Value="{DynamicResource BrushAccentPrimary}" />
+                                <Setter TargetName="ToggleLabel" Property="HorizontalAlignment" Value="Left" />
+                                <Setter TargetName="ToggleLabel" Property="Margin" Value="6,0,0,0" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ToggleBorder" Property="BorderThickness" Value="2" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Secondary Outline Button Style -->
+        <Style x:Key="HudSecondaryButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BrushAccentPrimary}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Foreground" Value="{DynamicResource BrushAccentPrimary}" />
+            <Setter Property="FontFamily" Value="{DynamicResource FontFamilyNumeric}" />
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Padding" Value="12,6" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Border"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource BrushPanelSurface}" />
+                                <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Warning Button Style -->
+        <Style x:Key="HudWarningButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#251800" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BrushAccentWarning}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Foreground" Value="{DynamicResource BrushAccentWarning}" />
+            <Setter Property="FontFamily" Value="{DynamicResource FontFamilyNumeric}" />
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Padding" Value="12,6" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Border"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="#452C00" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="32,24,32,32">
+        <Grid.RowDefinitions>
+            <!-- 0. Header -->
+            <RowDefinition Height="Auto" />
+            <!-- 1. KPI Cards -->
+            <RowDefinition Height="Auto" />
+            <!-- 2. Admin Elevation Banner -->
+            <RowDefinition Height="Auto" />
+            <!-- 3. Status Notification -->
+            <RowDefinition Height="Auto" />
+            <!-- 4. Toolbar & Filter -->
+            <RowDefinition Height="Auto" />
+            <!-- 5. List -->
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- 0. Header Section -->
+        <Grid Grid.Row="0" Margin="0,0,0,20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel>
+                <TextBlock Text="STARTUP // BOOT IMPACT MATRIX"
+                           FontSize="20"
+                           FontWeight="SemiBold"
+                           FontFamily="{DynamicResource FontFamilyUI}"
+                           Foreground="{DynamicResource BrushTextPrimary}" />
+                <TextBlock Text="0–100 MEASURED IMPACT SCORING // TIME VS. RESOURCE BREAKDOWN (PRD §8.3)"
+                           FontSize="11"
+                           FontFamily="{DynamicResource FontFamilyNumeric}"
+                           Foreground="{DynamicResource BrushTextSecondary}"
+                           Margin="0,4,0,0" />
+            </StackPanel>
+
+            <!-- Mode Tag Badge -->
+            <Border Grid.Column="1"
+                    Background="{DynamicResource BrushPanelSurface}"
+                    BorderBrush="{DynamicResource BrushAccentPrimary}"
+                    BorderThickness="1"
+                    CornerRadius="12"
+                    Padding="14,6"
+                    VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal">
+                    <Ellipse Width="7" Height="7"
+                             Fill="{DynamicResource BrushAccentPrimary}"
+                             Margin="0,0,8,0">
+                        <Ellipse.Effect>
+                            <DropShadowEffect BlurRadius="6" ShadowDepth="0" Color="{DynamicResource ColorAccentPrimary}" Opacity="0.8" />
+                        </Ellipse.Effect>
+                    </Ellipse>
+                    <TextBlock Text="ENGINE: V0.2 SAMPLING CORRELATION"
+                               FontSize="10"
+                               FontWeight="SemiBold"
+                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                               Foreground="{DynamicResource BrushAccentPrimary}" />
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- 1. Top Summary KPI Cards -->
+        <Grid Grid.Row="1" Margin="0,0,0,20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- KPI 1: Total Startup Apps -->
+            <Border Grid.Column="0"
+                    Background="{DynamicResource BrushPanelSurface}"
+                    BorderBrush="{DynamicResource BrushAccentPrimary}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="18,14">
+                <StackPanel>
+                    <TextBlock Text="REGISTERED RUN HOOKS"
+                               FontSize="10"
+                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                               Foreground="{DynamicResource BrushTextSecondary}" />
+                    <TextBlock Text="{Binding TotalStartupApps}"
+                               FontSize="28"
+                               FontWeight="Bold"
+                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                               Foreground="{DynamicResource BrushAccentPrimary}"
+                               Margin="0,4,0,0" />
+                    <TextBlock Text="REGISTRY + STARTUP FOLDER"
+                               FontSize="9"
+                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                               Foreground="{DynamicResource BrushTextSecondary}"
+                               Margin="0,2,0,0" />
+                </StackPanel>
+            </Border>
+
+            <!-- KPI 2: Average Impact Score -->
+            <Border Grid.Column="2"
+                    Background="{DynamicResource BrushPanelSurface}"
+                    BorderBrush="{DynamicResource BrushAccentSecondary}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="18,14">
+                <StackPanel>
+                    <TextBlock Text="AVERAGE BOOT IMPACT"
+                               FontSize="10"
+                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                               Foreground="{DynamicResource BrushTextSecondary}" />
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                        <TextBlock Text="{Binding AverageImpactScore}"
+                                   FontSize="28"
+                                   FontWeight="Bold"
+                                   FontFamily="{DynamicResource FontFamilyNumeric}"
+                                   Foreground="{DynamicResource BrushAccentSecondary}" />
+                        <TextBlock Text="/100"
+                                   FontSize="14"
+                                   FontFamily="{DynamicResource FontFamilyNumeric}"
+                                   Foreground="{DynamicResource BrushTextSecondary}"
+                                   VerticalAlignment="Bottom"
+                                   Margin="4,0,0,4" />
+                    </StackPanel>
+                    <TextBlock Text="NORMALIZED IMPACT AGGREGATE"
+                               FontSize="9"
+                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                               Foreground="{DynamicResource BrushTextSecondary}"
+                               Margin="0,2,0,0" />
+                </StackPanel>
+            </Border>
+
+            <!-- KPI 3: High Impact Offenders -->
+            <Border Grid.Column="4"
+                    Background="{DynamicResource BrushPanelSurface}"
+                    BorderBrush="{DynamicResource BrushAccentWarning}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="18,14">
+                <StackPanel>
+                    <TextBlock Text="HEAVY BOOT LOAD OFFENDERS"
+                               FontSize="10"
+                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                               Foreground="{DynamicResource BrushTextSecondary}" />
+                    <TextBlock Text="{Binding HighImpactCount}"
+                               FontSize="28"
+                               FontWeight="Bold"
+                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                               Foreground="{DynamicResource BrushAccentWarning}"
+                               Margin="0,4,0,0" />
+                    <TextBlock Text="IMPACT SCORE >= 60 PTS"
+                               FontSize="9"
+                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                               Foreground="{DynamicResource BrushTextSecondary}"
+                               Margin="0,2,0,0" />
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- 2. Administrative Elevation Banner (PRD §7) -->
+        <Border Grid.Row="2"
+                Margin="0,0,0,16"
+                Background="#1E1605"
+                BorderBrush="{DynamicResource BrushAccentWarning}"
+                BorderThickness="1.5"
+                CornerRadius="8"
+                Padding="16,12"
+                Visibility="{Binding AdminBannerVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Shield Icon -->
+                <Path Grid.Column="0"
+                      Data="{StaticResource IconShieldGeometry}"
+                      Stroke="{DynamicResource BrushAccentWarning}"
+                      StrokeThickness="1.5"
+                      Width="20" Height="20"
+                      Stretch="Uniform"
+                      VerticalAlignment="Center"
+                      Margin="0,0,14,0" />
+
+                <!-- Banner Text -->
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Text="ELEVATION RECOMMENDED // STANDARD USER CONTEXT"
+                               FontSize="11"
+                               FontWeight="Bold"
+                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                               Foreground="{DynamicResource BrushAccentWarning}" />
+                    <TextBlock Text="Machine-wide startup entries (HKLM) require administrator privileges to toggle. You can review all scores now, or relaunch with elevation to modify all entries."
+                               FontSize="10"
+                               FontFamily="{DynamicResource FontFamilyUI}"
+                               Foreground="{DynamicResource BrushTextSecondary}"
+                               Margin="0,2,0,0" />
+                </StackPanel>
+
+                <!-- Relaunch Action Button -->
+                <Button Grid.Column="2"
+                        Content="RELAUNCH AS ADMIN"
+                        Style="{StaticResource HudWarningButtonStyle}"
+                        Command="{Binding RelaunchAsAdminCommand}"
+                        VerticalAlignment="Center"
+                        Margin="12,0,8,0" />
+
+                <!-- Dismiss Button -->
+                <Button Grid.Column="3"
+                        Content="✕"
+                        Style="{StaticResource HudSecondaryButtonStyle}"
+                        Command="{Binding DismissBannerCommand}"
+                        Padding="8,6"
+                        VerticalAlignment="Center" />
+            </Grid>
+        </Border>
+
+        <!-- 3. Status Notification Banner -->
+        <Border Grid.Row="3"
+                Margin="0,0,0,16"
+                Background="{DynamicResource BrushPanelSurface}"
+                BorderBrush="{DynamicResource BrushAccentPrimary}"
+                BorderThickness="1"
+                CornerRadius="6"
+                Padding="14,10"
+                Visibility="{Binding IsStatusVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0"
+                           Text="{Binding StatusMessage}"
+                           FontSize="11"
+                           FontFamily="{DynamicResource FontFamilyNumeric}"
+                           Foreground="{DynamicResource BrushAccentPrimary}"
+                           VerticalAlignment="Center" />
+
+                <Button Grid.Column="1"
+                        Content="✕"
+                        Style="{StaticResource HudSecondaryButtonStyle}"
+                        Command="{Binding DismissStatusNotificationCommand}"
+                        Padding="6,2"
+                        VerticalAlignment="Center" />
+            </Grid>
+        </Border>
+
+        <!-- 4. Toolbar & Filter Section -->
+        <Grid Grid.Row="4" Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Search / Filter Input -->
+            <Border Grid.Column="0"
+                    Background="{DynamicResource BrushPanelSurface}"
+                    BorderBrush="{DynamicResource BrushAccentPrimary}"
+                    BorderThickness="1"
+                    CornerRadius="6"
+                    Padding="10,6"
+                    Margin="0,0,12,0">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <Path Grid.Column="0"
+                          Data="{StaticResource IconSearchGeometry}"
+                          Stroke="{DynamicResource BrushTextSecondary}"
+                          StrokeThickness="1.5"
+                          Width="14" Height="14"
+                          Stretch="Uniform"
+                          VerticalAlignment="Center"
+                          Margin="0,0,8,0" />
+
+                    <TextBox Grid.Column="1"
+                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             Foreground="{DynamicResource BrushTextPrimary}"
+                             FontFamily="{DynamicResource FontFamilyUI}"
+                             FontSize="12"
+                             VerticalAlignment="Center" />
+
+                    <TextBlock Grid.Column="1"
+                               Text="Filter startup entries by name, command, location or rating..."
+                               IsHitTestVisible="False"
+                               Foreground="{DynamicResource BrushTextSecondary}"
+                               FontFamily="{DynamicResource FontFamilyUI}"
+                               FontSize="12"
+                               VerticalAlignment="Center">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SearchText}" Value="">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding SearchText}" Value="{x:Null}">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Grid>
+            </Border>
+
+            <!-- Refresh Button -->
+            <Button Grid.Column="1"
+                    Content="REFRESH MATRIX"
+                    Style="{StaticResource HudSecondaryButtonStyle}"
+                    Command="{Binding RefreshCommand}"
+                    Padding="16,8" />
+        </Grid>
+
+        <!-- 5. Scrollable Startup Entries List -->
+        <ScrollViewer Grid.Row="5"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <ItemsControl ItemsSource="{Binding FilteredEntries}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type vm:StartupEntryItemViewModel}">
+                        <Border Margin="0,0,0,12"
+                                Background="{DynamicResource BrushPanelSurface}"
+                                BorderBrush="{DynamicResource BrushAccentPrimary}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="16,14">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <!-- Main Row -->
+                                    <RowDefinition Height="Auto" />
+                                    <!-- Expandable Breakdown Detail Drawer -->
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+
+                                <!-- 0. Main Row Content -->
+                                <Grid Grid.Row="0">
+                                    <Grid.ColumnDefinitions>
+                                        <!-- Toggle Switch -->
+                                        <ColumnDefinition Width="Auto" />
+                                        <!-- Entry Info -->
+                                        <ColumnDefinition Width="*" />
+                                        <!-- Score & Split Meter -->
+                                        <ColumnDefinition Width="220" />
+                                        <!-- Action / Expand Button -->
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Toggle CheckBox -->
+                                    <CheckBox Grid.Column="0"
+                                              IsChecked="{Binding IsEnabled, Mode=TwoWay}"
+                                              Style="{StaticResource HudToggleStyle}"
+                                              VerticalAlignment="Center"
+                                              Margin="0,0,16,0"
+                                              ToolTip="Enable or disable startup execution" />
+
+                                    <!-- Entry Info (Name, Source Badge, Location/Command) -->
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,16,0">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding Name}"
+                                                       FontSize="14"
+                                                       FontWeight="Bold"
+                                                       FontFamily="{DynamicResource FontFamilyUI}"
+                                                       Foreground="{DynamicResource BrushTextPrimary}" />
+
+                                            <!-- Source Badge -->
+                                            <Border Margin="10,0,0,0"
+                                                    Background="#102535"
+                                                    BorderBrush="{DynamicResource BrushAccentPrimary}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="4"
+                                                    Padding="6,2"
+                                                    VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding SourceTypeDisplay}"
+                                                           FontSize="9"
+                                                           FontFamily="{DynamicResource FontFamilyNumeric}"
+                                                           Foreground="{DynamicResource BrushAccentPrimary}" />
+                                            </Border>
+
+                                            <!-- Live Running Indicator -->
+                                            <Border Margin="6,0,0,0"
+                                                    Background="#0A3018"
+                                                    BorderBrush="#00E599"
+                                                    BorderThickness="1"
+                                                    CornerRadius="4"
+                                                    Padding="6,2"
+                                                    VerticalAlignment="Center"
+                                                    Visibility="{Binding IsRunning, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                <TextBlock Text="RUNNING NOW"
+                                                           FontSize="8"
+                                                           FontWeight="Bold"
+                                                           FontFamily="{DynamicResource FontFamilyNumeric}"
+                                                           Foreground="#00E599" />
+                                            </Border>
+                                        </StackPanel>
+
+                                        <TextBlock Text="{Binding Command}"
+                                                   FontSize="10"
+                                                   FontFamily="{DynamicResource FontFamilyNumeric}"
+                                                   Foreground="{DynamicResource BrushTextSecondary}"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   Margin="0,4,0,0" />
+                                    </StackPanel>
+
+                                    <!-- Score Badge & Dual Progress Meter -->
+                                    <Grid Grid.Column="2" VerticalAlignment="Center" Margin="0,0,16,0">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+
+                                        <!-- Score Header & Rating Label -->
+                                        <Grid Grid.Row="0" Margin="0,0,0,4">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding Score}"
+                                                           FontSize="18"
+                                                           FontWeight="Bold"
+                                                           FontFamily="{DynamicResource FontFamilyNumeric}"
+                                                           Foreground="{Binding ImpactBrush}" />
+                                                <TextBlock Text="/100"
+                                                           FontSize="10"
+                                                           FontFamily="{DynamicResource FontFamilyNumeric}"
+                                                           Foreground="{DynamicResource BrushTextSecondary}"
+                                                           VerticalAlignment="Bottom"
+                                                           Margin="2,0,0,2" />
+                                            </StackPanel>
+
+                                            <Border HorizontalAlignment="Right"
+                                                    BorderBrush="{Binding ImpactBrush}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="4"
+                                                    Padding="6,2">
+                                                <TextBlock Text="{Binding ImpactRating}"
+                                                           FontSize="9"
+                                                           FontWeight="Bold"
+                                                           FontFamily="{DynamicResource FontFamilyNumeric}"
+                                                           Foreground="{Binding ImpactBrush}" />
+                                            </Border>
+                                        </Grid>
+
+                                        <!-- Dual-Color Split Meter Bar (Cyan = Time, Magenta = Resource) -->
+                                        <Border Grid.Row="1"
+                                                Height="6"
+                                                Width="180"
+                                                HorizontalAlignment="Left"
+                                                CornerRadius="3"
+                                                Background="#111B24"
+                                                ClipToBounds="True">
+                                            <StackPanel Orientation="Horizontal">
+                                                <!-- Time Component (Cyan) -->
+                                                <Rectangle Width="{Binding TimeBarWidth}" Height="6" Fill="{DynamicResource BrushAccentPrimary}" />
+                                                <!-- Resource Component (Magenta) -->
+                                                <Rectangle Width="{Binding ResourceBarWidth}" Height="6" Fill="{DynamicResource BrushAccentSecondary}" />
+                                            </StackPanel>
+                                        </Border>
+
+                                        <!-- Ratio Subtitle -->
+                                        <Grid Grid.Row="2" Margin="0,4,0,0">
+                                            <TextBlock Text="{Binding TimeScore, StringFormat='TIME: {0:0.0} pts'}"
+                                                       FontSize="8"
+                                                       FontFamily="{DynamicResource FontFamilyNumeric}"
+                                                       Foreground="{DynamicResource BrushAccentPrimary}"
+                                                       HorizontalAlignment="Left" />
+                                            <TextBlock Text="{Binding ResourceScore, StringFormat='RES: {0:0.0} pts'}"
+                                                       FontSize="8"
+                                                       FontFamily="{DynamicResource FontFamilyNumeric}"
+                                                       Foreground="{DynamicResource BrushAccentSecondary}"
+                                                       HorizontalAlignment="Right" />
+                                        </Grid>
+                                    </Grid>
+
+                                    <!-- Expand / Explain Button -->
+                                    <Button Grid.Column="3"
+                                            Content="EXPLAIN ▾"
+                                            Style="{StaticResource HudSecondaryButtonStyle}"
+                                            Command="{Binding ToggleExpandCommand}"
+                                            VerticalAlignment="Center"
+                                            Padding="10,6" />
+                                </Grid>
+
+                                <!-- 1. Expandable Breakdown Drawer (PRD §8.3 Explainability) -->
+                                <Border Grid.Row="1"
+                                        Margin="0,14,0,0"
+                                        Padding="16,12"
+                                        Background="{DynamicResource BrushBackgroundBase}"
+                                        BorderBrush="{DynamicResource BrushAccentPrimary}"
+                                        BorderThickness="1"
+                                        CornerRadius="6"
+                                        Visibility="{Binding IsExpanded, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <StackPanel>
+                                        <!-- Header line -->
+                                        <TextBlock Text="MEASURED IMPACT BREAKDOWN // PRD §8.3 EXPLAINABILITY"
+                                                   FontSize="10"
+                                                   FontWeight="Bold"
+                                                   FontFamily="{DynamicResource FontFamilyNumeric}"
+                                                   Foreground="{DynamicResource BrushAccentPrimary}"
+                                                   Margin="0,0,0,10" />
+
+                                        <!-- 3 Metric Telemetry Blocks -->
+                                        <Grid Margin="0,0,0,12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- Metric 1: Time Window -->
+                                            <Border Grid.Column="0"
+                                                    Background="{DynamicResource BrushPanelSurface}"
+                                                    BorderBrush="{DynamicResource BrushAccentPrimary}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="4"
+                                                    Padding="10,8"
+                                                    Margin="0,0,8,0">
+                                                <StackPanel>
+                                                    <TextBlock Text="INIT DURATION"
+                                                               FontSize="9"
+                                                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                                                               Foreground="{DynamicResource BrushTextSecondary}" />
+                                                    <TextBlock Text="{Binding ActiveDurationSeconds, StringFormat='{}{0:0.0}s active'}"
+                                                               FontSize="13"
+                                                               FontWeight="Bold"
+                                                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                                                               Foreground="{DynamicResource BrushTextPrimary}"
+                                                               Margin="0,2,0,0" />
+                                                    <TextBlock Text="{Binding BootDelaySeconds, StringFormat='Delay: {0:0.0}s'}"
+                                                               FontSize="8"
+                                                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                                                               Foreground="{DynamicResource BrushTextSecondary}"
+                                                               Margin="0,1,0,0" />
+                                                </StackPanel>
+                                            </Border>
+
+                                            <!-- Metric 2: CPU Time -->
+                                            <Border Grid.Column="1"
+                                                    Background="{DynamicResource BrushPanelSurface}"
+                                                    BorderBrush="{DynamicResource BrushAccentSecondary}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="4"
+                                                    Padding="10,8"
+                                                    Margin="0,0,8,0">
+                                                <StackPanel>
+                                                    <TextBlock Text="CPU CONSUMPTION"
+                                                               FontSize="9"
+                                                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                                                               Foreground="{DynamicResource BrushTextSecondary}" />
+                                                    <TextBlock Text="{Binding CpuTimeSeconds, StringFormat='{}{0:0.00}s'}"
+                                                               FontSize="13"
+                                                               FontWeight="Bold"
+                                                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                                                               Foreground="{DynamicResource BrushAccentSecondary}"
+                                                               Margin="0,2,0,0" />
+                                                    <TextBlock Text="Core load share"
+                                                               FontSize="8"
+                                                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                                                               Foreground="{DynamicResource BrushTextSecondary}"
+                                                               Margin="0,1,0,0" />
+                                                </StackPanel>
+                                            </Border>
+
+                                            <!-- Metric 3: Disk I/O -->
+                                            <Border Grid.Column="2"
+                                                    Background="{DynamicResource BrushPanelSurface}"
+                                                    BorderBrush="{DynamicResource BrushAccentPrimary}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="4"
+                                                    Padding="10,8">
+                                                <StackPanel>
+                                                    <TextBlock Text="STORAGE I/O LOAD"
+                                                               FontSize="9"
+                                                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                                                               Foreground="{DynamicResource BrushTextSecondary}" />
+                                                    <TextBlock Text="{Binding IoDisplay}"
+                                                               FontSize="13"
+                                                               FontWeight="Bold"
+                                                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                                                               Foreground="{DynamicResource BrushAccentPrimary}"
+                                                               Margin="0,2,0,0" />
+                                                    <TextBlock Text="Read + Write throughput"
+                                                               FontSize="8"
+                                                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                                                               Foreground="{DynamicResource BrushTextSecondary}"
+                                                               Margin="0,1,0,0" />
+                                                </StackPanel>
+                                            </Border>
+                                        </Grid>
+
+                                        <!-- Human-readable explanation sentence -->
+                                        <Border Background="{DynamicResource BrushPanelSurface}"
+                                                BorderBrush="{DynamicResource BrushBorderDefault}"
+                                                BorderThickness="1"
+                                                CornerRadius="4"
+                                                Padding="10,8"
+                                                Margin="0,0,0,8">
+                                            <TextBlock Text="{Binding Summary}"
+                                                       FontSize="11"
+                                                       FontFamily="{DynamicResource FontFamilyUI}"
+                                                       Foreground="{DynamicResource BrushTextPrimary}"
+                                                       TextWrapping="Wrap" />
+                                        </Border>
+
+                                        <!-- Target location path -->
+                                        <TextBlock Text="{Binding Location, StringFormat='KEY LOCATION: {0}'}"
+                                                   FontSize="9"
+                                                   FontFamily="{DynamicResource FontFamilyNumeric}"
+                                                   Foreground="{DynamicResource BrushTextSecondary}"
+                                                   TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

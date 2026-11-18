@@ -18,6 +18,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     public DashboardViewModel Dashboard { get; }
     public ProcessListViewModel ProcessList { get; }
     public PerformanceViewModel Performance { get; }
+    public StartupViewModel Startup { get; }
     public SettingsViewModel Settings { get; }
 
     public event Action? RequestRestoreWindow;
@@ -39,7 +40,9 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         ProcessMonitorCoordinator coordinator,
         ISettingsService settingsService,
         IProcessActionService actionService,
-        TrayIconService trayIconService)
+        TrayIconService trayIconService,
+        IStartupScoreEngine startupScoreEngine,
+        IProcessMonitorService monitorService)
     {
         _coordinator = coordinator ?? throw new ArgumentNullException(nameof(coordinator));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
@@ -49,12 +52,16 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         Dashboard = new DashboardViewModel();
         ProcessList = new ProcessListViewModel(_actionService);
         Performance = new PerformanceViewModel();
+        Startup = new StartupViewModel(startupScoreEngine, monitorService);
         Settings = new SettingsViewModel(_settingsService, _coordinator);
 
         _coordinator.UpdateReceived += OnMonitoringUpdateReceived;
 
         _trayIconService.RestoreRequested += () => RequestRestoreWindow?.Invoke();
         _trayIconService.ExitRequested += () => RequestExitApplication?.Invoke();
+
+        // Initial background load of startup matrix
+        _ = Startup.LoadEntriesAsync();
     }
 
     public async Task StartMonitoringAsync(CancellationToken cancellationToken = default)
