@@ -6,7 +6,9 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Effects;
 using System.Windows.Media.Imaging;
-using NeuralTask.App.Views;
+using Microsoft.Extensions.DependencyInjection;
+using NeuralTask.App.Services;
+using NeuralTask.App.ViewModels;
 using NeuralTask.Theming;
 using Wpf.Ui.Controls;
 
@@ -17,13 +19,63 @@ public partial class MainWindow : FluentWindow
     private int _currentTabIndex = 0;
     private Storyboard? _ambientStoryboard;
 
-    public MainWindow()
+    public MainWindowViewModel ViewModel { get; }
+
+    public MainWindow(MainWindowViewModel? viewModel = null)
     {
         InitializeComponent();
+
+        ViewModel = viewModel ?? AppHost.Services.GetRequiredService<MainWindowViewModel>();
+        DataContext = ViewModel;
+
+        ViewDashboard.DataContext = ViewModel.Dashboard;
+        ViewProcesses.DataContext = ViewModel.ProcessList;
+        ViewSettings.DataContext = ViewModel.Settings;
+
         SetupAmbientAnimation();
-        SettingsView.AmbientAnimationToggled += OnAmbientAnimationToggled;
+        ViewModel.Settings.PropertyChanged += OnSettingsPropertyChanged;
         ThemeManager.ThemeChanged += OnThemeChanged;
+
+        Loaded += async (_, _) =>
+        {
+            try
+            {
+                await ViewModel.StartMonitoringAsync();
+            }
+            catch
+            {
+            }
+        };
+
+        Closed += async (_, _) =>
+        {
+            try
+            {
+                await ViewModel.StopMonitoringAsync();
+            }
+            catch
+            {
+            }
+        };
+
         SelectTab(0);
+    }
+
+    private void OnSettingsPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(SettingsViewModel.IsAmbientAnimationEnabled))
+        {
+            var isEnabled = ViewModel.Settings.IsAmbientAnimationEnabled;
+            AmbientAnimationCanvas.Visibility = isEnabled ? Visibility.Visible : Visibility.Collapsed;
+            if (isEnabled)
+            {
+                _ambientStoryboard?.Resume();
+            }
+            else
+            {
+                _ambientStoryboard?.Pause();
+            }
+        }
     }
 
     private void SetupAmbientAnimation()
@@ -59,19 +111,6 @@ public partial class MainWindow : FluentWindow
         _ambientStoryboard.Begin();
     }
 
-    private void OnAmbientAnimationToggled(bool isEnabled)
-    {
-        AmbientAnimationCanvas.Visibility = isEnabled ? Visibility.Visible : Visibility.Collapsed;
-        if (isEnabled)
-        {
-            _ambientStoryboard?.Resume();
-        }
-        else
-        {
-            _ambientStoryboard?.Pause();
-        }
-    }
-
     private void OnThemeChanged(object? sender, ThemeMode theme)
     {
         // Re-apply nav button highlighting to pick up refreshed theme dynamic brushes
@@ -85,6 +124,7 @@ public partial class MainWindow : FluentWindow
     public void SelectTab(int index)
     {
         _currentTabIndex = index;
+        ViewModel.SelectedTabIndex = index;
 
         // Reset all indicators
         IndicatorDashboard.Visibility = index == 0 ? Visibility.Visible : Visibility.Collapsed;
@@ -146,36 +186,39 @@ public partial class MainWindow : FluentWindow
     {
         Directory.CreateDirectory(outputDir);
 
-        // 1. Dark Theme - Dashboard
+        // Wait for live monitoring to collect initial real metrics
+        await Task.Delay(1200);
+
+        // 1. Dark Theme - Dashboard (Live metrics)
         ThemeManager.ApplyTheme(ThemeMode.Dark);
         SelectTab(0);
-        await Task.Delay(300);
+        await Task.Delay(400);
         SaveBitmap(Path.Combine(outputDir, "screen_dashboard_dark.png"));
 
-        // 2. Dark Theme - Processes
+        // 2. Dark Theme - Processes (Live processes)
         SelectTab(1);
-        await Task.Delay(300);
+        await Task.Delay(400);
         SaveBitmap(Path.Combine(outputDir, "screen_processes_dark.png"));
 
         // 3. Dark Theme - Settings
         SelectTab(2);
-        await Task.Delay(300);
+        await Task.Delay(400);
         SaveBitmap(Path.Combine(outputDir, "screen_settings_dark.png"));
 
         // 4. Light Theme - Dashboard
         ThemeManager.ApplyTheme(ThemeMode.Light);
         SelectTab(0);
-        await Task.Delay(300);
+        await Task.Delay(400);
         SaveBitmap(Path.Combine(outputDir, "screen_dashboard_light.png"));
 
         // 5. Light Theme - Processes
         SelectTab(1);
-        await Task.Delay(300);
+        await Task.Delay(400);
         SaveBitmap(Path.Combine(outputDir, "screen_processes_light.png"));
 
         // 6. Light Theme - Settings
         SelectTab(2);
-        await Task.Delay(300);
+        await Task.Delay(400);
         SaveBitmap(Path.Combine(outputDir, "screen_settings_light.png"));
 
         // Revert to Dark

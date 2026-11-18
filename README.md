@@ -21,11 +21,12 @@ Per the project roadmap and environment capability checks:
 
 ```
 /src
-  /NeuralTask.App         -> Main WPF executable, Mica-enabled HUD window, DI & UI routing
-  /NeuralTask.Core        -> Shared business logic, telemetry models, and future OS interop
-  /NeuralTask.Theming     -> Centralized design tokens (Dark Hologram & Light Holo-Glass), brushes, fonts
+  /NeuralTask.App         -> Main WPF executable, Mica/Acrylic HUD shell, DI (Microsoft.Extensions.DependencyInjection), ViewModels, Views
+  /NeuralTask.Core        -> OS telemetry engine: ProcessMonitorService, SystemMetricsService, ProcessTreeBuilder, Win32 P/Invoke interop
+  /NeuralTask.Theming     -> Centralized design tokens (Dark Hologram & Light Holo-Glass), brushes, fonts, theme switching engine
+  /NeuralTask.Harness     -> Live terminal CLI harness for headless diagnostics and verification
 /tests
-  /NeuralTask.Core.Tests  -> Automated xUnit test suite for telemetry and process engines
+  /NeuralTask.Core.Tests  -> Automated xUnit test suite (16 tests covering CPU deltas, orphan trees, collections, telemetry, buffers)
 ```
 
 ### Design Token Architecture (`NeuralTask.Theming`)
@@ -33,6 +34,26 @@ Color and typography tokens strictly adhere to PRD §13 specifications:
 * **Dark (Hologram):** Deep space canvas (`#0A0E14`), translucent panel surface (`rgba(16,20,30,0.65)`), vibrant electric cyan accent (`#00E5FF`), and secondary violet/magenta (`#B14EFF`).
 * **Light (Holo-Glass):** High-contrast cleanroom canvas (`#F4F6FA`), frosty acrylic (`rgba(255,255,255,0.65)`), deep cyan accent (`#0091B3`), and violet accent (`#7A2FD1`).
 * **Zero-Hardcoding Guarantee:** The UI layer (`NeuralTask.App`) consumes semantic resource keys (`BrushBackgroundBase`, `BrushAccentPrimary`, `FontFamilyNumeric`, etc.) without hardcoded hex values.
+
+---
+
+## Live Monitoring Architecture (Phase 3)
+
+### 1. Metric Accuracy & Hardware Measurement Sources
+NeuralTask prioritizes metric precision over misleading approximations:
+* **System CPU Load:** Measured via Win32 `GetSystemTimes` calculating genuine delta ratios:
+  $$\text{CPU \%} = 1.0 - \frac{\Delta\text{IdleTime}}{\Delta\text{KernelTime} + \Delta\text{UserTime}}$$
+* **Physical System Memory:** Measured via `GlobalMemoryStatusEx` (`MEMORYSTATUSEX`) reporting total physical RAM vs. committed load percentage.
+* **System Network Throughput:** Computed from active IPv4 network interfaces via `NetworkInterface.GetAllNetworkInterfaces()`, aggregating differential byte receipt/transmission rates.
+* **Process File/Disk I/O:** Derived from `GetProcessIoCounters` measuring delta `ReadTransferCount + WriteTransferCount`. Accurately displayed as **Process I/O Rate** rather than false physical disk transfer.
+* **Per-Process Network Traffic:** Accurately surfaced as `—` (unavailable). Under Windows, measuring per-process network traffic requires a kernel NDIS filter driver or high-overhead ETW packet traces (`Microsoft-Windows-Kernel-Network`); Win32 `IO_COUNTERS.OtherTransferCount` measures device/socket control handles, NOT network bandwidth, and is never misrepresented as network traffic.
+* **Process Working Set & CPU %:** Computed using `CreateToolhelp32Snapshot` and multi-sample `GetProcessTimes` deltas normalized across logical CPU cores.
+
+### 2. Threading & Performance Model
+* **Drop-Frame UI Throttling:** `ProcessMonitorCoordinator` utilizes non-blocking `Interlocked.CompareExchange` locks to dispatch snapshots onto the WPF UI thread. If the UI is rendering or processing an expensive layout pass when a new sample arrives, the coordinator drops the intermediate UI frame rather than queuing stale operations.
+* **Recycled ObservableCollection Sync:** Instead of clearing and re-allocating 300+ UI row items on every tick, `ProcessListViewModel` executes an in-place collection synchronization algorithm (`SyncObservableCollection`) keyed by PID. Existing items update their bound properties in-place, preserving selection state, keyboard focus, and virtual scroll offsets.
+* **Bounded History Ring Buffers:** Waveform chart data is stored in a fixed 60-sample ring buffer (`PerformanceHistoryBuffer`) generating normalized WPF `PointCollection`s without unbounded memory growth or garbage collector pressure.
+* **Configurable Sampling Cadence:** The sampling interval can be dynamically adjusted between 500ms (High Performance), 1000ms (Balanced), and 2000ms (Power Saver) via Settings or JSON configuration (`%LOCALAPPDATA%\NeuralTask\settings.json`) without restarting the sampling loop.
 
 ---
 

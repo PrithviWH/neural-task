@@ -49,6 +49,15 @@ internal static class Win32Native
         out PROCESS_MEMORY_COUNTERS_EX counters,
         uint size);
 
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern bool GetSystemTimes(
+        out long lpIdleTime,
+        out long lpKernelTime,
+        out long lpUserTime);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern bool GlobalMemoryStatusEx(ref MEMORYSTATUSEX lpBuffer);
+
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
     public struct PROCESSENTRY32
     {
@@ -91,5 +100,19 @@ internal static class Win32Native
         public UIntPtr PagefileUsage;
         public UIntPtr PeakPagefileUsage;
         public UIntPtr PrivateUsage;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct MEMORYSTATUSEX
+    {
+        public uint dwLength;
+        public uint dwMemoryLoad;
+        public ulong ullTotalPhys;
+        public ulong ullAvailPhys;
+        public ulong ullTotalPageFile;
+        public ulong ullAvailPageFile;
+        public ulong ullTotalVirtual;
+        public ulong ullAvailVirtual;
+        public ulong ullAvailExtendedVirtual;
     }
 }

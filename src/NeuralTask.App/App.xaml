@@ -10,6 +10,8 @@
                 <ResourceDictionary Source="pack://application:,,,/NeuralTask.Theming;component/Themes/DarkTheme.xaml" />
                 <ResourceDictionary Source="Resources/VectorIcons.xaml" />
             </ResourceDictionary.MergedDictionaries>
+
+            <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>
