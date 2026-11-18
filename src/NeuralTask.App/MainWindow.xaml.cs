@@ -22,6 +22,12 @@ public partial class MainWindow : FluentWindow
     private Storyboard? _ambientStoryboard;
     private bool _isExplicitExit = false;
 
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
     public MainWindowViewModel ViewModel { get; }
 
     public MainWindow(MainWindowViewModel? viewModel = null)
@@ -66,6 +72,14 @@ public partial class MainWindow : FluentWindow
             Topmost = true;
             Activate();
             Focus();
+
+            var handle = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+            if (handle != IntPtr.Zero)
+            {
+                ShowWindow(handle, 9); // SW_RESTORE
+                SetForegroundWindow(handle);
+            }
+
             try
             {
                 await ViewModel.StartMonitoringAsync();
@@ -96,6 +110,13 @@ public partial class MainWindow : FluentWindow
         Activate();
         Focus();
         Topmost = true;
+
+        var handle = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+        if (handle != IntPtr.Zero)
+        {
+            ShowWindow(handle, 9); // SW_RESTORE
+            SetForegroundWindow(handle);
+        }
     }
 
     public void ExitApplication()
