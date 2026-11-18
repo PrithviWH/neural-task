@@ -37,6 +37,31 @@
             </StackPanel>
 
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <!-- Re-Scan Heuristics Button (PRD §8.4 / §9) -->
+                <Border Background="{DynamicResource BrushPanelSurface}"
+                        BorderBrush="{DynamicResource BrushAccentWarning}"
+                        BorderThickness="1"
+                        CornerRadius="6"
+                        Padding="12,6"
+                        Margin="0,0,10,0"
+                        Cursor="Hand"
+                        ToolTip="Trigger Local Heuristic Audit Re-Scan (Not An Antivirus)"
+                        MouseDown="OnReScanClick">
+                    <StackPanel Orientation="Horizontal">
+                        <Path Data="{StaticResource IconScanGeometry}"
+                              Stroke="{DynamicResource BrushAccentWarning}"
+                              StrokeThickness="1.5"
+                              Width="14" Height="14"
+                              Stretch="Uniform"
+                              Margin="0,0,6,0" />
+                        <TextBlock Text="RE-SCAN HEURISTICS"
+                                   FontSize="11"
+                                   FontWeight="SemiBold"
+                                   FontFamily="{DynamicResource FontFamilyNumeric}"
+                                   Foreground="{DynamicResource BrushAccentWarning}" />
+                    </StackPanel>
+                </Border>
+
                 <!-- Kill Single Process Button -->
                 <Border Background="{DynamicResource BrushPanelSurface}"
                         BorderBrush="{DynamicResource BrushAccentPrimary}"
@@ -156,6 +181,35 @@
                                FontSize="10"
                                FontFamily="{DynamicResource FontFamilyNumeric}"
                                Foreground="{DynamicResource BrushTextSecondary}"
+                               VerticalAlignment="Center" />
+                </Grid>
+            </Border>
+
+            <!-- PRD §8.4 Local Heuristics Disclaimer & Anomaly Counter -->
+            <Border Background="{DynamicResource BrushBackgroundBase}"
+                    BorderBrush="{DynamicResource BrushAccentWarning}"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    Padding="10,5"
+                    Margin="0,8,0,0">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0"
+                               Text="LOCAL HEURISTIC TRIAGE // FLAGS ARE ANOMALY SIGNALS, EXPLICITLY NOT AN ANTIVIRUS OR MALWARE SCANNER (PRD §8.4)"
+                               FontSize="10"
+                               FontWeight="SemiBold"
+                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                               Foreground="{DynamicResource BrushAccentWarning}"
+                               VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding FlaggedCountDisplay}"
+                               FontSize="10"
+                               FontWeight="Bold"
+                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                               Foreground="{DynamicResource BrushAccentPrimary}"
                                VerticalAlignment="Center" />
                 </Grid>
             </Border>
@@ -315,7 +369,7 @@
                                     <ColumnDefinition Width="1.5*" />
                                 </Grid.ColumnDefinitions>
 
-                                <!-- Process Name & Denied Badge -->
+                                <!-- Process Name & Heuristic Flag Badge & Denied Badge -->
                                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                                     <TextBlock Text="{Binding Name}"
                                                FontSize="13"
@@ -323,6 +377,44 @@
                                                FontFamily="{DynamicResource FontFamilyUI}"
                                                Foreground="{DynamicResource BrushTextPrimary}" />
 
+                                    <!-- Subtle Glowing Heuristic Flag Badge (PRD §6.2) -->
+                                    <Border Background="{DynamicResource BrushBackgroundBase}"
+                                            BorderBrush="{Binding FlagBadgeBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="4"
+                                            Padding="5,1.5"
+                                            Margin="8,0,0,0"
+                                            Cursor="Help"
+                                            ToolTipService.InitialShowDelay="50"
+                                            ToolTipService.ShowDuration="20000"
+                                            Visibility="{Binding HasFlags, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <Border.ToolTip>
+                                            <ToolTip Background="{DynamicResource BrushBackgroundBase}"
+                                                     BorderBrush="{DynamicResource BrushAccentWarning}"
+                                                     BorderThickness="1">
+                                                <StackPanel Margin="6,4">
+                                                    <TextBlock Text="LOCAL HEURISTIC TRIAGE (NOT MALWARE DETECTION)"
+                                                               FontWeight="Bold" FontSize="10"
+                                                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                                                               Foreground="{DynamicResource BrushAccentWarning}"
+                                                               Margin="0,0,0,4" />
+                                                    <TextBlock Text="{Binding FlagTooltip}"
+                                                               FontSize="11" FontFamily="{DynamicResource FontFamilyUI}"
+                                                               Foreground="{DynamicResource BrushTextPrimary}" />
+                                                </StackPanel>
+                                            </ToolTip>
+                                        </Border.ToolTip>
+                                        <Border.Effect>
+                                            <DropShadowEffect BlurRadius="6" ShadowDepth="0" Color="{DynamicResource ColorAccentWarning}" Opacity="0.6" />
+                                        </Border.Effect>
+                                        <TextBlock Text="{Binding FlagBadgeText}"
+                                                   FontSize="9"
+                                                   FontWeight="Bold"
+                                                   FontFamily="{DynamicResource FontFamilyNumeric}"
+                                                   Foreground="{Binding FlagBadgeBrush}" />
+                                    </Border>
+
+                                    <!-- Protected System Process Badge -->
                                     <Border Background="{DynamicResource BrushBackgroundBase}"
                                             BorderBrush="{DynamicResource BrushWarning}"
                                             BorderThickness="1"
@@ -387,6 +479,28 @@
                         </DataTemplate>
                     </ListView.ItemTemplate>
                 </ListView>
+
+                <!-- Overlay Scanner Sweep Beam (PRD §9) -->
+                <Canvas Grid.Row="1" x:Name="ScannerSweepCanvas" IsHitTestVisible="False" ClipToBounds="True">
+                    <Rectangle x:Name="ScannerBeam"
+                               Height="3"
+                               Width="1200"
+                               Opacity="0">
+                        <Rectangle.Fill>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                <GradientStop Color="#00000000" Offset="0" />
+                                <GradientStop Color="{DynamicResource ColorAccentPrimary}" Offset="0.5" />
+                                <GradientStop Color="#00000000" Offset="1" />
+                            </LinearGradientBrush>
+                        </Rectangle.Fill>
+                        <Rectangle.Effect>
+                            <DropShadowEffect BlurRadius="12" ShadowDepth="0" Color="{DynamicResource ColorAccentPrimary}" Opacity="0.9" />
+                        </Rectangle.Effect>
+                        <Rectangle.RenderTransform>
+                            <TranslateTransform x:Name="ScannerTransform" X="0" Y="0" />
+                        </Rectangle.RenderTransform>
+                    </Rectangle>
+                </Canvas>
             </Grid>
         </Border>
 

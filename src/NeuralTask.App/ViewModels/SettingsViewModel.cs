@@ -8,12 +8,60 @@ public class SettingsViewModel : ViewModelBase
 {
     private readonly ISettingsService _settingsService;
     private readonly ProcessMonitorCoordinator _coordinator;
+    private readonly NeuralTask.Core.Services.IHeuristicFlagEngine? _heuristicEngine;
 
     private ThemeMode _selectedTheme;
     private int _selectedIntervalMs;
     private bool _isAmbientAnimationEnabled;
     private bool _isMinimizeToTrayEnabled;
     private string _trayIconMetric = "CPU";
+    private NeuralTask.Core.Services.HeuristicSensitivity _heuristicSensitivity = NeuralTask.Core.Services.HeuristicSensitivity.Conservative;
+
+    public NeuralTask.Core.Services.HeuristicSensitivity HeuristicSensitivity
+    {
+        get => _heuristicSensitivity;
+        set
+        {
+            if (SetProperty(ref _heuristicSensitivity, value))
+            {
+                if (_heuristicEngine != null)
+                {
+                    _heuristicEngine.Sensitivity = value;
+                }
+                Persist();
+                OnPropertyChanged(nameof(IsSensitivityConservative));
+                OnPropertyChanged(nameof(IsSensitivityStandard));
+                OnPropertyChanged(nameof(IsSensitivityAggressive));
+            }
+        }
+    }
+
+    public bool IsSensitivityConservative
+    {
+        get => _heuristicSensitivity == NeuralTask.Core.Services.HeuristicSensitivity.Conservative;
+        set
+        {
+            if (value) HeuristicSensitivity = NeuralTask.Core.Services.HeuristicSensitivity.Conservative;
+        }
+    }
+
+    public bool IsSensitivityStandard
+    {
+        get => _heuristicSensitivity == NeuralTask.Core.Services.HeuristicSensitivity.Standard;
+        set
+        {
+            if (value) HeuristicSensitivity = NeuralTask.Core.Services.HeuristicSensitivity.Standard;
+        }
+    }
+
+    public bool IsSensitivityAggressive
+    {
+        get => _heuristicSensitivity == NeuralTask.Core.Services.HeuristicSensitivity.Aggressive;
+        set
+        {
+            if (value) HeuristicSensitivity = NeuralTask.Core.Services.HeuristicSensitivity.Aggressive;
+        }
+    }
 
     public bool IsMinimizeToTrayEnabled
     {
@@ -153,10 +201,14 @@ public class SettingsViewModel : ViewModelBase
         }
     }
 
-    public SettingsViewModel(ISettingsService settingsService, ProcessMonitorCoordinator coordinator)
+    public SettingsViewModel(
+        ISettingsService settingsService,
+        ProcessMonitorCoordinator coordinator,
+        NeuralTask.Core.Services.IHeuristicFlagEngine? heuristicEngine = null)
     {
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         _coordinator = coordinator ?? throw new ArgumentNullException(nameof(coordinator));
+        _heuristicEngine = heuristicEngine;
 
         var initial = _settingsService.CurrentSettings;
         _selectedTheme = initial.Theme;
@@ -164,6 +216,12 @@ public class SettingsViewModel : ViewModelBase
         _isAmbientAnimationEnabled = initial.IsAmbientAnimationEnabled;
         _isMinimizeToTrayEnabled = initial.IsMinimizeToTrayEnabled;
         _trayIconMetric = initial.TrayIconMetric;
+        _heuristicSensitivity = initial.HeuristicSensitivity;
+
+        if (_heuristicEngine != null)
+        {
+            _heuristicEngine.Sensitivity = _heuristicSensitivity;
+        }
 
         // Apply loaded initial settings
         ThemeManager.ApplyTheme(_selectedTheme);
@@ -177,7 +235,8 @@ public class SettingsViewModel : ViewModelBase
             RefreshIntervalMs: _selectedIntervalMs,
             IsAmbientAnimationEnabled: _isAmbientAnimationEnabled,
             IsMinimizeToTrayEnabled: _isMinimizeToTrayEnabled,
-            TrayIconMetric: _trayIconMetric
+            TrayIconMetric: _trayIconMetric,
+            HeuristicSensitivity: _heuristicSensitivity
         ));
     }
 }

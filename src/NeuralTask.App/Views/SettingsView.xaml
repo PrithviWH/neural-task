@@ -17,6 +17,7 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
             <!-- 1. Header -->
@@ -272,8 +273,100 @@
                 </StackPanel>
             </Border>
 
-            <!-- 6. Privacy & Platform Attribution -->
+            <!-- 6. Local Heuristic Engine & Non-AV Disclaimer (PRD §8.4 / §11) -->
             <Border Grid.Row="5"
+                    Margin="0,0,0,20"
+                    Background="{DynamicResource BrushPanelSurface}"
+                    BorderBrush="{DynamicResource BrushAccentWarning}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="24,20">
+                <StackPanel>
+                    <TextBlock Text="LOCAL HEURISTIC ENGINE // ANOMALY TRIAGE (PRD §8.4)"
+                               FontSize="13"
+                               FontWeight="SemiBold"
+                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                               Foreground="{DynamicResource BrushAccentWarning}"
+                               Margin="0,0,0,4" />
+                    <TextBlock Text="Transparent, explainable flags highlighting unusual execution directories (%TEMP%, Downloads), unsigned binaries, and handle count spikes."
+                               FontSize="12"
+                               FontFamily="{DynamicResource FontFamilyUI}"
+                               Foreground="{DynamicResource BrushTextSecondary}"
+                               Margin="0,0,0,16" />
+
+                    <!-- Sensitivity Radios -->
+                    <TextBlock Text="HEURISTIC SENSITIVITY PROFILE"
+                               FontSize="11"
+                               FontWeight="SemiBold"
+                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                               Foreground="{DynamicResource BrushTextSecondary}"
+                               Margin="0,0,0,8" />
+
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                        <RadioButton Content="Conservative (Dev-Friendly)"
+                                     GroupName="SensitivityGroup"
+                                     IsChecked="{Binding IsSensitivityConservative, Mode=TwoWay}"
+                                     FontSize="12"
+                                     FontFamily="{DynamicResource FontFamilyNumeric}"
+                                     Foreground="{DynamicResource BrushAccentPrimary}"
+                                     Margin="0,0,20,0"
+                                     ToolTip="Suppresses alerts on normal developer installations (Programs, npm, cargo, scoop)." />
+                        <RadioButton Content="Standard"
+                                     GroupName="SensitivityGroup"
+                                     IsChecked="{Binding IsSensitivityStandard, Mode=TwoWay}"
+                                     FontSize="12"
+                                     FontFamily="{DynamicResource FontFamilyNumeric}"
+                                     Foreground="{DynamicResource BrushTextPrimary}"
+                                     Margin="0,0,20,0" />
+                        <RadioButton Content="Aggressive"
+                                     GroupName="SensitivityGroup"
+                                     IsChecked="{Binding IsSensitivityAggressive, Mode=TwoWay}"
+                                     FontSize="12"
+                                     FontFamily="{DynamicResource FontFamilyNumeric}"
+                                     Foreground="{DynamicResource BrushAccentWarning}" />
+                    </StackPanel>
+
+                    <!-- Persistent Disclaimer Callout Box -->
+                    <Border Background="#1C1808"
+                            BorderBrush="{DynamicResource BrushAccentWarning}"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            Padding="16,12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <Path Grid.Column="0"
+                                  Data="{StaticResource IconShieldGeometry}"
+                                  Stroke="{DynamicResource BrushAccentWarning}"
+                                  StrokeThickness="1.5"
+                                  Width="20" Height="20"
+                                  Stretch="Uniform"
+                                  Margin="0,0,14,0"
+                                  VerticalAlignment="Center" />
+
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="MANDATORY DISCLAIMER: NOT AN ANTIVIRUS OR MALWARE SCANNER"
+                                           FontSize="11"
+                                           FontWeight="Bold"
+                                           FontFamily="{DynamicResource FontFamilyNumeric}"
+                                           Foreground="{DynamicResource BrushAccentWarning}" />
+                                <TextBlock Text="NeuralTask's heuristic flags are local diagnostic aids intended solely to highlight potential anomalies for user triage. This software is explicitly NOT an antivirus, antimalware, or security product, does not provide endpoint threat protection, and must never be relied upon as a substitute for certified antivirus software (PRD §8.4 &amp; §11)."
+                                           FontSize="10"
+                                           FontFamily="{DynamicResource FontFamilyUI}"
+                                           Foreground="{DynamicResource BrushTextSecondary}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,4,0,0" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+            </Border>
+
+            <!-- 7. Privacy & Platform Attribution -->
+            <Border Grid.Row="6"
                     Background="{DynamicResource BrushPanelSurface}"
                     BorderBrush="{DynamicResource BrushAccentPrimary}"
                     BorderThickness="1"

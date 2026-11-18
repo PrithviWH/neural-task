@@ -118,6 +118,13 @@ public class Win32ProcessDataSampler : IProcessDataSampler
                         otherBytes = ioCounters.OtherTransferCount;
                     }
 
+                    // Process Handle Count
+                    int handleCount = 0;
+                    if (Win32Native.GetProcessHandleCount(processHandle, out var hCount))
+                    {
+                        handleCount = (int)hCount;
+                    }
+
                     // Process Full Executable Path
                     string? exePath = null;
                     pathBuffer.Clear();
@@ -139,7 +146,8 @@ public class Win32ProcessDataSampler : IProcessDataSampler
                         OtherTransferBytes: otherBytes,
                         StartTime: startTime,
                         ExecutablePath: exePath,
-                        IsAccessDenied: false));
+                        IsAccessDenied: false,
+                        HandleCount: handleCount));
                 }
                 finally
                 {

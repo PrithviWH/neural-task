@@ -42,7 +42,8 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         IProcessActionService actionService,
         TrayIconService trayIconService,
         IStartupScoreEngine startupScoreEngine,
-        IProcessMonitorService monitorService)
+        IProcessMonitorService monitorService,
+        IHeuristicFlagEngine heuristicFlagEngine)
     {
         _coordinator = coordinator ?? throw new ArgumentNullException(nameof(coordinator));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
@@ -50,10 +51,10 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         _trayIconService = trayIconService ?? throw new ArgumentNullException(nameof(trayIconService));
 
         Dashboard = new DashboardViewModel();
-        ProcessList = new ProcessListViewModel(_actionService);
+        ProcessList = new ProcessListViewModel(_actionService, heuristicFlagEngine);
         Performance = new PerformanceViewModel();
         Startup = new StartupViewModel(startupScoreEngine, monitorService);
-        Settings = new SettingsViewModel(_settingsService, _coordinator);
+        Settings = new SettingsViewModel(_settingsService, _coordinator, heuristicFlagEngine);
 
         _coordinator.UpdateReceived += OnMonitoringUpdateReceived;
 

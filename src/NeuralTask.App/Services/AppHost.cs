@@ -21,6 +21,7 @@ public static class AppHost
         services.AddSingleton<ISystemMetricsService, SystemMetricsService>();
         services.AddSingleton<IProcessActionService, ProcessActionService>();
         services.AddSingleton<IStartupScoreEngine, StartupScoreEngine>();
+        services.AddSingleton<IHeuristicFlagEngine, HeuristicFlagEngine>();
 
         // 2. Application Services
         services.AddSingleton<ISettingsService, JsonSettingsService>();

@@ -135,7 +135,8 @@ public class ProcessMonitorService : IProcessMonitorService
                         NetworkBytesPerSec: 0.0,
                         StartTime: raw.StartTime,
                         ExecutablePath: raw.ExecutablePath,
-                        IsAccessDenied: true));
+                        IsAccessDenied: true,
+                        HandleCount: raw.HandleCount));
 
                     continue;
                 }
@@ -193,7 +194,8 @@ public class ProcessMonitorService : IProcessMonitorService
                     NetworkBytesPerSec: netBytesPerSec,
                     StartTime: raw.StartTime,
                     ExecutablePath: raw.ExecutablePath,
-                    IsAccessDenied: false));
+                    IsAccessDenied: false,
+                    HandleCount: raw.HandleCount));
             }
 
             // Replace history dictionary (evicts terminated processes, preventing memory leaks)

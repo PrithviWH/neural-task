@@ -11,8 +11,10 @@ namespace NeuralTask.App.ViewModels;
 public class ProcessListViewModel : ViewModelBase
 {
     private readonly IProcessActionService _actionService;
+    private readonly IHeuristicFlagEngine _heuristicEngine;
     private readonly Dictionary<int, ProcessItemViewModel> _allProcessesMap = new();
     private readonly List<ProcessItemViewModel> _allProcessesList = new();
+    private readonly Dictionary<int, ProcessHeuristicResult> _heuristicCache = new();
     private IReadOnlyList<ProcessSnapshot> _lastSnapshots = Array.Empty<ProcessSnapshot>();
 
     private string _searchText = string.Empty;
@@ -29,6 +31,10 @@ public class ProcessListViewModel : ViewModelBase
     public ObservableCollection<ProcessItemViewModel> FilteredProcesses { get; } = new();
 
     public Func<ProcessSnapshot, IReadOnlyList<ProcessSnapshot>, Task<(bool confirmed, bool entireTree)>>? ConfirmKillTreeCallback { get; set; }
+
+    public event Action? RequestScannerSweep;
+
+    public System.Windows.Input.ICommand ReScanCommand { get; }
 
     public string SearchText
     {
@@ -107,9 +113,43 @@ public class ProcessListViewModel : ViewModelBase
         set => SetProperty(ref _statusBannerIsError, value);
     }
 
-    public ProcessListViewModel(IProcessActionService? actionService = null)
+    public int FlaggedCount => _allProcessesList.Count(p => p.HasFlags);
+
+    public string FlaggedCountDisplay => $"TRIAGE: {FlaggedCount} ANOMALIES";
+
+    public ProcessListViewModel(
+        IProcessActionService? actionService = null,
+        IHeuristicFlagEngine? heuristicEngine = null)
     {
         _actionService = actionService ?? new ProcessActionService();
+        _heuristicEngine = heuristicEngine ?? new HeuristicFlagEngine();
+
+        ReScanCommand = new RelayCommand(TriggerReScan);
+    }
+
+    public void TriggerReScan()
+    {
+        if (_lastSnapshots == null || _lastSnapshots.Count == 0) return;
+
+        var results = _heuristicEngine.Evaluate(_lastSnapshots);
+        _heuristicCache.Clear();
+
+        int flagged = 0;
+        foreach (var kvp in results)
+        {
+            _heuristicCache[kvp.Key] = kvp.Value;
+            if (_allProcessesMap.TryGetValue(kvp.Key, out var item))
+            {
+                item.UpdateHeuristics(kvp.Value);
+                if (kvp.Value.HasFlags) flagged++;
+            }
+        }
+
+        OnPropertyChanged(nameof(FlaggedCount));
+        OnPropertyChanged(nameof(FlaggedCountDisplay));
+
+        ShowStatus($"HEURISTIC AUDIT COMPLETE // {flagged} ANOMALIES IDENTIFIED (NOT AN ANTIVIRUS)", false);
+        RequestScannerSweep?.Invoke();
     }
 
     public void ShowStatus(string message, bool isError = false)
@@ -163,6 +203,17 @@ public class ProcessListViewModel : ViewModelBase
             else
             {
                 var newItem = new ProcessItemViewModel(snap);
+                if (_heuristicCache.TryGetValue(snap.Pid, out var cached))
+                {
+                    newItem.UpdateHeuristics(cached);
+                }
+                else
+                {
+                    var eval = _heuristicEngine.EvaluateSingle(snap);
+                    _heuristicCache[snap.Pid] = eval;
+                    newItem.UpdateHeuristics(eval);
+                }
+
                 _allProcessesMap[snap.Pid] = newItem;
                 _allProcessesList.Add(newItem);
             }
@@ -175,6 +226,7 @@ public class ProcessListViewModel : ViewModelBase
             if (!incomingPids.Contains(item.Pid))
             {
                 _allProcessesMap.Remove(item.Pid);
+                _heuristicCache.Remove(item.Pid);
                 _allProcessesList.RemoveAt(i);
             }
         }

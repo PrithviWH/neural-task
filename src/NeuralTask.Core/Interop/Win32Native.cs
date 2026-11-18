@@ -36,6 +36,9 @@ internal static class Win32Native
     [DllImport("kernel32.dll", SetLastError = true)]
     public static extern bool GetProcessIoCounters(IntPtr ProcessHandle, out IO_COUNTERS IoCounters);
 
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern bool GetProcessHandleCount(IntPtr hProcess, out uint pdwHandleCount);
+
     [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
     public static extern bool QueryFullProcessImageName(
         IntPtr hProcess,

@@ -17,5 +17,6 @@ public record RawProcessSample(
     ulong OtherTransferBytes,
     DateTimeOffset? StartTime,
     string? ExecutablePath,
-    bool IsAccessDenied
+    bool IsAccessDenied,
+    int HandleCount = 0
 );

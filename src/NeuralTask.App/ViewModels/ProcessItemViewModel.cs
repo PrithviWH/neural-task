@@ -12,12 +12,55 @@ public class ProcessItemViewModel : ViewModelBase
     private string _cpuDisplay = "0.00%";
     private string _ramDisplay = "0.0 MB";
     private string _ioDisplay = "—";
+    private ProcessHeuristicResult? _heuristicResult;
 
     public int Pid { get; }
     public string Name { get; }
     public int ParentPid { get; }
     public DateTimeOffset? StartTime { get; }
     public string? ExecutablePath { get; private set; }
+
+    public ProcessHeuristicResult? HeuristicResult
+    {
+        get => _heuristicResult;
+        private set
+        {
+            if (SetProperty(ref _heuristicResult, value))
+            {
+                OnPropertyChanged(nameof(HasFlags));
+                OnPropertyChanged(nameof(FlagCount));
+                OnPropertyChanged(nameof(FlagBadgeText));
+                OnPropertyChanged(nameof(FlagTooltip));
+                OnPropertyChanged(nameof(FlagBadgeBrush));
+            }
+        }
+    }
+
+    public bool HasFlags => _heuristicResult?.HasFlags ?? false;
+    public int FlagCount => _heuristicResult?.FlagCount ?? 0;
+    public string FlagBadgeText => _heuristicResult != null && _heuristicResult.HasFlags
+        ? $"⚠ {_heuristicResult.FlagCount} {(_heuristicResult.FlagCount == 1 ? "FLAG" : "FLAGS")}"
+        : string.Empty;
+
+    public string FlagTooltip => _heuristicResult?.TooltipText ?? "No heuristic anomalies detected.";
+
+    public System.Windows.Media.Brush FlagBadgeBrush
+    {
+        get
+        {
+            if (_heuristicResult == null || !_heuristicResult.HasFlags)
+            {
+                return new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x8F, 0xA3, 0xB8));
+            }
+
+            return _heuristicResult.MaxSeverity switch
+            {
+                HeuristicSeverity.Warning => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0xFF, 0xB8, 0x00)), // Amber/Warning
+                HeuristicSeverity.Notice => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x00, 0xE5, 0xFF)),  // Neon Cyan
+                _ => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x79, 0x28, 0xCA))                        // Violet
+            };
+        }
+    }
 
     public double CpuPercent
     {
@@ -125,6 +168,11 @@ public class ProcessItemViewModel : ViewModelBase
             ExecutablePath = snapshot.ExecutablePath;
             OnPropertyChanged(nameof(ExecutablePath));
         }
+    }
+
+    public void UpdateHeuristics(ProcessHeuristicResult result)
+    {
+        HeuristicResult = result;
     }
 
     private static string FormatBytes(long bytes)

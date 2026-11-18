@@ -15,5 +15,6 @@ public record ProcessSnapshot(
     double NetworkBytesPerSec,
     DateTimeOffset? StartTime,
     string? ExecutablePath,
-    bool IsAccessDenied
+    bool IsAccessDenied,
+    int HandleCount = 0
 );

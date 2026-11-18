@@ -138,10 +138,52 @@ Per the explicit fallback in **PRD §11 (Technical Risks)**:
 
 ---
 
+## Suspicious-Process Heuristic Engine (Phase 6 / Tier 2)
+
+> **MANDATORY LEGAL & TECHNICAL DISCLAIMER (PRD §8.4 & §11):**  
+> NeuralTask's heuristic flags are local diagnostic aids intended solely to highlight potential anomalies for user triage. This software is **EXPLICITLY NOT AN ANTIVIRUS, ANTIMALWARE, OR SECURITY PRODUCT**, does not provide real-time endpoint threat protection, and must never be relied upon as a substitute for certified antivirus software.
+
+### 1. Transparent Local-Only Heuristic Rules (PRD §8.4)
+The `HeuristicFlagEngine` executes 100% locally with zero cloud dependencies, network queries, or telemetric reporting, evaluating running processes across 4 transparent rules:
+
+1. **Digital Signature Verification (`ISignatureVerifier`):**
+   * Verifies PE Authenticode signatures using the native Windows `WinVerifyTrust` API (`WINTRUST_ACTION_GENERIC_VERIFY_V2`) configured for offline verification (`WTD_REVOCATION_CHECK_NONE | WTD_CACHE_ONLY_URL_RETRIEVAL`).
+   * Validates full PKCS#7 certificate chains without tripping on missing intermediate certificates.
+   * Recognizes catalog-signed Windows OS system components in `System32` and `Windows`.
+   * Flags invalid, altered, or revoked certificates (`SIG_INVALID`).
+2. **Unusual Execution Paths:**
+   * Flags processes running from `%TEMP%` (`\AppData\Local\Temp`, `\Windows\Temp`) where droppers frequently execute (`PATH_TEMP`).
+   * Flags binaries executing directly from the user's `Downloads` directory without standard installation (`PATH_DOWNLOADS`).
+   * Identifies executables residing in `%APPDATA%` / `%LOCALAPPDATA%` (`PATH_APPDATA`).
+   * **Developer-Friendly False-Positive Mitigation:** In Conservative mode, normal developer tools and package managers (`AppData\Local\Programs`, `npm`, `cargo`, `scoop`, `JetBrains`, `dotnet`) and digitally signed applications are exempted from AppData flags to prevent alert fatigue.
+3. **Statistically High Handle Count:**
+   * Dynamic statistical baseline: Computes the 95th percentile ($P_{95}$) handle count across the active snapshot population.
+   * Dual-baseline noise floors: User-mode applications use a conservative floor (4,000 handles in Conservative, 2,500 in Standard), while core Windows system services (`explorer.exe`, `svchost.exe`) have an elevated baseline (15,000 handles) reflecting legitimate OS-wide handle aggregation.
+   * Kernel processes ($\text{PID} \le 4$, e.g. System, Idle) and access-denied services are excluded to prevent false alarms.
+4. **System Process Name Mimicry:**
+   * **Typo-Squatting Detection:** Computes Levenshtein edit distance ($1 \le d \le 2$) against core Windows system binaries (e.g. flagging `"svch0st.exe"`, `"csrs.exe"`, `"lsasss.exe"`).
+   * **System Binary Masquerade:** Identifies processes using genuine system names (e.g. `"svchost.exe"`, `"lsass.exe"`) that execute outside `C:\Windows\System32` or `C:\Windows`.
+
+### 2. Explainable Human-Readable Reasons (Never Bare Booleans)
+Every flag carries an explicit, human-readable reason string surfaced directly to the user:
+* *"Binary is not digitally signed and runs from an untrusted location"*
+* *"Process executable resides in temporary directory: C:\Users\...\Temp\payload.exe"*
+* *"Process name 'svch0st.exe' closely mimics Windows system binary 'svchost.exe' (Levenshtein distance: 1)"*
+* *"Process holds 6,420 handles, exceeding statistical 95th percentile baseline of 4,000"*
+
+### 3. UI Presentation & Holographic Scanner Sweep (PRD §6.2 & §9)
+* **Subtle Glowing Badges:** Anomaly indicators render as subtle amber glowing pills (`[ ⚠ 1 FLAG ]` / `[ ⚠ 2 FLAGS ]`), strictly avoiding alarmist red banners.
+* **Rich Tooltips:** Hovering or tapping a badge displays the exact rule titles and reason explanations.
+* **Persistent Triage Bar:** Process Matrix displays a persistent non-alarming status strip (`TRIAGE: X ANOMALIES`) with the mandatory non-AV notice.
+* **Manual Re-Scan Sweep:** Clicking **"RE-SCAN HEURISTICS"** triggers a GPU-composited laser light-beam sweep animation across the process table while refreshing evaluations.
+* **User-Configurable Sensitivity:** Settings allows users to select between **Conservative (Dev-Friendly)** [Default], **Standard**, and **Aggressive** sensitivity profiles.
+
+---
+
 ## Roadmap Overview
 * **v0.1 (Released / Public RC):** Core holographic & holo-glass themes, live process table with multi-column sorting, fuzzy search, safe kill-tree with creation timestamp checks, neural topology dialog, real-time hardware graphs, and persistent system tray mini-graph.
-* **v0.2 (Current):** Explainable 0-100 startup impact scoring with Time vs. Resource split, multi-source enumeration, binary `StartupApproved` toggle, and admin elevation handling.
-* **v0.3:** Deep process tree visualizer, local suspicious process heuristics, and ETW boot-trace capture.
+* **v0.2 (Current):** Explainable 0-100 startup impact scoring with Time vs. Resource split, multi-source enumeration, binary `StartupApproved` toggle, admin elevation handling, and local-only explainable suspicious-process heuristic triage (PRD §8.4).
+* **v0.3:** Deep process tree visualizer, ETW boot-trace capture across reboots, and historical telemetry logging.
 * **v0.4+:** Historical telemetry capture, JSON/CSV export, and plugin architecture.
 
 ---

@@ -267,8 +267,9 @@ public partial class MainWindow : FluentWindow
         await Task.Delay(400);
         SaveBitmap(Path.Combine(outputDir, "screen_dashboard_dark.png"));
 
-        // 2. Dark Theme - Processes (Live processes)
+        // 2. Dark Theme - Processes (Live processes & Heuristic Flags)
         SelectTab(1);
+        ViewModel.ProcessList.TriggerReScan();
         await Task.Delay(400);
         SaveBitmap(Path.Combine(outputDir, "screen_processes_dark.png"));
 
@@ -295,6 +296,7 @@ public partial class MainWindow : FluentWindow
 
         // 6. Light Theme - Processes
         SelectTab(1);
+        ViewModel.ProcessList.TriggerReScan();
         await Task.Delay(400);
         SaveBitmap(Path.Combine(outputDir, "screen_processes_light.png"));
 

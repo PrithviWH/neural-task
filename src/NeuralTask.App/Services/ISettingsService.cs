@@ -8,7 +8,8 @@ public record AppSettings(
     int RefreshIntervalMs = 1000,
     bool IsAmbientAnimationEnabled = true,
     bool IsMinimizeToTrayEnabled = true,
-    string TrayIconMetric = "CPU"
+    string TrayIconMetric = "CPU",
+    NeuralTask.Core.Services.HeuristicSensitivity HeuristicSensitivity = NeuralTask.Core.Services.HeuristicSensitivity.Conservative
 );
 
 public interface ISettingsService

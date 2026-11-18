@@ -22,7 +22,43 @@ public partial class ProcessListView : UserControl
         if (ViewModel != null)
         {
             ViewModel.ConfirmKillTreeCallback = ShowKillTreeDialog;
+            ViewModel.RequestScannerSweep += PlayScannerSweepAnimation;
         }
+    }
+
+    private void OnReScanClick(object sender, RoutedEventArgs e)
+    {
+        ViewModel?.TriggerReScan();
+    }
+
+    private void PlayScannerSweepAnimation()
+    {
+        var height = Math.Max(ActualHeight - 120, 400);
+
+        var moveAnim = new System.Windows.Media.Animation.DoubleAnimation
+        {
+            From = 0,
+            To = height,
+            Duration = System.TimeSpan.FromMilliseconds(750),
+            EasingFunction = new System.Windows.Media.Animation.QuadraticEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseInOut }
+        };
+
+        var opacityAnim = new System.Windows.Media.Animation.DoubleAnimationUsingKeyFrames();
+        opacityAnim.KeyFrames.Add(new System.Windows.Media.Animation.LinearDoubleKeyFrame(0.0, System.Windows.Media.Animation.KeyTime.FromTimeSpan(System.TimeSpan.Zero)));
+        opacityAnim.KeyFrames.Add(new System.Windows.Media.Animation.LinearDoubleKeyFrame(1.0, System.Windows.Media.Animation.KeyTime.FromTimeSpan(System.TimeSpan.FromMilliseconds(100))));
+        opacityAnim.KeyFrames.Add(new System.Windows.Media.Animation.LinearDoubleKeyFrame(1.0, System.Windows.Media.Animation.KeyTime.FromTimeSpan(System.TimeSpan.FromMilliseconds(650))));
+        opacityAnim.KeyFrames.Add(new System.Windows.Media.Animation.LinearDoubleKeyFrame(0.0, System.Windows.Media.Animation.KeyTime.FromTimeSpan(System.TimeSpan.FromMilliseconds(750))));
+
+        System.Windows.Media.Animation.Storyboard.SetTarget(moveAnim, ScannerTransform);
+        System.Windows.Media.Animation.Storyboard.SetTargetProperty(moveAnim, new PropertyPath(System.Windows.Media.TranslateTransform.YProperty));
+
+        System.Windows.Media.Animation.Storyboard.SetTarget(opacityAnim, ScannerBeam);
+        System.Windows.Media.Animation.Storyboard.SetTargetProperty(opacityAnim, new PropertyPath(UIElement.OpacityProperty));
+
+        var sb = new System.Windows.Media.Animation.Storyboard();
+        sb.Children.Add(moveAnim);
+        sb.Children.Add(opacityAnim);
+        sb.Begin();
     }
 
     private Task<(bool confirmed, bool entireTree)> ShowKillTreeDialog(ProcessSnapshot root, IReadOnlyList<ProcessSnapshot> children)

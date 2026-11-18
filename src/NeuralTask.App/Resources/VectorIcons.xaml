@@ -72,4 +72,12 @@
         M 12,2 L 20,5 L 20,11 C 20,16 16.5,20.5 12,22 C 7.5,20.5 4,16 4,11 L 4,5 Z
     </Geometry>
 
+    <!-- Radar Scanner Sweep Icon -->
+    <Geometry x:Key="IconScanGeometry">
+        M 12,2 A 10,10 0 1 0 22,12
+        M 12,6 A 6,6 0 1 0 18,12
+        M 12,10 A 2,2 0 1 0 14,12
+        M 12,12 L 21,3
+    </Geometry>
+
 </ResourceDictionary>
