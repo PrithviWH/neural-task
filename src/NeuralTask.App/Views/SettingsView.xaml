@@ -8,9 +8,10 @@
              d:DataContext="{d:DesignInstance Type=vm:SettingsViewModel}"
              d:DesignHeight="700" d:DesignWidth="900">
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
+    <ScrollViewer x:Name="SettingsScrollViewer" VerticalScrollBarVisibility="Auto">
         <Grid Margin="32,24,32,32">
             <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -435,8 +436,111 @@
                 </StackPanel>
             </Border>
 
-            <!-- 8. Privacy & Platform Attribution -->
+            <!-- 8. Extension Plugins (PRD §8.5) -->
             <Border Grid.Row="7"
+                    Background="{DynamicResource BrushPanelSurface}"
+                    BorderBrush="{DynamicResource BrushBorderNormal}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="24,20"
+                    Margin="0,0,0,24">
+                <StackPanel>
+                    <Grid Margin="0,0,0,12">
+                        <StackPanel>
+                            <TextBlock Text="EXTENSION PLUGINS (PRD §8.5)"
+                                       FontSize="14"
+                                       FontWeight="SemiBold"
+                                       FontFamily="{DynamicResource FontFamilyUI}"
+                                       Foreground="{DynamicResource BrushTextPrimary}" />
+                            <TextBlock Text="Discovers and dynamically isolates third-party DLL widgets from the local /plugins folder."
+                                       FontSize="11"
+                                       FontFamily="{DynamicResource FontFamilyNumeric}"
+                                       Foreground="{DynamicResource BrushTextSecondary}"
+                                       Margin="0,2,0,0" />
+                        </StackPanel>
+                    </Grid>
+
+                    <Border Background="#14141F"
+                            BorderBrush="{DynamicResource BrushBorderNormal}"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            Padding="12,8"
+                            Margin="0,0,0,16">
+                        <Grid>
+                            <TextBlock Text="PLUGINS DIRECTORY:"
+                                       FontSize="10"
+                                       FontWeight="Bold"
+                                       FontFamily="{DynamicResource FontFamilyNumeric}"
+                                       Foreground="{DynamicResource BrushTextSecondary}"
+                                       VerticalAlignment="Center" />
+                            <TextBlock HorizontalAlignment="Right"
+                                       Text="{Binding PluginsDirectory, FallbackValue='(local)/plugins'}"
+                                       FontSize="11"
+                                       FontFamily="{DynamicResource FontFamilyCode}"
+                                       Foreground="{DynamicResource BrushAccentPrimary}"
+                                       VerticalAlignment="Center" />
+                        </Grid>
+                    </Border>
+
+                    <!-- Plugin Items List -->
+                    <ItemsControl ItemsSource="{Binding LoadedPlugins}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="#1A1A28"
+                                        BorderBrush="{DynamicResource BrushBorderNormal}"
+                                        BorderThickness="1"
+                                        CornerRadius="6"
+                                        Padding="14,10"
+                                        Margin="0,0,0,10">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding Title}"
+                                                           FontSize="12"
+                                                           FontWeight="Bold"
+                                                           FontFamily="{DynamicResource FontFamilyUI}"
+                                                           Foreground="{DynamicResource BrushTextPrimary}" />
+                                                <TextBlock Text="{Binding Id, StringFormat='  [{0}]'}"
+                                                           FontSize="11"
+                                                           FontFamily="{DynamicResource FontFamilyCode}"
+                                                           Foreground="{DynamicResource BrushAccentPrimary}" />
+                                            </StackPanel>
+                                            <TextBlock Text="{Binding Description}"
+                                                       FontSize="11"
+                                                       FontFamily="{DynamicResource FontFamilyUI}"
+                                                       Foreground="{DynamicResource BrushTextSecondary}"
+                                                       Margin="0,2,0,0" />
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Border Background="#1A00E5FF"
+                                                    BorderBrush="{DynamicResource BrushAccentPrimary}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="4"
+                                                    Padding="8,3"
+                                                    Margin="0,0,10,0">
+                                                <TextBlock Text="LOADED // ACTIVE"
+                                                           FontSize="9"
+                                                           FontWeight="Bold"
+                                                           FontFamily="{DynamicResource FontFamilyNumeric}"
+                                                           Foreground="{DynamicResource BrushAccentPrimary}" />
+                                            </Border>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- 9. Privacy & Platform Attribution -->
+            <Border Grid.Row="8"
                     Background="{DynamicResource BrushPanelSurface}"
                     BorderBrush="{DynamicResource BrushAccentPrimary}"
                     BorderThickness="1"

@@ -12,6 +12,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     private readonly ISettingsService _settingsService;
     private readonly IProcessActionService _actionService;
     private readonly TrayIconService _trayIconService;
+    private readonly IPluginManager _pluginManager;
     private string _statusBadgeText = "SYS.NODE: ONLINE";
     private int _selectedTabIndex = 0;
 
@@ -20,6 +21,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     public PerformanceViewModel Performance { get; }
     public StartupViewModel Startup { get; }
     public SettingsViewModel Settings { get; }
+    public IPluginManager PluginManager => _pluginManager;
 
     public event Action? RequestRestoreWindow;
     public event Action? RequestExitApplication;
@@ -46,23 +48,34 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         IHeuristicFlagEngine heuristicFlagEngine,
         IProcessInfoService processInfoService,
         IHistoryStore historyStore,
-        IExportService exportService)
+        IExportService exportService,
+        IPluginManager pluginManager)
     {
         _coordinator = coordinator ?? throw new ArgumentNullException(nameof(coordinator));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         _actionService = actionService ?? throw new ArgumentNullException(nameof(actionService));
         _trayIconService = trayIconService ?? throw new ArgumentNullException(nameof(trayIconService));
+        _pluginManager = pluginManager ?? throw new ArgumentNullException(nameof(pluginManager));
 
         Dashboard = new DashboardViewModel(historyStore, exportService, heuristicFlagEngine);
         ProcessList = new ProcessListViewModel(_actionService, heuristicFlagEngine, processInfoService);
         Performance = new PerformanceViewModel();
         Startup = new StartupViewModel(startupScoreEngine, monitorService);
-        Settings = new SettingsViewModel(_settingsService, _coordinator, heuristicFlagEngine, historyStore);
+        Settings = new SettingsViewModel(_settingsService, _coordinator, heuristicFlagEngine, historyStore, _pluginManager);
 
         _coordinator.UpdateReceived += OnMonitoringUpdateReceived;
 
         _trayIconService.RestoreRequested += () => RequestRestoreWindow?.Invoke();
         _trayIconService.ExitRequested += () => RequestExitApplication?.Invoke();
+
+        // Discover and load local extension plugins from /plugins
+        try
+        {
+            _pluginManager.DiscoverAndLoadPlugins();
+        }
+        catch
+        {
+        }
 
         // Initial background load of startup matrix
         _ = Startup.LoadEntriesAsync();
@@ -92,7 +105,17 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         // 4. Update System Tray Icon live mini-graph & tooltip
         _trayIconService.UpdateMetrics(update.Processes, update.SystemMetrics);
 
-        // 5. Update Header Status
+        // 5. Dispatch telemetry tick to loaded plugins
+        var pluginContext = new NeuralTask.Contracts.PluginTelemetryContext(
+            update.SystemMetrics.CpuPercent,
+            update.SystemMetrics.TotalMemoryBytes,
+            update.SystemMetrics.UsedMemoryBytes,
+            update.SystemMetrics.AvailableMemoryBytes,
+            update.Processes.Count,
+            DateTime.UtcNow);
+        _pluginManager.DispatchTelemetryTick(pluginContext);
+
+        // 6. Update Header Status
         StatusBadgeText = $"SYS.NODE: ONLINE // {update.Processes.Count} TASKS";
     }
 
@@ -101,5 +124,6 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         _coordinator.UpdateReceived -= OnMonitoringUpdateReceived;
         _coordinator.Dispose();
         _trayIconService.Dispose();
+        _pluginManager.Dispose();
     }
 }

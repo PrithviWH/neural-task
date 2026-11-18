@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <Version>0.3.0</Version>
+    <Authors>NeuralTask Team</Authors>
+    <Description>First-party example plugin for NeuralTask HUD: GPU 3D engine utilization and video memory telemetry.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\NeuralTask.Contracts\NeuralTask.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Management" Version="8.0.0" />
+  </ItemGroup>
+
+  <Target Name="CopyToAppPlugins" AfterTargets="Build">
+    <ItemGroup>
+      <PluginOutputFiles Include="$(TargetDir)$(TargetName).dll;$(TargetDir)$(TargetName).pdb" />
+    </ItemGroup>
+    <Copy SourceFiles="@(PluginOutputFiles)"
+          DestinationFolder="$(MSBuildThisFileDirectory)..\..\NeuralTask.App\bin\$(Configuration)\net8.0-windows\plugins\Gpu\"
+          SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>

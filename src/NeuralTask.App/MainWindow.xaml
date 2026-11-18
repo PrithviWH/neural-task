@@ -83,7 +83,7 @@
 
             <!-- 1. Futuristic HUD TitleBar Chrome -->
             <ui:TitleBar Grid.Row="0"
-                         Title="NEURALTASK // HUD v0.2"
+                         Title="NEURALTASK // HUD v0.3"
                          Foreground="{DynamicResource BrushTitleBarForeground}"
                          Height="42"
                          Padding="12,0,0,0">
@@ -197,6 +197,9 @@
                                 </Button>
                             </Grid>
 
+                            <!-- Dynamic Extension Plugins Navigation Container -->
+                            <StackPanel x:Name="NavRailPluginsContainer" />
+
                             <!-- Settings Button -->
                             <Grid>
                                 <Rectangle x:Name="IndicatorSettings"
@@ -231,7 +234,7 @@
                                     <DropShadowEffect BlurRadius="6" ShadowDepth="0" Color="{DynamicResource ColorAccentPrimary}" Opacity="0.8" />
                                 </Ellipse.Effect>
                             </Ellipse>
-                            <TextBlock Text="v0.2"
+                            <TextBlock Text="v0.3"
                                        FontSize="9"
                                        FontWeight="SemiBold"
                                        FontFamily="{DynamicResource FontFamilyNumeric}"
@@ -247,6 +250,7 @@
                     <views:ProcessListView x:Name="ViewProcesses" Visibility="Collapsed" />
                     <views:StartupView x:Name="ViewStartup" Visibility="Collapsed" />
                     <views:SettingsView x:Name="ViewSettings" Visibility="Collapsed" />
+                    <ContentControl x:Name="PluginViewportPresenter" Visibility="Collapsed" />
                 </Grid>
             </Grid>
         </Grid>

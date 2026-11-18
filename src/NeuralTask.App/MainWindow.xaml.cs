@@ -2,6 +2,7 @@
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Effects;
@@ -21,6 +22,8 @@ public partial class MainWindow : FluentWindow
     private int _currentTabIndex = 0;
     private Storyboard? _ambientStoryboard;
     private bool _isExplicitExit = false;
+    private readonly List<(SafePluginPanel Panel, Grid NavGrid, System.Windows.Shapes.Rectangle Indicator, System.Windows.Shapes.Path Icon)> _pluginNavItems = new();
+    private SafePluginPanel? _activePluginPanel;
 
     [System.Runtime.InteropServices.DllImport("user32.dll")]
     private static extern bool SetForegroundWindow(IntPtr hWnd);
@@ -101,6 +104,9 @@ public partial class MainWindow : FluentWindow
         };
 
         SelectTab(0);
+        BuildPluginNavigationRail();
+        ViewModel.PluginManager.PanelLoaded += _ => Dispatcher.BeginInvoke(BuildPluginNavigationRail);
+        ViewModel.PluginManager.PanelFaulted += _ => Dispatcher.BeginInvoke(BuildPluginNavigationRail);
     }
 
     public void RestoreAndShowWindow()
@@ -179,7 +185,14 @@ public partial class MainWindow : FluentWindow
     private void OnThemeChanged(object? sender, ThemeMode theme)
     {
         // Re-apply nav button highlighting to pick up refreshed theme dynamic brushes
-        SelectTab(_currentTabIndex);
+        if (_activePluginPanel != null)
+        {
+            SelectPluginTab(_activePluginPanel);
+        }
+        else
+        {
+            SelectTab(_currentTabIndex);
+        }
     }
 
     private void OnNavDashboardClick(object sender, RoutedEventArgs e) => SelectTab(0);
@@ -191,12 +204,13 @@ public partial class MainWindow : FluentWindow
     {
         _currentTabIndex = index;
         ViewModel.SelectedTabIndex = index;
+        _activePluginPanel = null;
 
-        // Reset all indicators
-        IndicatorDashboard.Visibility = index == 0 ? Visibility.Visible : Visibility.Collapsed;
-        IndicatorProcesses.Visibility = index == 1 ? Visibility.Visible : Visibility.Collapsed;
-        IndicatorStartup.Visibility = index == 2 ? Visibility.Visible : Visibility.Collapsed;
-        IndicatorSettings.Visibility = index == 3 ? Visibility.Visible : Visibility.Collapsed;
+        if (PluginViewportPresenter != null)
+        {
+            PluginViewportPresenter.Visibility = Visibility.Collapsed;
+            PluginViewportPresenter.Content = null;
+        }
 
         // Apply theme-driven accent stroke & glow to active icon
         var activeBrush = (Brush)FindResource("BrushAccentPrimary");
@@ -210,6 +224,20 @@ public partial class MainWindow : FluentWindow
             Color = activeGlowColor,
             Opacity = 0.8
         };
+
+        // Reset plugin indicators
+        foreach (var item in _pluginNavItems)
+        {
+            item.Indicator.Visibility = Visibility.Collapsed;
+            item.Icon.Stroke = inactiveBrush;
+            item.Icon.Effect = null;
+        }
+
+        // Reset all indicators
+        IndicatorDashboard.Visibility = index == 0 ? Visibility.Visible : Visibility.Collapsed;
+        IndicatorProcesses.Visibility = index == 1 ? Visibility.Visible : Visibility.Collapsed;
+        IndicatorStartup.Visibility = index == 2 ? Visibility.Visible : Visibility.Collapsed;
+        IndicatorSettings.Visibility = index == 3 ? Visibility.Visible : Visibility.Collapsed;
 
         IconDashboard.Stroke = index == 0 ? activeBrush : inactiveBrush;
         IconDashboard.Effect = index == 0 ? activeGlow : null;
@@ -225,6 +253,131 @@ public partial class MainWindow : FluentWindow
 
         // Switch View with smooth fade-in
         SwitchView(index);
+    }
+
+    public void SelectPluginTab(SafePluginPanel panel)
+    {
+        _activePluginPanel = panel;
+        _currentTabIndex = -1;
+
+        // Reset built-in indicators and icons
+        IndicatorDashboard.Visibility = Visibility.Collapsed;
+        IndicatorProcesses.Visibility = Visibility.Collapsed;
+        IndicatorStartup.Visibility = Visibility.Collapsed;
+        IndicatorSettings.Visibility = Visibility.Collapsed;
+
+        var activeBrush = (Brush)FindResource("BrushAccentPrimary");
+        var inactiveBrush = (Brush)FindResource("BrushTextSecondary");
+        var activeGlowColor = (Color)FindResource("ColorAccentPrimary");
+        var activeGlow = new DropShadowEffect { BlurRadius = 8, ShadowDepth = 0, Color = activeGlowColor, Opacity = 0.8 };
+
+        IconDashboard.Stroke = inactiveBrush; IconDashboard.Effect = null;
+        IconProcesses.Stroke = inactiveBrush; IconProcesses.Effect = null;
+        IconStartup.Stroke = inactiveBrush; IconStartup.Effect = null;
+        IconSettings.Stroke = inactiveBrush; IconSettings.Effect = null;
+
+        // Highlight selected plugin tab
+        foreach (var item in _pluginNavItems)
+        {
+            bool isSelected = item.Panel == panel;
+            item.Indicator.Visibility = isSelected ? Visibility.Visible : Visibility.Collapsed;
+            item.Icon.Stroke = isSelected ? activeBrush : inactiveBrush;
+            item.Icon.Effect = isSelected ? activeGlow : null;
+        }
+
+        // Hide built-in views and show plugin view
+        ViewDashboard.Visibility = Visibility.Collapsed;
+        ViewProcesses.Visibility = Visibility.Collapsed;
+        ViewStartup.Visibility = Visibility.Collapsed;
+        ViewSettings.Visibility = Visibility.Collapsed;
+
+        if (PluginViewportPresenter != null)
+        {
+            PluginViewportPresenter.Content = panel.GetOrCreateView();
+            PluginViewportPresenter.Visibility = Visibility.Visible;
+
+            var fadeIn = new DoubleAnimation
+            {
+                From = 0.3,
+                To = 1.0,
+                Duration = TimeSpan.FromMilliseconds(180),
+                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+            };
+            PluginViewportPresenter.BeginAnimation(UIElement.OpacityProperty, fadeIn);
+        }
+    }
+
+    public void BuildPluginNavigationRail()
+    {
+        if (NavRailPluginsContainer == null) return;
+
+        NavRailPluginsContainer.Children.Clear();
+        _pluginNavItems.Clear();
+
+        var navButtonStyle = (Style)FindResource("NavRailButtonStyle");
+        var inactiveBrush = (Brush)FindResource("BrushTextSecondary");
+        var activeGlowColor = (Color)FindResource("ColorAccentPrimary");
+
+        foreach (var panel in ViewModel.PluginManager.LoadedPanels)
+        {
+            if (!panel.IsEnabled) continue;
+
+            var grid = new Grid();
+
+            var indicator = new System.Windows.Shapes.Rectangle
+            {
+                HorizontalAlignment = HorizontalAlignment.Left,
+                Width = 3,
+                Height = 28,
+                Fill = (Brush)FindResource("BrushAccentPrimary"),
+                RadiusX = 1.5,
+                RadiusY = 1.5,
+                Margin = new Thickness(-8, 0, 0, 0),
+                Visibility = Visibility.Collapsed,
+                Effect = new DropShadowEffect
+                {
+                    BlurRadius = 8,
+                    ShadowDepth = 0,
+                    Color = activeGlowColor,
+                    Opacity = 0.8
+                }
+            };
+
+            var btn = new Button
+            {
+                Style = navButtonStyle,
+                ToolTip = $"{panel.Title} (PRD §8.5 Plugin)"
+            };
+
+            var iconPath = new System.Windows.Shapes.Path
+            {
+                Stroke = inactiveBrush,
+                StrokeThickness = 1.5,
+                Width = 22,
+                Height = 22,
+                Stretch = Stretch.Uniform
+            };
+
+            try
+            {
+                iconPath.Data = Geometry.Parse(panel.IconGeometry);
+            }
+            catch
+            {
+                iconPath.Data = Geometry.Parse("M 4,4 L 20,4 L 20,20 L 4,20 Z");
+            }
+
+            btn.Content = iconPath;
+
+            var targetPanel = panel;
+            btn.Click += (_, _) => SelectPluginTab(targetPanel);
+
+            grid.Children.Add(indicator);
+            grid.Children.Add(btn);
+
+            NavRailPluginsContainer.Children.Add(grid);
+            _pluginNavItems.Add((panel, grid, indicator, iconPath));
+        }
     }
 
     private void SwitchView(int index)
@@ -296,8 +449,15 @@ public partial class MainWindow : FluentWindow
 
         // 4. Dark Theme - Settings
         SelectTab(3);
+        ViewSettings.ScrollToTop();
         await Task.Delay(400);
         SaveBitmap(Path.Combine(outputDir, "screen_settings_dark.png"));
+
+        // 4b. Dark Theme - Settings Plugins Section
+        ViewSettings.ScrollToBottom();
+        await Task.Delay(300);
+        SaveBitmap(Path.Combine(outputDir, "screen_settings_plugins_dark.png"));
+        ViewSettings.ScrollToTop();
 
         // 5. Dark Theme - Kill-Tree Dialog Neural Topology Screenshot
         var dummyRootDark = new ProcessSnapshot(12480, "parent_service.exe", 0, 4.2, 250_000_000, 1024, 0, DateTime.Now, null, false);
@@ -313,6 +473,15 @@ public partial class MainWindow : FluentWindow
         SaveElementBitmap(killDialogDark, Path.Combine(outputDir, "screen_kill_tree_dialog.png"));
         SaveElementBitmap(killDialogDark, Path.Combine(outputDir, "screen_kill_tree_dialog_dark.png"));
         killDialogDark.Close();
+
+        // 5b. Dark Theme - GPU Plugin Panel (PRD §8.5)
+        var gpuPluginDark = ViewModel.PluginManager.LoadedPanels.FirstOrDefault(p => p.Id == "gpu-monitor");
+        if (gpuPluginDark != null)
+        {
+            SelectPluginTab(gpuPluginDark);
+            await Task.Delay(400);
+            SaveBitmap(Path.Combine(outputDir, "screen_gpu_dark.png"));
+        }
 
         // 6. Light Theme - Dashboard
         ThemeManager.ApplyTheme(ThemeMode.Light);
@@ -341,8 +510,15 @@ public partial class MainWindow : FluentWindow
 
         // 9. Light Theme - Settings
         SelectTab(3);
+        ViewSettings.ScrollToTop();
         await Task.Delay(400);
         SaveBitmap(Path.Combine(outputDir, "screen_settings_light.png"));
+
+        // 9b. Light Theme - Settings Plugins Section
+        ViewSettings.ScrollToBottom();
+        await Task.Delay(300);
+        SaveBitmap(Path.Combine(outputDir, "screen_settings_plugins_light.png"));
+        ViewSettings.ScrollToTop();
 
         // 10. Light Theme - Kill-Tree Dialog
         var dummyRootLight = new ProcessSnapshot(12480, "parent_service.exe", 0, 4.2, 250_000_000, 1024, 0, DateTime.Now, null, false);
@@ -357,6 +533,15 @@ public partial class MainWindow : FluentWindow
         await Task.Delay(300);
         SaveElementBitmap(killDialogLight, Path.Combine(outputDir, "screen_kill_tree_dialog_light.png"));
         killDialogLight.Close();
+
+        // 10b. Light Theme - GPU Plugin Panel (PRD §8.5)
+        var gpuPluginLight = ViewModel.PluginManager.LoadedPanels.FirstOrDefault(p => p.Id == "gpu-monitor");
+        if (gpuPluginLight != null)
+        {
+            SelectPluginTab(gpuPluginLight);
+            await Task.Delay(400);
+            SaveBitmap(Path.Combine(outputDir, "screen_gpu_light.png"));
+        }
 
         // Revert to Dark
         ThemeManager.ApplyTheme(ThemeMode.Dark);

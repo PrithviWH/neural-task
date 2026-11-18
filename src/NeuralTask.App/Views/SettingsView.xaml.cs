@@ -8,4 +8,7 @@ public partial class SettingsView : UserControl
     {
         InitializeComponent();
     }
+
+    public void ScrollToBottom() => SettingsScrollViewer.ScrollToEnd();
+    public void ScrollToTop() => SettingsScrollViewer.ScrollToTop();
 }

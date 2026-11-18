@@ -24,6 +24,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\NeuralTask.Core\NeuralTask.Core.csproj" />
     <ProjectReference Include="..\..\src\NeuralTask.App\NeuralTask.App.csproj" />
+    <ProjectReference Include="..\..\src\NeuralTask.Contracts\NeuralTask.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\plugins\NeuralTask.Plugins.Gpu\NeuralTask.Plugins.Gpu.csproj" />
   </ItemGroup>
 
 </Project>

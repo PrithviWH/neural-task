@@ -28,6 +28,7 @@ public static class AppHost
 
         // 2. Application Services
         services.AddSingleton<ISettingsService, JsonSettingsService>();
+        services.AddSingleton<IPluginManager, PluginManager>();
         services.AddSingleton<ProcessMonitorCoordinator>();
         services.AddSingleton<TrayIconService>();
 

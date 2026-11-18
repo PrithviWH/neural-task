@@ -10,6 +10,15 @@ public class SettingsViewModel : ViewModelBase
     private readonly ProcessMonitorCoordinator _coordinator;
     private readonly NeuralTask.Core.Services.IHeuristicFlagEngine? _heuristicEngine;
     private readonly NeuralTask.Core.Services.IHistoryStore? _historyStore;
+    private readonly IPluginManager? _pluginManager;
+
+    public IReadOnlyList<SafePluginPanel> LoadedPlugins => _pluginManager?.LoadedPanels ?? Array.Empty<SafePluginPanel>();
+    public string PluginsDirectory => _pluginManager?.PluginsDirectory ?? "";
+
+    public void RefreshPluginsList()
+    {
+        OnPropertyChanged(nameof(LoadedPlugins));
+    }
 
     private ThemeMode _selectedTheme;
     private int _selectedIntervalMs;
@@ -270,12 +279,20 @@ public class SettingsViewModel : ViewModelBase
         ISettingsService settingsService,
         ProcessMonitorCoordinator coordinator,
         NeuralTask.Core.Services.IHeuristicFlagEngine? heuristicEngine = null,
-        NeuralTask.Core.Services.IHistoryStore? historyStore = null)
+        NeuralTask.Core.Services.IHistoryStore? historyStore = null,
+        IPluginManager? pluginManager = null)
     {
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         _coordinator = coordinator ?? throw new ArgumentNullException(nameof(coordinator));
         _heuristicEngine = heuristicEngine;
         _historyStore = historyStore;
+        _pluginManager = pluginManager;
+
+        if (_pluginManager != null)
+        {
+            _pluginManager.PanelLoaded += _ => RefreshPluginsList();
+            _pluginManager.PanelFaulted += _ => RefreshPluginsList();
+        }
 
         var initial = _settingsService.CurrentSettings;
         _selectedTheme = initial.Theme;

@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\NeuralTask.Core\NeuralTask.Core.csproj" />
     <ProjectReference Include="..\NeuralTask.Theming\NeuralTask.Theming.csproj" />
+    <ProjectReference Include="..\NeuralTask.Contracts\NeuralTask.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>
