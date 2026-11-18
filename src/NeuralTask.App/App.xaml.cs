@@ -14,10 +14,26 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        AppDomain.CurrentDomain.UnhandledException += (s, args) =>
+        {
+            try { File.WriteAllText("crash.log", args.ExceptionObject?.ToString() ?? "Unknown exception"); } catch { }
+        };
+        DispatcherUnhandledException += (s, args) =>
+        {
+            try { File.WriteAllText("crash.log", args.Exception?.ToString() ?? "Unknown dispatcher exception"); } catch { }
+        };
+
         ShutdownMode = ShutdownMode.OnMainWindowClose;
 
         // 1. Initialize DI Container
         AppHost.InitializeServices();
+
+        var settingsService = AppHost.Services.GetRequiredService<ISettingsService>();
+        var historyStore = AppHost.Services.GetRequiredService<NeuralTask.Core.Services.IHistoryStore>();
+        if (settingsService.CurrentSettings.IsHistoryPersistenceEnabled)
+        {
+            _ = historyStore.LoadPersistedAsync();
+        }
 
         var mainWindow = AppHost.Services.GetRequiredService<MainWindow>();
         this.MainWindow = mainWindow;
@@ -55,6 +71,12 @@ public partial class App : Application
         // Ensure clean shutdown of coordinator and background monitoring loop
         try
         {
+            var historyStore = AppHost.Services.GetService<NeuralTask.Core.Services.IHistoryStore>();
+            if (historyStore != null && historyStore.IsPersistenceEnabled)
+            {
+                await historyStore.PersistAsync();
+            }
+
             var coordinator = AppHost.Services.GetService<ProcessMonitorCoordinator>();
             if (coordinator != null)
             {

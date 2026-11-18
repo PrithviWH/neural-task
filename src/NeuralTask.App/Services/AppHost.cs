@@ -23,6 +23,8 @@ public static class AppHost
         services.AddSingleton<IProcessInfoService, ProcessInfoService>();
         services.AddSingleton<IStartupScoreEngine, StartupScoreEngine>();
         services.AddSingleton<IHeuristicFlagEngine, HeuristicFlagEngine>();
+        services.AddSingleton<IHistoryStore, HistoryStore>();
+        services.AddSingleton<IExportService, ExportService>();
 
         // 2. Application Services
         services.AddSingleton<ISettingsService, JsonSettingsService>();

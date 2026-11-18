@@ -9,7 +9,9 @@ public record AppSettings(
     bool IsAmbientAnimationEnabled = true,
     bool IsMinimizeToTrayEnabled = true,
     string TrayIconMetric = "CPU",
-    NeuralTask.Core.Services.HeuristicSensitivity HeuristicSensitivity = NeuralTask.Core.Services.HeuristicSensitivity.Conservative
+    NeuralTask.Core.Services.HeuristicSensitivity HeuristicSensitivity = NeuralTask.Core.Services.HeuristicSensitivity.Conservative,
+    int HistoryRetentionMinutes = 30,
+    bool IsHistoryPersistenceEnabled = false
 );
 
 public interface ISettingsService

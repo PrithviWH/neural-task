@@ -18,6 +18,7 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
             <!-- 1. Header -->
@@ -365,8 +366,77 @@
                 </StackPanel>
             </Border>
 
-            <!-- 7. Privacy & Platform Attribution -->
+            <!-- 7. Historical Telemetry & Persistence (PRD §6.3 - 3.1) -->
             <Border Grid.Row="6"
+                    Margin="0,0,0,20"
+                    Background="{DynamicResource BrushPanelSurface}"
+                    BorderBrush="{DynamicResource BrushPanelBorder}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="24,20">
+                <StackPanel>
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="HISTORICAL TELEMETRY BUFFER &amp; RESTART PERSISTENCE"
+                                       FontSize="13"
+                                       FontWeight="SemiBold"
+                                       FontFamily="{DynamicResource FontFamilyNumeric}"
+                                       Foreground="{DynamicResource BrushAccentPrimary}"
+                                       Margin="0,0,0,4" />
+                            <TextBlock Text="Retains a rolling telemetry buffer enabling timeline scrubbing. Optionally persist samples to local disk across restarts."
+                                       FontSize="12"
+                                       FontFamily="{DynamicResource FontFamilyUI}"
+                                       Foreground="{DynamicResource BrushTextSecondary}"
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+                        <CheckBox Grid.Column="1"
+                                  IsChecked="{Binding IsHistoryPersistenceEnabled, Mode=TwoWay}"
+                                  Content="PERSIST ON DISK"
+                                  FontSize="12"
+                                  FontWeight="Bold"
+                                  FontFamily="{DynamicResource FontFamilyNumeric}"
+                                  Foreground="{DynamicResource BrushAccentPrimary}"
+                                  VerticalAlignment="Center" />
+                    </Grid>
+
+                    <TextBlock Text="ROLLING RETENTION WINDOW"
+                               FontSize="11"
+                               FontWeight="SemiBold"
+                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                               Foreground="{DynamicResource BrushTextSecondary}"
+                               Margin="0,4,0,8" />
+
+                    <StackPanel Orientation="Horizontal">
+                        <RadioButton Content="15 Minutes"
+                                     GroupName="RetentionGroup"
+                                     IsChecked="{Binding IsRetention15, Mode=TwoWay}"
+                                     FontSize="12"
+                                     FontFamily="{DynamicResource FontFamilyNumeric}"
+                                     Foreground="{DynamicResource BrushTextPrimary}"
+                                     Margin="0,0,24,0" />
+                        <RadioButton Content="30 Minutes (Recommended)"
+                                     GroupName="RetentionGroup"
+                                     IsChecked="{Binding IsRetention30, Mode=TwoWay}"
+                                     FontSize="12"
+                                     FontFamily="{DynamicResource FontFamilyNumeric}"
+                                     Foreground="{DynamicResource BrushAccentPrimary}"
+                                     Margin="0,0,24,0" />
+                        <RadioButton Content="60 Minutes (Deep Buffer)"
+                                     GroupName="RetentionGroup"
+                                     IsChecked="{Binding IsRetention60, Mode=TwoWay}"
+                                     FontSize="12"
+                                     FontFamily="{DynamicResource FontFamilyNumeric}"
+                                     Foreground="{DynamicResource BrushAccentSecondary}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- 8. Privacy & Platform Attribution -->
+            <Border Grid.Row="7"
                     Background="{DynamicResource BrushPanelSurface}"
                     BorderBrush="{DynamicResource BrushAccentPrimary}"
                     BorderThickness="1"

@@ -242,11 +242,44 @@ An automated contrast test suite (`ThemeContrastTests.cs`) mathematically valida
 
 ---
 
+## Historical Telemetry & Timeline Scrubber (PRD §6.3 - 3.1)
+
+### 1. Rolling In-Memory Retention & Memory Budget
+The `HistoryStore` service maintains a bounded chronological window of system and per-process telemetry:
+* **Configurable Window:** 15m, 30m (Default), or 60m via Settings.
+* **Memory Budget Design (PRD §7):**
+  * Scalar system metrics consume only $\sim 80$ bytes per sample.
+  * Process tracking is capped at top 10 CPU and top 10 RAM offenders (deduplicated, $\le 15$ processes), consuming $\sim 960$ bytes.
+  * Hard capacity ceiling capped at 4,000 samples ($< 4.5\text{ MB}$ total heap usage).
+  * Guarantees zero memory leaks or unbounded growth during multi-day continuous monitoring.
+* **Optional Local-Only Persistence:**
+  * When enabled in Settings, history is automatically saved on app exit and restored on startup from `%LOCALAPPDATA%\NeuralTask\telemetry_history.json`.
+  * Strictly local-only file storage; zero external network calls.
+
+### 2. Scrubbable Timeline Control
+* **Interactive Timeline Slider:** Dragging the timeline slider scrubs backwards through historical metrics with sub-millisecond responsiveness.
+* **Historical Readout:** CPU%, RAM%, Disk, and Network displays, along with Top Offenders cards, update to show exact point-in-time metrics.
+* **One-Click Live Resume:** Clicking **`[ ⏺ LIVE ]`** or returning the slider to `1.0` seamlessly resumes real-time streaming.
+
+---
+
+## Snapshot Export: Versioned JSON & Flat CSV (PRD §6.3 - 3.2)
+
+One-click snapshot export affordances directly in the Dashboard header toolbar:
+* **Versioned JSON (`[ 💾 JSON ]`):**
+  * Emits a structured JSON document with `"schemaVersion": "1.0.0"` and `"product": "NeuralTask"`.
+  * Includes system-wide telemetry, full process hierarchy, resource rates, and active heuristic flags for external tooling/bug report workflows.
+* **Flat Spreadsheet CSV (`[ 📊 CSV ]`):**
+  * Fully RFC 4180 compliant with headers: `PID,Name,ParentPID,CPU_Percent,RAM_Bytes,RAM_MB,Disk_Bytes_Per_Sec,Network_Bytes_Per_Sec,Executable_Path,Is_Access_Denied,Heuristic_Flags`.
+  * Opens cleanly in Microsoft Excel, Google Sheets, or LibreOffice Calc without manual data parsing.
+
+---
+
 ## Roadmap Overview
-* **v0.1 (Released / Public RC):** Core holographic & holo-glass themes, live process table with multi-column sorting, fuzzy search, safe kill-tree with creation timestamp checks, neural topology dialog, real-time hardware graphs, and persistent system tray mini-graph.
-* **v0.2 (Current):** Explainable 0-100 startup impact scoring with Time vs. Resource split, multi-source enumeration, binary `StartupApproved` toggle, admin elevation handling, local-only suspicious-process heuristic triage (PRD §8.4), structured "Copy Process Info" with async SHA-256 hashing, and redesigned Holo-Glass light theme with verified WCAG AA compliance.
-* **v0.3:** Deep process tree visualizer, ETW boot-trace capture across reboots, and historical telemetry logging.
-* **v0.4+:** Historical telemetry capture, JSON/CSV export, and plugin architecture.
+* **v0.1 (Released):** Core holographic & holo-glass themes, live process table with multi-column sorting, fuzzy search, safe kill-tree with creation timestamp checks, neural topology dialog, real-time hardware graphs, and persistent system tray mini-graph.
+* **v0.2 (Released):** Explainable 0-100 startup impact scoring with Time vs. Resource split, multi-source enumeration, binary `StartupApproved` toggle, admin elevation handling, local-only suspicious-process heuristic triage (PRD §8.4), structured "Copy Process Info" with async SHA-256 hashing, and redesigned Holo-Glass light theme with verified WCAG AA compliance.
+* **v0.3 (Current):** Historical telemetry store (`HistoryStore`) with rolling 30–60m memory-budgeted retention, scrubbable timeline control, local-only restart persistence, and versioned JSON / RFC 4180 CSV snapshot exports.
+* **v0.4+:** Plugin architecture (PRD §8.5) and community widgets.
 
 ---
 

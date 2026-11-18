@@ -44,18 +44,20 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         IStartupScoreEngine startupScoreEngine,
         IProcessMonitorService monitorService,
         IHeuristicFlagEngine heuristicFlagEngine,
-        IProcessInfoService processInfoService)
+        IProcessInfoService processInfoService,
+        IHistoryStore historyStore,
+        IExportService exportService)
     {
         _coordinator = coordinator ?? throw new ArgumentNullException(nameof(coordinator));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         _actionService = actionService ?? throw new ArgumentNullException(nameof(actionService));
         _trayIconService = trayIconService ?? throw new ArgumentNullException(nameof(trayIconService));
 
-        Dashboard = new DashboardViewModel();
+        Dashboard = new DashboardViewModel(historyStore, exportService, heuristicFlagEngine);
         ProcessList = new ProcessListViewModel(_actionService, heuristicFlagEngine, processInfoService);
         Performance = new PerformanceViewModel();
         Startup = new StartupViewModel(startupScoreEngine, monitorService);
-        Settings = new SettingsViewModel(_settingsService, _coordinator, heuristicFlagEngine);
+        Settings = new SettingsViewModel(_settingsService, _coordinator, heuristicFlagEngine, historyStore);
 
         _coordinator.UpdateReceived += OnMonitoringUpdateReceived;
 

@@ -261,11 +261,18 @@ public partial class MainWindow : FluentWindow
         // Wait for live monitoring to collect initial real metrics
         await Task.Delay(1200);
 
-        // 1. Dark Theme - Dashboard (Live metrics)
+        // 1. Dark Theme - Dashboard (Live metrics with scrubber & export)
         ThemeManager.ApplyTheme(ThemeMode.Dark);
         SelectTab(0);
         await Task.Delay(400);
         SaveBitmap(Path.Combine(outputDir, "screen_dashboard_dark.png"));
+
+        // 1b. Dark Theme - Dashboard (Scrubbing historical mode)
+        ViewModel.Dashboard.ScrubberValue = 0.0;
+        await Task.Delay(300);
+        SaveBitmap(Path.Combine(outputDir, "screen_dashboard_scrubbing_dark.png"));
+        ViewModel.Dashboard.ResumeLive();
+        await Task.Delay(200);
 
         // 2. Dark Theme - Processes (Live processes & Heuristic Flags)
         SelectTab(1);

@@ -9,6 +9,7 @@ public class SettingsViewModel : ViewModelBase
     private readonly ISettingsService _settingsService;
     private readonly ProcessMonitorCoordinator _coordinator;
     private readonly NeuralTask.Core.Services.IHeuristicFlagEngine? _heuristicEngine;
+    private readonly NeuralTask.Core.Services.IHistoryStore? _historyStore;
 
     private ThemeMode _selectedTheme;
     private int _selectedIntervalMs;
@@ -16,6 +17,70 @@ public class SettingsViewModel : ViewModelBase
     private bool _isMinimizeToTrayEnabled;
     private string _trayIconMetric = "CPU";
     private NeuralTask.Core.Services.HeuristicSensitivity _heuristicSensitivity = NeuralTask.Core.Services.HeuristicSensitivity.Conservative;
+    private int _historyRetentionMinutes = 30;
+    private bool _isHistoryPersistenceEnabled = false;
+
+    public int HistoryRetentionMinutes
+    {
+        get => _historyRetentionMinutes;
+        set
+        {
+            if (SetProperty(ref _historyRetentionMinutes, value))
+            {
+                if (_historyStore != null)
+                {
+                    _historyStore.RetentionWindow = TimeSpan.FromMinutes(value);
+                }
+                Persist();
+                OnPropertyChanged(nameof(IsRetention15));
+                OnPropertyChanged(nameof(IsRetention30));
+                OnPropertyChanged(nameof(IsRetention60));
+            }
+        }
+    }
+
+    public bool IsRetention15
+    {
+        get => _historyRetentionMinutes == 15;
+        set
+        {
+            if (value) HistoryRetentionMinutes = 15;
+        }
+    }
+
+    public bool IsRetention30
+    {
+        get => _historyRetentionMinutes == 30;
+        set
+        {
+            if (value) HistoryRetentionMinutes = 30;
+        }
+    }
+
+    public bool IsRetention60
+    {
+        get => _historyRetentionMinutes == 60;
+        set
+        {
+            if (value) HistoryRetentionMinutes = 60;
+        }
+    }
+
+    public bool IsHistoryPersistenceEnabled
+    {
+        get => _isHistoryPersistenceEnabled;
+        set
+        {
+            if (SetProperty(ref _isHistoryPersistenceEnabled, value))
+            {
+                if (_historyStore != null)
+                {
+                    _historyStore.IsPersistenceEnabled = value;
+                }
+                Persist();
+            }
+        }
+    }
 
     public NeuralTask.Core.Services.HeuristicSensitivity HeuristicSensitivity
     {
@@ -204,11 +269,13 @@ public class SettingsViewModel : ViewModelBase
     public SettingsViewModel(
         ISettingsService settingsService,
         ProcessMonitorCoordinator coordinator,
-        NeuralTask.Core.Services.IHeuristicFlagEngine? heuristicEngine = null)
+        NeuralTask.Core.Services.IHeuristicFlagEngine? heuristicEngine = null,
+        NeuralTask.Core.Services.IHistoryStore? historyStore = null)
     {
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         _coordinator = coordinator ?? throw new ArgumentNullException(nameof(coordinator));
         _heuristicEngine = heuristicEngine;
+        _historyStore = historyStore;
 
         var initial = _settingsService.CurrentSettings;
         _selectedTheme = initial.Theme;
@@ -217,10 +284,18 @@ public class SettingsViewModel : ViewModelBase
         _isMinimizeToTrayEnabled = initial.IsMinimizeToTrayEnabled;
         _trayIconMetric = initial.TrayIconMetric;
         _heuristicSensitivity = initial.HeuristicSensitivity;
+        _historyRetentionMinutes = initial.HistoryRetentionMinutes;
+        _isHistoryPersistenceEnabled = initial.IsHistoryPersistenceEnabled;
 
         if (_heuristicEngine != null)
         {
             _heuristicEngine.Sensitivity = _heuristicSensitivity;
+        }
+
+        if (_historyStore != null)
+        {
+            _historyStore.RetentionWindow = TimeSpan.FromMinutes(_historyRetentionMinutes);
+            _historyStore.IsPersistenceEnabled = _isHistoryPersistenceEnabled;
         }
 
         // Apply loaded initial settings
@@ -236,7 +311,9 @@ public class SettingsViewModel : ViewModelBase
             IsAmbientAnimationEnabled: _isAmbientAnimationEnabled,
             IsMinimizeToTrayEnabled: _isMinimizeToTrayEnabled,
             TrayIconMetric: _trayIconMetric,
-            HeuristicSensitivity: _heuristicSensitivity
+            HeuristicSensitivity: _heuristicSensitivity,
+            HistoryRetentionMinutes: _historyRetentionMinutes,
+            IsHistoryPersistenceEnabled: _isHistoryPersistenceEnabled
         ));
     }
 }
