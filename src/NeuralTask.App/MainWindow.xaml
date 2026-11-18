@@ -4,49 +4,218 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        xmlns:views="clr-namespace:NeuralTask.App.Views"
         mc:Ignorable="d"
-        Title="NeuralTask"
-        Height="600"
-        Width="960"
-        MinHeight="480"
-        MinWidth="720"
+        Title="NeuralTask // HUD"
+        Height="720"
+        Width="1100"
+        MinHeight="560"
+        MinWidth="880"
         WindowStartupLocation="CenterScreen"
+        ExtendsContentIntoTitleBar="True"
         WindowBackdropType="Mica"
         Background="{DynamicResource BrushBackgroundBase}">
 
+    <ui:FluentWindow.Resources>
+        <!-- Style for Navigation Rail Icon Buttons -->
+        <Style x:Key="NavRailButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Width" Value="52" />
+            <Setter Property="Height" Value="52" />
+            <Setter Property="Margin" Value="0,6" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="ButtonBorder"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="8"
+                                Padding="12">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource BrushPanelSurface}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </ui:FluentWindow.Resources>
+
     <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
+        <!-- 0. Ambient Background Animation Layer (GPU Composited) -->
+        <Canvas x:Name="AmbientAnimationCanvas" IsHitTestVisible="False" ClipToBounds="True">
+            <!-- Subtle diagonal data stream lines -->
+            <Path Data="M -200,100 L 1500,-400 M -200,350 L 1500,-150 M -200,600 L 1500,100 M -200,850 L 1500,350"
+                  Stroke="{DynamicResource BrushAccentPrimary}"
+                  StrokeThickness="1"
+                  Opacity="0.04">
+                <Path.RenderTransform>
+                    <TranslateTransform x:Name="AmbientTransform" X="0" Y="0" />
+                </Path.RenderTransform>
+            </Path>
 
-        <!-- Futuristic HUD TitleBar with Window Controls -->
-        <ui:TitleBar Grid.Row="0"
-                     Title="NEURALTASK // HUD v0.1" />
+            <!-- Subtle secondary violet wave -->
+            <Path Data="M -200,200 L 1500,-300 M -200,700 L 1500,200"
+                  Stroke="{DynamicResource BrushAccentSecondary}"
+                  StrokeThickness="1"
+                  Opacity="0.03">
+                <Path.RenderTransform>
+                    <TranslateTransform x:Name="AmbientTransformSecondary" X="0" Y="0" />
+                </Path.RenderTransform>
+            </Path>
+        </Canvas>
 
-        <!-- Main Viewport Placeholder -->
-        <Border Grid.Row="1"
-                Margin="24"
-                Background="{DynamicResource BrushPanelSurface}"
-                BorderBrush="{DynamicResource BrushAccentPrimary}"
-                BorderThickness="1"
-                CornerRadius="6">
-            <StackPanel HorizontalAlignment="Center"
-                        VerticalAlignment="Center">
-                <TextBlock Text="NeuralTask"
-                           FontSize="42"
-                           FontWeight="Bold"
-                           FontFamily="{DynamicResource FontFamilyUI}"
-                           Foreground="{DynamicResource BrushAccentPrimary}"
-                           HorizontalAlignment="Center" />
+        <!-- Main Window Structure -->
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
 
-                <TextBlock Text="SYSTEM MONITOR // INITIALIZING KERNEL TELEMETRY"
-                           FontSize="13"
-                           FontFamily="{DynamicResource FontFamilyNumeric}"
-                           Foreground="{DynamicResource BrushTextSecondary}"
-                           HorizontalAlignment="Center"
-                           Margin="0,8,0,0" />
-            </StackPanel>
-        </Border>
+            <!-- 1. Futuristic HUD TitleBar Chrome -->
+            <ui:TitleBar Grid.Row="0"
+                         Title="NEURALTASK // HUD v0.1"
+                         Height="42"
+                         Padding="12,0,0,0">
+                <ui:TitleBar.Header>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="SYS.NODE: ONLINE"
+                                   FontSize="10"
+                                   FontWeight="Bold"
+                                   FontFamily="{DynamicResource FontFamilyNumeric}"
+                                   Foreground="{DynamicResource BrushAccentPrimary}"
+                                   Margin="20,0,0,0" />
+                    </StackPanel>
+                </ui:TitleBar.Header>
+            </ui:TitleBar>
+
+            <!-- 2. Main Shell Layout (Slim Icon Rail + Viewport) -->
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="68" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Left Navigation Icon Rail -->
+                <Border Grid.Column="0"
+                        Background="{DynamicResource BrushPanelSurface}"
+                        BorderBrush="{DynamicResource BrushAccentPrimary}"
+                        BorderThickness="0,1,1,0"
+                        Padding="0,16,0,16">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <!-- Top Navigation Items -->
+                        <StackPanel Grid.Row="0" HorizontalAlignment="Center">
+                            <!-- Dashboard Button -->
+                            <Grid>
+                                <Rectangle x:Name="IndicatorDashboard"
+                                           HorizontalAlignment="Left"
+                                           Width="3" Height="28"
+                                           Fill="{DynamicResource BrushAccentPrimary}"
+                                           RadiusX="1.5" RadiusY="1.5"
+                                           Margin="-8,0,0,0">
+                                    <Rectangle.Effect>
+                                        <DropShadowEffect BlurRadius="8" ShadowDepth="0" Color="{DynamicResource ColorAccentPrimary}" Opacity="0.8" />
+                                    </Rectangle.Effect>
+                                </Rectangle>
+                                <Button x:Name="NavButtonDashboard"
+                                        Style="{StaticResource NavRailButtonStyle}"
+                                        ToolTip="Telemetry Dashboard"
+                                        Click="OnNavDashboardClick">
+                                    <Path x:Name="IconDashboard"
+                                          Data="{StaticResource IconDashboardGeometry}"
+                                          Stroke="{DynamicResource BrushAccentPrimary}"
+                                          StrokeThickness="1.5"
+                                          Width="22" Height="22"
+                                          Stretch="Uniform" />
+                                </Button>
+                            </Grid>
+
+                            <!-- Process List Button -->
+                            <Grid>
+                                <Rectangle x:Name="IndicatorProcesses"
+                                           HorizontalAlignment="Left"
+                                           Width="3" Height="28"
+                                           Fill="{DynamicResource BrushAccentPrimary}"
+                                           RadiusX="1.5" RadiusY="1.5"
+                                           Margin="-8,0,0,0"
+                                           Visibility="Collapsed">
+                                    <Rectangle.Effect>
+                                        <DropShadowEffect BlurRadius="8" ShadowDepth="0" Color="{DynamicResource ColorAccentPrimary}" Opacity="0.8" />
+                                    </Rectangle.Effect>
+                                </Rectangle>
+                                <Button x:Name="NavButtonProcesses"
+                                        Style="{StaticResource NavRailButtonStyle}"
+                                        ToolTip="Process Matrix"
+                                        Click="OnNavProcessesClick">
+                                    <Path x:Name="IconProcesses"
+                                          Data="{StaticResource IconProcessesGeometry}"
+                                          Stroke="{DynamicResource BrushTextSecondary}"
+                                          StrokeThickness="1.5"
+                                          Width="22" Height="22"
+                                          Stretch="Uniform" />
+                                </Button>
+                            </Grid>
+
+                            <!-- Settings Button -->
+                            <Grid>
+                                <Rectangle x:Name="IndicatorSettings"
+                                           HorizontalAlignment="Left"
+                                           Width="3" Height="28"
+                                           Fill="{DynamicResource BrushAccentPrimary}"
+                                           RadiusX="1.5" RadiusY="1.5"
+                                           Margin="-8,0,0,0"
+                                           Visibility="Collapsed">
+                                    <Rectangle.Effect>
+                                        <DropShadowEffect BlurRadius="8" ShadowDepth="0" Color="{DynamicResource ColorAccentPrimary}" Opacity="0.8" />
+                                    </Rectangle.Effect>
+                                </Rectangle>
+                                <Button x:Name="NavButtonSettings"
+                                        Style="{StaticResource NavRailButtonStyle}"
+                                        ToolTip="System Settings"
+                                        Click="OnNavSettingsClick">
+                                    <Path x:Name="IconSettings"
+                                          Data="{StaticResource IconSettingsGeometry}"
+                                          Stroke="{DynamicResource BrushTextSecondary}"
+                                          StrokeThickness="1.5"
+                                          Width="22" Height="22"
+                                          Stretch="Uniform" />
+                                </Button>
+                            </Grid>
+                        </StackPanel>
+
+                        <!-- Bottom Rail Status Pip -->
+                        <StackPanel Grid.Row="1" HorizontalAlignment="Center">
+                            <Ellipse Width="6" Height="6" Fill="{DynamicResource BrushAccentPrimary}" Margin="0,0,0,4">
+                                <Ellipse.Effect>
+                                    <DropShadowEffect BlurRadius="6" ShadowDepth="0" Color="{DynamicResource ColorAccentPrimary}" Opacity="0.8" />
+                                </Ellipse.Effect>
+                            </Ellipse>
+                            <TextBlock Text="v0.1"
+                                       FontSize="9"
+                                       FontWeight="SemiBold"
+                                       FontFamily="{DynamicResource FontFamilyNumeric}"
+                                       Foreground="{DynamicResource BrushTextSecondary}"
+                                       HorizontalAlignment="Center" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- Right Viewport Area Hosting Views -->
+                <Grid Grid.Column="1" x:Name="ViewportContainer" Background="Transparent">
+                    <views:DashboardView x:Name="ViewDashboard" Visibility="Visible" />
+                    <views:ProcessListView x:Name="ViewProcesses" Visibility="Collapsed" />
+                    <views:SettingsView x:Name="ViewSettings" Visibility="Collapsed" />
+                </Grid>
+            </Grid>
+        </Grid>
     </Grid>
 </ui:FluentWindow>

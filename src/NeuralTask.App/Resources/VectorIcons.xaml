@@ -1,0 +1,69 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ========================================================================= -->
+    <!-- Custom HD Line-Icons for NeuralTask HUD (PRD §5.1)                         -->
+    <!-- Hand-crafted vector paths with 24x24 viewport & clean geometric lines     -->
+    <!-- ========================================================================= -->
+
+    <!-- Dashboard: Futuristic Telemetry HUD / Radar Node -->
+    <Geometry x:Key="IconDashboardGeometry">
+        M 12,2 L 21,7 L 21,17 L 12,22 L 3,17 L 3,7 Z
+        M 12,6 A 6,6 0 1 0 12,18 A 6,6 0 1 0 12,6
+        M 12,2 L 12,6
+        M 12,18 L 12,22
+        M 3,12 L 6,12
+        M 18,12 L 21,12
+        M 12,10 A 2,2 0 1 0 12,14 A 2,2 0 1 0 12,10
+    </Geometry>
+
+    <!-- Processes: Hierarchical Neural Task Matrix / Process Tree -->
+    <Geometry x:Key="IconProcessesGeometry">
+        M 4,5 L 11,5
+        M 13,5 L 20,5
+        M 4,12 L 9,12
+        M 15,12 L 20,12
+        M 4,19 L 13,19
+        M 17,19 L 20,19
+        M 7,5 L 7,19
+        M 12,4 A 1.5,1.5 0 1 0 12,6 A 1.5,1.5 0 1 0 12,4
+        M 12,11 A 1.5,1.5 0 1 0 12,13 A 1.5,1.5 0 1 0 12,11
+        M 15,18 A 1.5,1.5 0 1 0 15,20 A 1.5,1.5 0 1 0 15,18
+    </Geometry>
+
+    <!-- Settings: Futuristic Multi-Axis Cyber Tuner / Calibration Nodes -->
+    <Geometry x:Key="IconSettingsGeometry">
+        M 3,6 L 21,6
+        M 3,12 L 21,12
+        M 3,18 L 21,18
+        M 8,4 L 10,6 L 8,8 L 6,6 Z
+        M 16,10 L 18,12 L 16,14 L 14,12 Z
+        M 11,16 L 13,18 L 11,20 L 9,18 Z
+    </Geometry>
+
+    <!-- Column Picker Icon -->
+    <Geometry x:Key="IconColumnsGeometry">
+        M 3,4 L 21,4 L 21,20 L 3,20 Z
+        M 9,4 L 9,20
+        M 15,4 L 15,20
+    </Geometry>
+
+    <!-- Kill-Tree Skull / Disconnect Node -->
+    <Geometry x:Key="IconKillGeometry">
+        M 6,6 L 18,18
+        M 18,6 L 6,18
+        M 12,2 A 10,10 0 1 0 12,22 A 10,10 0 1 0 12,2
+    </Geometry>
+
+    <!-- Search Magnifier Icon -->
+    <Geometry x:Key="IconSearchGeometry">
+        M 11,3 A 8,8 0 1 0 11,19 A 8,8 0 1 0 11,3
+        M 17,17 L 21,21
+    </Geometry>
+
+    <!-- System Shield Icon -->
+    <Geometry x:Key="IconShieldGeometry">
+        M 12,2 L 20,5 L 20,11 C 20,16 16.5,20.5 12,22 C 7.5,20.5 4,16 4,11 L 4,5 Z
+    </Geometry>
+
+</ResourceDictionary>

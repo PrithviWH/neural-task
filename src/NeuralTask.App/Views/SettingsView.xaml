@@ -1,0 +1,256 @@
+<UserControl x:Class="NeuralTask.App.Views.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             d:DesignHeight="700" d:DesignWidth="900">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Grid Margin="32,24,32,32">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- 1. Header -->
+            <Grid Grid.Row="0" Margin="0,0,0,24">
+                <StackPanel>
+                    <TextBlock Text="SYSTEM SETTINGS"
+                               FontSize="20"
+                               FontWeight="SemiBold"
+                               FontFamily="{DynamicResource FontFamilyUI}"
+                               Foreground="{DynamicResource BrushTextPrimary}" />
+                    <TextBlock Text="HUD CONFIGURATION // DISPLAY ENGINE &amp; TELEMETRY TUNING"
+                               FontSize="11"
+                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                               Foreground="{DynamicResource BrushTextSecondary}"
+                               Margin="0,4,0,0" />
+                </StackPanel>
+            </Grid>
+
+            <!-- 2. Visual Theme Card (Dark Hologram vs Light Holo-Glass) -->
+            <Border Grid.Row="1"
+                    Margin="0,0,0,20"
+                    Background="{DynamicResource BrushPanelSurface}"
+                    BorderBrush="{DynamicResource BrushAccentPrimary}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="24,20">
+                <StackPanel>
+                    <TextBlock Text="VISUAL PALETTE &amp; THEME ENGINE"
+                               FontSize="13"
+                               FontWeight="SemiBold"
+                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                               Foreground="{DynamicResource BrushAccentPrimary}"
+                               Margin="0,0,0,6" />
+                    <TextBlock Text="Switch between native Dark Hologram and High-Contrast Holo-Glass lab palettes live without restarting."
+                               FontSize="12"
+                               FontFamily="{DynamicResource FontFamilyUI}"
+                               Foreground="{DynamicResource BrushTextSecondary}"
+                               Margin="0,0,0,16" />
+
+                    <!-- Radio buttons for Theme selection -->
+                    <Grid Margin="0,4,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="20" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Dark Theme Option Card -->
+                        <Border x:Name="BorderThemeDark"
+                                Grid.Column="0"
+                                Background="{DynamicResource BrushBackgroundBase}"
+                                BorderBrush="{DynamicResource BrushAccentPrimary}"
+                                BorderThickness="1.5"
+                                CornerRadius="6"
+                                Padding="16,14"
+                                Cursor="Hand"
+                                MouseLeftButtonDown="OnSelectDarkTheme">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                    <RadioButton x:Name="RadioThemeDark"
+                                                 GroupName="ThemeGroup"
+                                                 IsChecked="True"
+                                                 Checked="OnRadioThemeDarkChecked"
+                                                 VerticalAlignment="Center" />
+                                    <TextBlock Text="DARK (HOLOGRAM)"
+                                               FontSize="13"
+                                               FontWeight="Bold"
+                                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                                               Foreground="{DynamicResource BrushTextPrimary}"
+                                               Margin="8,0,0,0"
+                                               VerticalAlignment="Center" />
+                                </StackPanel>
+                                <TextBlock Text="Deep space obsidian (#0A0E14) canvas with glowing electric cyan HUD accents and translucent Mica glass depth."
+                                           FontSize="11"
+                                           FontFamily="{DynamicResource FontFamilyUI}"
+                                           Foreground="{DynamicResource BrushTextSecondary}"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Light Theme Option Card -->
+                        <Border x:Name="BorderThemeLight"
+                                Grid.Column="2"
+                                Background="{DynamicResource BrushBackgroundBase}"
+                                BorderBrush="{DynamicResource BrushTextSecondary}"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="16,14"
+                                Cursor="Hand"
+                                MouseLeftButtonDown="OnSelectLightTheme">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                    <RadioButton x:Name="RadioThemeLight"
+                                                 GroupName="ThemeGroup"
+                                                 Checked="OnRadioThemeLightChecked"
+                                                 VerticalAlignment="Center" />
+                                    <TextBlock Text="LIGHT (HOLO-GLASS)"
+                                               FontSize="13"
+                                               FontWeight="Bold"
+                                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                                               Foreground="{DynamicResource BrushTextPrimary}"
+                                               Margin="8,0,0,0"
+                                               VerticalAlignment="Center" />
+                                </StackPanel>
+                                <TextBlock Text="Cleanroom medical lab aesthetic (#F4F6FA) with frosty acrylic glass, crisp obsidian text, and deep cyan tokens."
+                                           FontSize="11"
+                                           FontFamily="{DynamicResource FontFamilyUI}"
+                                           Foreground="{DynamicResource BrushTextSecondary}"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- 3. Ambient Animation Layer Toggle -->
+            <Border Grid.Row="2"
+                    Margin="0,0,0,20"
+                    Background="{DynamicResource BrushPanelSurface}"
+                    BorderBrush="{DynamicResource BrushAccentPrimary}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="24,20">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="GPU AMBIENT DATA-FLOW ANIMATION"
+                                   FontSize="13"
+                                   FontWeight="SemiBold"
+                                   FontFamily="{DynamicResource FontFamilyNumeric}"
+                                   Foreground="{DynamicResource BrushAccentPrimary}"
+                                   Margin="0,0,0,6" />
+                        <TextBlock Text="Renders subtle GPU-composited telemetry data streams on the canvas background. Disable for low-power mode or static preference."
+                                   FontSize="12"
+                                   FontFamily="{DynamicResource FontFamilyUI}"
+                                   Foreground="{DynamicResource BrushTextSecondary}"
+                                   TextWrapping="Wrap" />
+                    </StackPanel>
+
+                    <CheckBox x:Name="CheckAmbientAnimation"
+                              Grid.Column="1"
+                              IsChecked="True"
+                              Content="ACTIVE"
+                              FontSize="12"
+                              FontWeight="Bold"
+                              FontFamily="{DynamicResource FontFamilyNumeric}"
+                              Foreground="{DynamicResource BrushAccentPrimary}"
+                              VerticalAlignment="Center"
+                              Checked="OnAmbientAnimationToggled"
+                              Unchecked="OnAmbientAnimationToggled" />
+                </Grid>
+            </Border>
+
+            <!-- 4. Telemetry Sampling Frequency -->
+            <Border Grid.Row="3"
+                    Margin="0,0,0,20"
+                    Background="{DynamicResource BrushPanelSurface}"
+                    BorderBrush="{DynamicResource BrushAccentPrimary}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="24,20">
+                <StackPanel>
+                    <TextBlock Text="SAMPLING INTERVAL // REFRESH RATE"
+                               FontSize="13"
+                               FontWeight="SemiBold"
+                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                               Foreground="{DynamicResource BrushAccentPrimary}"
+                               Margin="0,0,0,6" />
+                    <TextBlock Text="Controls the frequency of native Win32 process enumeration and delta calculations."
+                               FontSize="12"
+                               FontFamily="{DynamicResource FontFamilyUI}"
+                               Foreground="{DynamicResource BrushTextSecondary}"
+                               Margin="0,0,0,14" />
+
+                    <StackPanel Orientation="Horizontal">
+                        <RadioButton Content="500 ms (High Performance)"
+                                     GroupName="IntervalGroup"
+                                     FontSize="12"
+                                     FontFamily="{DynamicResource FontFamilyNumeric}"
+                                     Foreground="{DynamicResource BrushTextPrimary}"
+                                     Margin="0,0,24,0" />
+                        <RadioButton Content="1000 ms (Default Balanced)"
+                                     GroupName="IntervalGroup"
+                                     IsChecked="True"
+                                     FontSize="12"
+                                     FontFamily="{DynamicResource FontFamilyNumeric}"
+                                     Foreground="{DynamicResource BrushAccentPrimary}"
+                                     Margin="0,0,24,0" />
+                        <RadioButton Content="2000 ms (Power Saver)"
+                                     GroupName="IntervalGroup"
+                                     FontSize="12"
+                                     FontFamily="{DynamicResource FontFamilyNumeric}"
+                                     Foreground="{DynamicResource BrushTextPrimary}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- 5. Privacy & Platform Attribution -->
+            <Border Grid.Row="4"
+                    Background="{DynamicResource BrushPanelSurface}"
+                    BorderBrush="{DynamicResource BrushAccentPrimary}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="24,18">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <Path Grid.Column="0"
+                          Data="{StaticResource IconShieldGeometry}"
+                          Stroke="{DynamicResource BrushAccentPrimary}"
+                          StrokeThickness="1.5"
+                          Width="22" Height="22"
+                          Stretch="Uniform"
+                          Margin="0,0,16,0"
+                          VerticalAlignment="Center" />
+
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="LOCAL TELEMETRY ONLY // ZERO EXTERNAL NETWORK CALLS"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
+                                   FontFamily="{DynamicResource FontFamilyNumeric}"
+                                   Foreground="{DynamicResource BrushAccentPrimary}" />
+                        <TextBlock Text="NeuralTask operates strictly on native local Win32 kernel structures. No process identifiers, memory snapshots, or telemetry pings ever leave your machine."
+                                   FontSize="11"
+                                   FontFamily="{DynamicResource FontFamilyUI}"
+                                   Foreground="{DynamicResource BrushTextSecondary}"
+                                   Margin="0,4,0,0" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+    </ScrollViewer>
+</UserControl>
