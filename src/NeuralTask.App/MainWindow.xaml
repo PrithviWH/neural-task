@@ -1,0 +1,52 @@
+﻿<ui:FluentWindow x:Class="NeuralTask.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        mc:Ignorable="d"
+        Title="NeuralTask"
+        Height="600"
+        Width="960"
+        MinHeight="480"
+        MinWidth="720"
+        WindowStartupLocation="CenterScreen"
+        WindowBackdropType="Mica"
+        Background="{DynamicResource BrushBackgroundBase}">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Futuristic HUD TitleBar with Window Controls -->
+        <ui:TitleBar Grid.Row="0"
+                     Title="NEURALTASK // HUD v0.1" />
+
+        <!-- Main Viewport Placeholder -->
+        <Border Grid.Row="1"
+                Margin="24"
+                Background="{DynamicResource BrushPanelSurface}"
+                BorderBrush="{DynamicResource BrushAccentPrimary}"
+                BorderThickness="1"
+                CornerRadius="6">
+            <StackPanel HorizontalAlignment="Center"
+                        VerticalAlignment="Center">
+                <TextBlock Text="NeuralTask"
+                           FontSize="42"
+                           FontWeight="Bold"
+                           FontFamily="{DynamicResource FontFamilyUI}"
+                           Foreground="{DynamicResource BrushAccentPrimary}"
+                           HorizontalAlignment="Center" />
+
+                <TextBlock Text="SYSTEM MONITOR // INITIALIZING KERNEL TELEMETRY"
+                           FontSize="13"
+                           FontFamily="{DynamicResource FontFamilyNumeric}"
+                           Foreground="{DynamicResource BrushTextSecondary}"
+                           HorizontalAlignment="Center"
+                           Margin="0,8,0,0" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</ui:FluentWindow>

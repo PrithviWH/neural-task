@@ -1,0 +1,50 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{FD3CFC71-B5B2-4E2B-BE8C-9CAC168D3751}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NeuralTask.App", "src\NeuralTask.App\NeuralTask.App.csproj", "{A7D0751F-A4FB-4462-8419-0FD8A35179D5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NeuralTask.Core", "src\NeuralTask.Core\NeuralTask.Core.csproj", "{7847EDEA-A4DB-47C8-A50B-B043F057799D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NeuralTask.Theming", "src\NeuralTask.Theming\NeuralTask.Theming.csproj", "{5B004126-4191-4089-8BEC-1189A61E58FC}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{6E127A50-EC4A-4811-B6AB-0D9EC761A35C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NeuralTask.Core.Tests", "tests\NeuralTask.Core.Tests\NeuralTask.Core.Tests.csproj", "{DEE1B4DD-847F-4457-B18C-B32737447A3D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A7D0751F-A4FB-4462-8419-0FD8A35179D5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A7D0751F-A4FB-4462-8419-0FD8A35179D5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A7D0751F-A4FB-4462-8419-0FD8A35179D5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A7D0751F-A4FB-4462-8419-0FD8A35179D5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7847EDEA-A4DB-47C8-A50B-B043F057799D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7847EDEA-A4DB-47C8-A50B-B043F057799D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7847EDEA-A4DB-47C8-A50B-B043F057799D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7847EDEA-A4DB-47C8-A50B-B043F057799D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5B004126-4191-4089-8BEC-1189A61E58FC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5B004126-4191-4089-8BEC-1189A61E58FC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5B004126-4191-4089-8BEC-1189A61E58FC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5B004126-4191-4089-8BEC-1189A61E58FC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DEE1B4DD-847F-4457-B18C-B32737447A3D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DEE1B4DD-847F-4457-B18C-B32737447A3D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DEE1B4DD-847F-4457-B18C-B32737447A3D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DEE1B4DD-847F-4457-B18C-B32737447A3D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{A7D0751F-A4FB-4462-8419-0FD8A35179D5} = {FD3CFC71-B5B2-4E2B-BE8C-9CAC168D3751}
+		{7847EDEA-A4DB-47C8-A50B-B043F057799D} = {FD3CFC71-B5B2-4E2B-BE8C-9CAC168D3751}
+		{5B004126-4191-4089-8BEC-1189A61E58FC} = {FD3CFC71-B5B2-4E2B-BE8C-9CAC168D3751}
+		{DEE1B4DD-847F-4457-B18C-B32737447A3D} = {6E127A50-EC4A-4811-B6AB-0D9EC761A35C}
+	EndGlobalSection
+EndGlobal
