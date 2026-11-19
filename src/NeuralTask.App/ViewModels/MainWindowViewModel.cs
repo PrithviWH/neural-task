@@ -13,7 +13,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     private readonly IProcessActionService _actionService;
     private readonly TrayIconService _trayIconService;
     private readonly IPluginManager _pluginManager;
-    private string _statusBadgeText = "SYS.NODE: ONLINE";
+    private string _statusBadgeText = "System online";
     private int _selectedTabIndex = 0;
 
     public DashboardViewModel Dashboard { get; }
@@ -57,7 +57,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         _trayIconService = trayIconService ?? throw new ArgumentNullException(nameof(trayIconService));
         _pluginManager = pluginManager ?? throw new ArgumentNullException(nameof(pluginManager));
 
-        Dashboard = new DashboardViewModel(historyStore, exportService, heuristicFlagEngine);
+        Dashboard = new DashboardViewModel(historyStore, exportService, heuristicFlagEngine, startupEngine: startupScoreEngine);
         ProcessList = new ProcessListViewModel(_actionService, heuristicFlagEngine, processInfoService);
         Performance = new PerformanceViewModel();
         Startup = new StartupViewModel(startupScoreEngine, monitorService);
@@ -116,7 +116,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         _ = Task.Run(() => _pluginManager.DispatchTelemetryTick(pluginContext));
 
         // 6. Update Header Status
-        StatusBadgeText = $"SYS.NODE: ONLINE // {update.Processes.Count} TASKS";
+        StatusBadgeText = $"Online • {update.Processes.Count} processes";
     }
 
     public void Dispose()

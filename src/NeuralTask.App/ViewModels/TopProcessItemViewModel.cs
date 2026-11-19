@@ -1,3 +1,5 @@
+using System;
+
 namespace NeuralTask.App.ViewModels;
 
 public class TopProcessItemViewModel : ViewModelBase
@@ -6,6 +8,7 @@ public class TopProcessItemViewModel : ViewModelBase
     private int _pid;
     private string _subtext = string.Empty;
     private string _valueDisplay = string.Empty;
+    private double _percentValue;
 
     public string Name
     {
@@ -29,5 +32,11 @@ public class TopProcessItemViewModel : ViewModelBase
     {
         get => _valueDisplay;
         set => SetProperty(ref _valueDisplay, value);
+    }
+
+    public double PercentValue
+    {
+        get => _percentValue;
+        set => SetProperty(ref _percentValue, value);
     }
 }

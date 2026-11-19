@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Effects;
 using System.Windows.Shapes;
 using NeuralTask.Core.Models;
 
@@ -18,12 +20,31 @@ public partial class KillTreeDialog : Window
     {
         InitializeComponent();
 
+        // Enable dragging the window
+        MouseDown += (s, e) =>
+        {
+            if (e.LeftButton == MouseButtonState.Pressed)
+            {
+                DragMove();
+            }
+        };
+
+        // Keyboard navigation
+        KeyDown += (s, e) =>
+        {
+            if (e.Key == Key.Escape)
+            {
+                IsConfirmed = false;
+                Close();
+            }
+        };
+
         TextWarningSummary.Text = $"Root process '{rootProcess.Name}' (PID {rootProcess.Pid}) has {descendants.Count} active child tasks. Terminating the root without terminating its children may leave orphaned processes running in the background.";
-        ButtonTerminateTree.Content = $"TERMINATE ENTIRE TREE ({descendants.Count + 1} PROCESSES)";
+        ButtonTerminateTree.Content = $"Terminate entire tree ({descendants.Count + 1} processes)";
 
         var allNames = new List<string> { $"{rootProcess.Name} ({rootProcess.Pid})" };
         allNames.AddRange(descendants.Select(d => $"{d.Name} ({d.Pid})"));
-        TextTargetList.Text = "Target Processes: " + string.Join("  •  ", allNames);
+        TextTargetList.Text = "Target processes: " + string.Join("  •  ", allNames);
 
         RenderNeuralGraph(rootProcess, descendants);
     }
@@ -43,13 +64,12 @@ public partial class KillTreeDialog : Window
         {
             Width = 2,
             Height = 16,
-            Fill = (Brush)FindResource("BrushAccentPrimary"),
+            Fill = (Brush)FindResource("BrushBorderStrong"),
             HorizontalAlignment = HorizontalAlignment.Center
         };
         GraphContainer.Children.Add(trunk);
 
         // 3. Children container with branching connectors
-        var childrenGrid = new Grid { Margin = new Thickness(0, 0, 0, 0) };
         var childrenWrap = new WrapPanel
         {
             Orientation = System.Windows.Controls.Orientation.Horizontal,
@@ -60,15 +80,15 @@ public partial class KillTreeDialog : Window
         {
             var childStack = new StackPanel
             {
-                Margin = new Thickness(10, 0, 10, 10),
+                Margin = new Thickness(8, 0, 8, 8),
                 HorizontalAlignment = HorizontalAlignment.Center
             };
 
             var branchLine = new Rectangle
             {
                 Width = 1.5,
-                Height = 12,
-                Fill = (Brush)FindResource("BrushAccentSecondary"),
+                Height = 10,
+                Fill = (Brush)FindResource("BrushBorderSubtle"),
                 HorizontalAlignment = HorizontalAlignment.Center
             };
             childStack.Children.Add(branchLine);
@@ -85,29 +105,29 @@ public partial class KillTreeDialog : Window
     private Border CreateNodeCard(ProcessSnapshot process, bool isRoot)
     {
         var borderBrush = isRoot
-            ? (Brush)FindResource("BrushAccentPrimary")
-            : (Brush)FindResource("BrushAccentSecondary");
+            ? (Brush)FindResource("BrushAccentDanger")
+            : (Brush)FindResource("BrushBorderStrong");
 
-        var glowColor = isRoot
-            ? (Color)FindResource("ColorAccentPrimary")
-            : (Color)FindResource("ColorAccentSecondary");
+        var badgeBrush = isRoot
+            ? (Brush)FindResource("BrushAccentDanger")
+            : (Brush)FindResource("BrushAccentPrimary");
 
         var card = new Border
         {
-            Background = (Brush)FindResource("BrushBackgroundBase"),
+            Background = (Brush)FindResource("BrushSurface"),
             BorderBrush = borderBrush,
-            BorderThickness = new Thickness(1.5),
+            BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(6),
-            Padding = new Thickness(14, 8, 14, 8),
-            HorizontalAlignment = HorizontalAlignment.Center
-        };
-
-        card.Effect = new System.Windows.Media.Effects.DropShadowEffect
-        {
-            BlurRadius = isRoot ? 10 : 6,
-            ShadowDepth = 0,
-            Color = glowColor,
-            Opacity = isRoot ? 0.7 : 0.4
+            Padding = new Thickness(12, 7, 12, 7),
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Effect = new DropShadowEffect
+            {
+                BlurRadius = 8,
+                ShadowDepth = 1,
+                Direction = 270,
+                Color = Colors.Black,
+                Opacity = 0.08
+            }
         };
 
         var content = new StackPanel { Orientation = System.Windows.Controls.Orientation.Horizontal };
@@ -115,18 +135,18 @@ public partial class KillTreeDialog : Window
         // Badge indicator
         var badge = new Border
         {
-            Background = borderBrush,
+            Background = badgeBrush,
             CornerRadius = new CornerRadius(3),
-            Padding = new Thickness(4, 1, 4, 1),
+            Padding = new Thickness(5, 1, 5, 1),
             Margin = new Thickness(0, 0, 8, 0)
         };
         var badgeText = new TextBlock
         {
-            Text = isRoot ? "PARENT ROOT" : "CHILD NODE",
-            FontSize = 9,
-            FontWeight = FontWeights.Bold,
-            FontFamily = (FontFamily)FindResource("FontFamilyNumeric"),
-            Foreground = new SolidColorBrush(Color.FromRgb(10, 14, 20))
+            Text = isRoot ? "Root parent" : "Child process",
+            FontSize = 9.5,
+            FontWeight = FontWeights.SemiBold,
+            FontFamily = (FontFamily)FindResource("FontFamilyUI"),
+            Foreground = (Brush)FindResource("BrushButtonTextOnAccent")
         };
         badge.Child = badgeText;
         content.Children.Add(badge);
@@ -139,18 +159,20 @@ public partial class KillTreeDialog : Window
             FontWeight = FontWeights.SemiBold,
             FontFamily = (FontFamily)FindResource("FontFamilyUI"),
             Foreground = (Brush)FindResource("BrushTextPrimary"),
-            Margin = new Thickness(0, 0, 8, 0)
+            Margin = new Thickness(0, 0, 8, 0),
+            VerticalAlignment = VerticalAlignment.Center
         };
         content.Children.Add(nameText);
 
         // PID
         var pidText = new TextBlock
         {
-            Text = $"PID: {process.Pid}",
+            Text = $"PID {process.Pid}",
             FontSize = 11,
             FontFamily = (FontFamily)FindResource("FontFamilyNumeric"),
-            Foreground = (Brush)FindResource("BrushTextSecondary"),
-            Margin = new Thickness(0, 0, 8, 0)
+            Foreground = (Brush)FindResource("BrushTextTertiary"),
+            Margin = new Thickness(0, 0, 8, 0),
+            VerticalAlignment = VerticalAlignment.Center
         };
         content.Children.Add(pidText);
 
@@ -160,7 +182,8 @@ public partial class KillTreeDialog : Window
             Text = $"{process.RamBytes / (1024.0 * 1024):0.0} MB",
             FontSize = 11,
             FontFamily = (FontFamily)FindResource("FontFamilyNumeric"),
-            Foreground = borderBrush
+            Foreground = (Brush)FindResource("BrushTextSecondary"),
+            VerticalAlignment = VerticalAlignment.Center
         };
         content.Children.Add(ramText);
 

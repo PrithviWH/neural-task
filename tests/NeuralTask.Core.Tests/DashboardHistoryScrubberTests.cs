@@ -83,8 +83,8 @@ public class DashboardHistoryScrubberTests
         Assert.False(vm.IsLive);
         Assert.Equal("5.0%", vm.CpuDisplay);
         Assert.Equal(20.0, vm.RamPercent);
-        Assert.Contains("SCRUBBING", vm.TimelineTimeDisplay);
-        Assert.Contains("HISTORICAL", vm.StatusPillText);
+        Assert.Contains("Scrubbing", vm.TimelineTimeDisplay);
+        Assert.Contains("Historical", vm.StatusPillText);
 
         // Top offender should reflect historical sample
         Assert.Equal("heavy_task.exe", vm.TopCpuProcesses[0].Name);
@@ -117,6 +117,6 @@ public class DashboardHistoryScrubberTests
         Assert.True(vm.IsLive);
         Assert.Equal(1.0, vm.ScrubberValue);
         Assert.Equal("80.0%", vm.CpuDisplay);
-        Assert.Equal("LIVE // STREAMING", vm.TimelineTimeDisplay);
+        Assert.Equal("Live • Streaming", vm.TimelineTimeDisplay);
     }
 }

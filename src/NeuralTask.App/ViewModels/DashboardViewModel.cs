@@ -14,53 +14,140 @@ namespace NeuralTask.App.ViewModels;
 
 public class DashboardViewModel : ViewModelBase
 {
-    private const double WaveformWidth = 800.0;
-    private const double WaveformHeight = 150.0;
+    private double _chartViewportWidth = 1000.0;
+    private double _chartViewportHeight = 180.0;
 
-    private readonly PerformanceHistoryBuffer _cpuHistory = new(60);
-    private readonly PerformanceHistoryBuffer _ramHistory = new(60);
+    // Rolling 60-second buffers with 4s delay margin for continuous 60 FPS sub-pixel scrolling
+    private readonly PerformanceHistoryBuffer _cpuHistory = new(64);
+    private readonly PerformanceHistoryBuffer _ramHistory = new(64);
+    private readonly PerformanceHistoryBuffer _gpuHistory = new(64);
+    private readonly PerformanceHistoryBuffer _diskHistory = new(64);
+    private readonly PerformanceHistoryBuffer _netHistory = new(64);
 
     private readonly IHistoryStore _historyStore;
     private readonly IExportService _exportService;
     private readonly IHeuristicFlagEngine? _heuristicEngine;
+    private readonly IGpuMetricsService _gpuService;
+    private readonly IStorageInfoService _storageService;
+    private readonly INetworkInfoService _networkService;
+    private readonly IStartupScoreEngine? _startupEngine;
 
+    // 1. System Overview Metrics
     private double _cpuPercent;
     private string _cpuDisplay = "0.0%";
+    private string _cpuTrendDisplay = "0.0%";
     private string _cpuCoresDisplay = $"{Environment.ProcessorCount} Cores Active";
+    private double _prevCpuPercent;
 
     private string _ramDisplay = "—";
     private string _ramDetailDisplay = "—";
+    private string _ramTrendDisplay = "0.0%";
     private double _ramPercent;
 
-    private string _diskIoDisplay = "—";
-    private string _diskIoDetailDisplay = "Physical Disk: — (Requires Admin IOCTL)";
+    private string _gpuDisplay = "0.0%";
+    private double _gpuPercent;
+    private string _gpuStatusDisplay = "GPU Active";
+    private string _gpuSubtext = "DirectX Hardware GPU";
+    private bool _isGpuSupported = true;
+
+    private string _processCountDisplay = "0 Processes";
+    private string _processCountTrend = "Optimal";
+    private string _processSubtext = "Kernel threads & handles active";
+    private double _processCountProgress = 20.0;
+
+    // 2. Storage & Network Metrics
+    private string _diskIoDisplay = "0.0 KB/s";
+    private string _diskIoDetailDisplay = "Active process read + write";
     private double _diskIoProgress;
+    private string _primaryDriveName = "C:\\";
+    private string _primaryDriveLabel = "System OS";
+    private string _primaryDriveCapacityDisplay = "0 GB / 0 GB";
+    private double _primaryDrivePercent;
+    private string _storagePartitionsSummary = "Checking storage...";
 
-    private string _networkDisplay = "—";
-    private string _networkDetailDisplay = "In: 0.0 KB/s | Out: 0.0 KB/s";
+    private string _networkDisplay = "0.0 KB/s";
+    private string _networkDetailDisplay = "In: 0.0 KB/s • Out: 0.0 KB/s";
+    private string _networkDownloadDisplay = "0.0 KB/s";
+    private string _networkUploadDisplay = "0.0 KB/s";
     private double _networkProgress;
+    private string _networkAdapterName = "Network";
+    private string _networkAdapterDescription = "Active adapter";
+    private string _networkInterfaceType = "Ethernet / Wi-Fi";
+    private string _networkLinkSpeed = "100 Mbps";
 
+    // 3. System Intelligence
     private string _processorModel = "Detecting Processor...";
     private string _osVersion = string.Empty;
     private string _uptimeDisplay = "00:00:00";
-    private string _processCountDisplay = "0 Processes";
-    private string _statusPillText = "KERNEL LINK: INITIALIZING";
+    private string _statusPillText = "System online";
+    private string _healthStatusText = "Optimal";
+    private string _healthStatusMessage = "All hardware subsystems operating within normal parameters.";
+    private string _recentSpikesDisplay = "No spikes detected in rolling window";
+    private string _startupImpactSummary = "Startup impact scoring active";
+    private string _installedMemoryDisplay = "0.0 GB Physical RAM";
+
+    // 4. Advanced Telemetry Navigation & Geometries
+    private string _selectedMetric = "Overview"; // Overview, Cpu, Memory, Gpu, Disk, Network
+    private string _selectedRange = "60s";      // 60s, 5m, 15m, 30m
+    private string _currentMetricDisplay = "Overview • Live Stream";
 
     private PointCollection _cpuWaveformPoints = new();
     private PointCollection _ramWaveformPoints = new();
+    private Geometry _cpuCurveGeometry = Geometry.Empty;
+    private Geometry _cpuAreaGeometry = Geometry.Empty;
+    private Geometry _ramCurveGeometry = Geometry.Empty;
+    private Geometry _ramAreaGeometry = Geometry.Empty;
 
-    // Timeline Scrubber State (PRD §6.3 - 3.1)
+    private Geometry _primaryCurveGeometry = Geometry.Empty;
+    private Geometry _primaryAreaGeometry = Geometry.Empty;
+    private Geometry _secondaryCurveGeometry = Geometry.Empty;
+    private Geometry _secondaryAreaGeometry = Geometry.Empty;
+    private bool _isDualMetric = true;
+
+    // Multi-Channel Telemetry Geometries for Individual Metric Cards
+    private Geometry _gpuCurveGeometry = Geometry.Empty;
+    private Geometry _gpuAreaGeometry = Geometry.Empty;
+    private Geometry _diskCurveGeometry = Geometry.Empty;
+    private Geometry _diskAreaGeometry = Geometry.Empty;
+    private Geometry _netCurveGeometry = Geometry.Empty;
+    private Geometry _netAreaGeometry = Geometry.Empty;
+
+    private double _cardViewportWidth = 320.0;
+    private double _cardViewportHeight = 95.0;
+
+    private string _cpuPeakDisplay = "0.0%";
+    private string _ramPercentDisplay = "0.0%";
+    private string _diskPeakDisplay = "0.0 MB/s";
+    private string _netPeakDisplay = "0.0 MB/s";
+
+    // Live Channel Telemetry Inspector State
+    private double _primaryLiveY = 100.0;
+    private double _secondaryLiveY = 50.0;
+    private string _activeChannelName = "System Telemetry";
+    private string _activeChannelTag = "DUAL LIVE STREAM";
+    private string _activeChannelValue = "0.0%";
+    private string _activeChannelSubtext = "Kernel hardware sensors";
+    private string _activeChannelPeak = "0.0%";
+    private string _activeChannelAverage = "0.0%";
+    private string _activeChannelMin = "0.0%";
+    private string _activeChannelStatus = "Optimal Workload";
+    private string _activeChannelColor = "#00FF41";
+    private bool _isOverviewChannel = true;
+
+    // 5. Timeline Scrubber State
     private bool _isScrubbing = false;
     private double _scrubberValue = 1.0;
-    private string _timelineTimeDisplay = "LIVE // STREAMING";
+    private string _timelineTimeDisplay = "Live • Streaming";
     private string _timelineWindowDisplay = "-30m 00s";
     private bool _hasHistoricalSamples = false;
     private string _exportStatusMessage = string.Empty;
 
     private DateTimeOffset _lastLiveTimestamp = DateTimeOffset.Now;
     private SystemMetricsSnapshot? _latestSystemMetrics;
+    private GpuMetricsSnapshot? _latestGpuMetrics;
     private IReadOnlyList<ProcessSnapshot> _latestProcesses = Array.Empty<ProcessSnapshot>();
 
+    // Public Properties - Section 1: System Overview
     public double CpuPercent
     {
         get => _cpuPercent;
@@ -71,6 +158,12 @@ public class DashboardViewModel : ViewModelBase
     {
         get => _cpuDisplay;
         private set => SetProperty(ref _cpuDisplay, value);
+    }
+
+    public string CpuTrendDisplay
+    {
+        get => _cpuTrendDisplay;
+        private set => SetProperty(ref _cpuTrendDisplay, value);
     }
 
     public string CpuCoresDisplay
@@ -91,12 +184,73 @@ public class DashboardViewModel : ViewModelBase
         private set => SetProperty(ref _ramDetailDisplay, value);
     }
 
+    public string RamTrendDisplay
+    {
+        get => _ramTrendDisplay;
+        private set => SetProperty(ref _ramTrendDisplay, value);
+    }
+
     public double RamPercent
     {
         get => _ramPercent;
         private set => SetProperty(ref _ramPercent, value);
     }
 
+    public string GpuDisplay
+    {
+        get => _gpuDisplay;
+        private set => SetProperty(ref _gpuDisplay, value);
+    }
+
+    public double GpuPercent
+    {
+        get => _gpuPercent;
+        private set => SetProperty(ref _gpuPercent, value);
+    }
+
+    public string GpuStatusDisplay
+    {
+        get => _gpuStatusDisplay;
+        private set => SetProperty(ref _gpuStatusDisplay, value);
+    }
+
+    public string GpuSubtext
+    {
+        get => _gpuSubtext;
+        private set => SetProperty(ref _gpuSubtext, value);
+    }
+
+    public bool IsGpuSupported
+    {
+        get => _isGpuSupported;
+        private set => SetProperty(ref _isGpuSupported, value);
+    }
+
+    public string ProcessCountDisplay
+    {
+        get => _processCountDisplay;
+        private set => SetProperty(ref _processCountDisplay, value);
+    }
+
+    public string ProcessCountTrend
+    {
+        get => _processCountTrend;
+        private set => SetProperty(ref _processCountTrend, value);
+    }
+
+    public string ProcessSubtext
+    {
+        get => _processSubtext;
+        private set => SetProperty(ref _processSubtext, value);
+    }
+
+    public double ProcessCountProgress
+    {
+        get => _processCountProgress;
+        private set => SetProperty(ref _processCountProgress, value);
+    }
+
+    // Public Properties - Section 2: Storage & Network
     public string DiskIoDisplay
     {
         get => _diskIoDisplay;
@@ -115,6 +269,36 @@ public class DashboardViewModel : ViewModelBase
         private set => SetProperty(ref _diskIoProgress, value);
     }
 
+    public string PrimaryDriveName
+    {
+        get => _primaryDriveName;
+        private set => SetProperty(ref _primaryDriveName, value);
+    }
+
+    public string PrimaryDriveLabel
+    {
+        get => _primaryDriveLabel;
+        private set => SetProperty(ref _primaryDriveLabel, value);
+    }
+
+    public string PrimaryDriveCapacityDisplay
+    {
+        get => _primaryDriveCapacityDisplay;
+        private set => SetProperty(ref _primaryDriveCapacityDisplay, value);
+    }
+
+    public double PrimaryDrivePercent
+    {
+        get => _primaryDrivePercent;
+        private set => SetProperty(ref _primaryDrivePercent, value);
+    }
+
+    public string StoragePartitionsSummary
+    {
+        get => _storagePartitionsSummary;
+        private set => SetProperty(ref _storagePartitionsSummary, value);
+    }
+
     public string NetworkDisplay
     {
         get => _networkDisplay;
@@ -127,12 +311,49 @@ public class DashboardViewModel : ViewModelBase
         private set => SetProperty(ref _networkDetailDisplay, value);
     }
 
+    public string NetworkDownloadDisplay
+    {
+        get => _networkDownloadDisplay;
+        private set => SetProperty(ref _networkDownloadDisplay, value);
+    }
+
+    public string NetworkUploadDisplay
+    {
+        get => _networkUploadDisplay;
+        private set => SetProperty(ref _networkUploadDisplay, value);
+    }
+
     public double NetworkProgress
     {
         get => _networkProgress;
         private set => SetProperty(ref _networkProgress, value);
     }
 
+    public string NetworkAdapterName
+    {
+        get => _networkAdapterName;
+        private set => SetProperty(ref _networkAdapterName, value);
+    }
+
+    public string NetworkAdapterDescription
+    {
+        get => _networkAdapterDescription;
+        private set => SetProperty(ref _networkAdapterDescription, value);
+    }
+
+    public string NetworkInterfaceType
+    {
+        get => _networkInterfaceType;
+        private set => SetProperty(ref _networkInterfaceType, value);
+    }
+
+    public string NetworkLinkSpeed
+    {
+        get => _networkLinkSpeed;
+        private set => SetProperty(ref _networkLinkSpeed, value);
+    }
+
+    // Public Properties - Section 3: System Intelligence
     public string ProcessorModel
     {
         get => _processorModel;
@@ -151,18 +372,206 @@ public class DashboardViewModel : ViewModelBase
         private set => SetProperty(ref _uptimeDisplay, value);
     }
 
-    public string ProcessCountDisplay
-    {
-        get => _processCountDisplay;
-        private set => SetProperty(ref _processCountDisplay, value);
-    }
-
     public string StatusPillText
     {
         get => _statusPillText;
         private set => SetProperty(ref _statusPillText, value);
     }
 
+    public string HealthStatusText
+    {
+        get => _healthStatusText;
+        private set => SetProperty(ref _healthStatusText, value);
+    }
+
+    public string HealthStatusMessage
+    {
+        get => _healthStatusMessage;
+        private set => SetProperty(ref _healthStatusMessage, value);
+    }
+
+    public string RecentSpikesDisplay
+    {
+        get => _recentSpikesDisplay;
+        private set => SetProperty(ref _recentSpikesDisplay, value);
+    }
+
+    public string StartupImpactSummary
+    {
+        get => _startupImpactSummary;
+        private set => SetProperty(ref _startupImpactSummary, value);
+    }
+
+    public string InstalledMemoryDisplay
+    {
+        get => _installedMemoryDisplay;
+        private set => SetProperty(ref _installedMemoryDisplay, value);
+    }
+
+    // Public Properties - Section 4: Advanced Telemetry Chart Selection
+    public string SelectedMetric
+    {
+        get => _selectedMetric;
+        set
+        {
+            if (SetProperty(ref _selectedMetric, value))
+            {
+                UpdateChartDisplay();
+            }
+        }
+    }
+
+    public string SelectedRange
+    {
+        get => _selectedRange;
+        set
+        {
+            if (SetProperty(ref _selectedRange, value))
+            {
+                UpdateChartDisplay();
+            }
+        }
+    }
+
+    public double ChartViewportWidth
+    {
+        get => _chartViewportWidth;
+        set
+        {
+            if (value > 50 && Math.Abs(_chartViewportWidth - value) > 1.0)
+            {
+                if (SetProperty(ref _chartViewportWidth, value))
+                {
+                    UpdateChartDisplay();
+                }
+            }
+        }
+    }
+
+    public double ChartViewportHeight
+    {
+        get => _chartViewportHeight;
+        set
+        {
+            if (value > 50 && Math.Abs(_chartViewportHeight - value) > 1.0)
+            {
+                if (SetProperty(ref _chartViewportHeight, value))
+                {
+                    UpdateChartDisplay();
+                }
+            }
+        }
+    }
+
+    public string CurrentMetricDisplay
+    {
+        get => _currentMetricDisplay;
+        private set => SetProperty(ref _currentMetricDisplay, value);
+    }
+
+    public Geometry PrimaryCurveGeometry
+    {
+        get => _primaryCurveGeometry;
+        private set => SetProperty(ref _primaryCurveGeometry, value);
+    }
+
+    public Geometry PrimaryAreaGeometry
+    {
+        get => _primaryAreaGeometry;
+        private set => SetProperty(ref _primaryAreaGeometry, value);
+    }
+
+    public Geometry SecondaryCurveGeometry
+    {
+        get => _secondaryCurveGeometry;
+        private set => SetProperty(ref _secondaryCurveGeometry, value);
+    }
+
+    public Geometry SecondaryAreaGeometry
+    {
+        get => _secondaryAreaGeometry;
+        private set => SetProperty(ref _secondaryAreaGeometry, value);
+    }
+
+    public bool IsDualMetric
+    {
+        get => _isDualMetric;
+        private set => SetProperty(ref _isDualMetric, value);
+    }
+
+    public double PrimaryLiveY
+    {
+        get => _primaryLiveY;
+        private set => SetProperty(ref _primaryLiveY, value);
+    }
+
+    public double SecondaryLiveY
+    {
+        get => _secondaryLiveY;
+        private set => SetProperty(ref _secondaryLiveY, value);
+    }
+
+    public string ActiveChannelName
+    {
+        get => _activeChannelName;
+        private set => SetProperty(ref _activeChannelName, value);
+    }
+
+    public string ActiveChannelTag
+    {
+        get => _activeChannelTag;
+        private set => SetProperty(ref _activeChannelTag, value);
+    }
+
+    public string ActiveChannelValue
+    {
+        get => _activeChannelValue;
+        private set => SetProperty(ref _activeChannelValue, value);
+    }
+
+    public string ActiveChannelSubtext
+    {
+        get => _activeChannelSubtext;
+        private set => SetProperty(ref _activeChannelSubtext, value);
+    }
+
+    public string ActiveChannelPeak
+    {
+        get => _activeChannelPeak;
+        private set => SetProperty(ref _activeChannelPeak, value);
+    }
+
+    public string ActiveChannelAverage
+    {
+        get => _activeChannelAverage;
+        private set => SetProperty(ref _activeChannelAverage, value);
+    }
+
+    public string ActiveChannelMin
+    {
+        get => _activeChannelMin;
+        private set => SetProperty(ref _activeChannelMin, value);
+    }
+
+    public string ActiveChannelStatus
+    {
+        get => _activeChannelStatus;
+        private set => SetProperty(ref _activeChannelStatus, value);
+    }
+
+    public string ActiveChannelColor
+    {
+        get => _activeChannelColor;
+        private set => SetProperty(ref _activeChannelColor, value);
+    }
+
+    public bool IsOverviewChannel
+    {
+        get => _isOverviewChannel;
+        private set => SetProperty(ref _isOverviewChannel, value);
+    }
+
+    // Preserved for backward compatibility
     public PointCollection CpuWaveformPoints
     {
         get => _cpuWaveformPoints;
@@ -175,6 +584,121 @@ public class DashboardViewModel : ViewModelBase
         private set => SetProperty(ref _ramWaveformPoints, value);
     }
 
+    public Geometry CpuCurveGeometry
+    {
+        get => _cpuCurveGeometry;
+        private set => SetProperty(ref _cpuCurveGeometry, value);
+    }
+
+    public Geometry CpuAreaGeometry
+    {
+        get => _cpuAreaGeometry;
+        private set => SetProperty(ref _cpuAreaGeometry, value);
+    }
+
+    public Geometry RamCurveGeometry
+    {
+        get => _ramCurveGeometry;
+        private set => SetProperty(ref _ramCurveGeometry, value);
+    }
+
+    public Geometry RamAreaGeometry
+    {
+        get => _ramAreaGeometry;
+        private set => SetProperty(ref _ramAreaGeometry, value);
+    }
+
+    public Geometry GpuCurveGeometry
+    {
+        get => _gpuCurveGeometry;
+        private set => SetProperty(ref _gpuCurveGeometry, value);
+    }
+
+    public Geometry GpuAreaGeometry
+    {
+        get => _gpuAreaGeometry;
+        private set => SetProperty(ref _gpuAreaGeometry, value);
+    }
+
+    public Geometry DiskCurveGeometry
+    {
+        get => _diskCurveGeometry;
+        private set => SetProperty(ref _diskCurveGeometry, value);
+    }
+
+    public Geometry DiskAreaGeometry
+    {
+        get => _diskAreaGeometry;
+        private set => SetProperty(ref _diskAreaGeometry, value);
+    }
+
+    public Geometry NetCurveGeometry
+    {
+        get => _netCurveGeometry;
+        private set => SetProperty(ref _netCurveGeometry, value);
+    }
+
+    public Geometry NetAreaGeometry
+    {
+        get => _netAreaGeometry;
+        private set => SetProperty(ref _netAreaGeometry, value);
+    }
+
+    public double CardViewportWidth
+    {
+        get => _cardViewportWidth;
+        set
+        {
+            if (value > 30 && Math.Abs(_cardViewportWidth - value) > 1.0)
+            {
+                if (SetProperty(ref _cardViewportWidth, value))
+                {
+                    UpdateChartDisplay();
+                }
+            }
+        }
+    }
+
+    public double CardViewportHeight
+    {
+        get => _cardViewportHeight;
+        set
+        {
+            if (value > 20 && Math.Abs(_cardViewportHeight - value) > 1.0)
+            {
+                if (SetProperty(ref _cardViewportHeight, value))
+                {
+                    UpdateChartDisplay();
+                }
+            }
+        }
+    }
+
+    public string CpuPeakDisplay
+    {
+        get => _cpuPeakDisplay;
+        private set => SetProperty(ref _cpuPeakDisplay, value);
+    }
+
+    public string RamPercentDisplay
+    {
+        get => _ramPercentDisplay;
+        private set => SetProperty(ref _ramPercentDisplay, value);
+    }
+
+    public string DiskPeakDisplay
+    {
+        get => _diskPeakDisplay;
+        private set => SetProperty(ref _diskPeakDisplay, value);
+    }
+
+    public string NetPeakDisplay
+    {
+        get => _netPeakDisplay;
+        private set => SetProperty(ref _netPeakDisplay, value);
+    }
+
+    // Timeline Scrubber
     public bool IsScrubbing
     {
         get => _isScrubbing;
@@ -232,31 +756,68 @@ public class DashboardViewModel : ViewModelBase
         private set => SetProperty(ref _exportStatusMessage, value);
     }
 
+    // Commands
     public ICommand ResumeLiveCommand { get; }
     public ICommand ExportJsonCommand { get; }
     public ICommand ExportCsvCommand { get; }
+    public ICommand SelectMetricCommand { get; }
+    public ICommand SelectRangeCommand { get; }
 
+    // Section 3: Top Resource Consumers Collections (Top 5 each)
     public ObservableCollection<TopProcessItemViewModel> TopCpuProcesses { get; } = new();
     public ObservableCollection<TopProcessItemViewModel> TopRamProcesses { get; } = new();
+    public ObservableCollection<TopProcessItemViewModel> TopGpuProcesses { get; } = new();
 
     public DashboardViewModel(
         IHistoryStore? historyStore = null,
         IExportService? exportService = null,
-        IHeuristicFlagEngine? heuristicEngine = null)
+        IHeuristicFlagEngine? heuristicEngine = null,
+        IGpuMetricsService? gpuService = null,
+        IStorageInfoService? storageService = null,
+        INetworkInfoService? networkService = null,
+        IStartupScoreEngine? startupEngine = null)
     {
         _historyStore = historyStore ?? new HistoryStore();
         _exportService = exportService ?? new ExportService();
         _heuristicEngine = heuristicEngine;
+        _gpuService = gpuService ?? GpuMetricsService.Instance;
+        _storageService = storageService ?? StorageInfoService.Instance;
+        _networkService = networkService ?? NetworkInfoService.Instance;
+        _startupEngine = startupEngine;
 
         ResumeLiveCommand = new RelayCommand(ResumeLive);
         ExportJsonCommand = new RelayCommand(async () => await ExportSnapshotAsync(ExportFormat.Json));
         ExportCsvCommand = new RelayCommand(async () => await ExportSnapshotAsync(ExportFormat.Csv));
+        SelectMetricCommand = new RelayCommand(param => { if (param is string metric) SelectedMetric = metric; });
+        SelectRangeCommand = new RelayCommand(param => { if (param is string range) SelectedRange = range; });
 
-        // Pre-populate 3 items in each top list to avoid layout jumping
-        for (int i = 0; i < 3; i++)
+        // Pre-populate 5 items in each list to guarantee stable layout and zero jumping
+        for (int i = 0; i < 5; i++)
         {
             TopCpuProcesses.Add(new TopProcessItemViewModel());
             TopRamProcesses.Add(new TopProcessItemViewModel());
+            TopGpuProcesses.Add(new TopProcessItemViewModel());
+        }
+
+        // Initialize static hardware specs immediately
+        InitializeStaticTelemetry();
+    }
+
+    private void InitializeStaticTelemetry()
+    {
+        try
+        {
+            var storage = _storageService.GetStorageSnapshot();
+            UpdateStorageDisplays(storage);
+
+            var net = _networkService.GetPrimaryAdapterInfo();
+            UpdateNetworkDisplays(net);
+
+            GpuSubtext = _gpuService.AdapterName;
+            IsGpuSupported = _gpuService.IsSupported;
+        }
+        catch
+        {
         }
     }
 
@@ -266,55 +827,129 @@ public class DashboardViewModel : ViewModelBase
         _latestSystemMetrics = system;
         _lastLiveTimestamp = DateTimeOffset.Now;
 
-        // 1. Ingest into historical store
+        // Ingest into historical rolling store
         _historyStore.AddSample(_lastLiveTimestamp, system, processes);
         HasHistoricalSamples = _historyStore.SampleCount > 1;
 
-        // 2. Rolling Waveforms (always buffer live telemetry)
-        _cpuHistory.AddSample(system.CpuPercent);
-        _ramHistory.AddSample(system.MemoryPercent);
-        CpuWaveformPoints = _cpuHistory.GeneratePoints(WaveformWidth, WaveformHeight, 100.0);
-        RamWaveformPoints = _ramHistory.GeneratePoints(WaveformWidth, WaveformHeight, 100.0);
+        // Sample GPU Hardware Telemetry
+        try
+        {
+            _latestGpuMetrics = _gpuService.CollectSnapshot(processes);
+            if (_latestGpuMetrics != null && _latestGpuMetrics.IsSupported)
+            {
+                GpuPercent = _latestGpuMetrics.UtilizationPercent;
+                GpuDisplay = $"{_latestGpuMetrics.UtilizationPercent:F1}%";
+                GpuStatusDisplay = $"{_latestGpuMetrics.DedicatedMemoryPercent:F0}% VRAM";
+                GpuSubtext = $"{_latestGpuMetrics.AdapterName} • {_latestGpuMetrics.DedicatedMemoryUsedGb:F1}/{_latestGpuMetrics.DedicatedMemoryTotalGb:F1} GB";
+                IsGpuSupported = true;
+            }
+        }
+        catch
+        {
+            IsGpuSupported = false;
+        }
 
-        // 3. System Hardware Info (static hardware specs)
+        // Rolling Waveforms buffers - seed on first observation so line spans full width immediately
+        double netMb = (system.NetworkReceivedBytesPerSec + system.NetworkSentBytesPerSec) / (1024.0 * 1024.0);
+        if (_cpuHistory.Count == 0)
+        {
+            _cpuHistory.Seed(system.CpuPercent);
+            _ramHistory.Seed(system.MemoryPercent);
+            _gpuHistory.Seed(_latestGpuMetrics?.UtilizationPercent ?? 0.0);
+            _diskHistory.Seed(system.ProcessIoBytesPerSec / (1024.0 * 1024.0));
+            _netHistory.Seed(netMb);
+        }
+        else
+        {
+            _cpuHistory.AddSample(system.CpuPercent);
+            _ramHistory.AddSample(system.MemoryPercent);
+            _gpuHistory.AddSample(_latestGpuMetrics?.UtilizationPercent ?? 0.0);
+            _diskHistory.AddSample(system.ProcessIoBytesPerSec / (1024.0 * 1024.0)); // MB/s
+            _netHistory.AddSample(netMb);
+        }
+
+        // Update geometries based on currently active chart mode
+        UpdateChartDisplay();
+
+        // Hardware & Static Metadata
         ProcessorModel = system.ProcessorName;
         OsVersion = system.OsVersion;
         UptimeDisplay = $"{system.Uptime.Days}d {system.Uptime.Hours:D2}h {system.Uptime.Minutes:D2}m {system.Uptime.Seconds:D2}s";
+        InstalledMemoryDisplay = $"{system.TotalMemoryBytes / (1024.0 * 1024.0 * 1024.0):F1} GB Physical RAM";
 
-        // 4. If scrubbing, do not overwrite historical display values
+        // Periodic update of Storage and Network adapter details
+        try
+        {
+            var storage = _storageService.GetStorageSnapshot();
+            UpdateStorageDisplays(storage);
+
+            var net = _networkService.GetPrimaryAdapterInfo();
+            UpdateNetworkDisplays(net);
+        }
+        catch
+        {
+        }
+
+        // System Intelligence & Health
+        double peakCpu = _cpuHistory.GetPeak();
+        double peakRam = _ramHistory.GetPeak();
+        var health = SystemHealthEvaluator.Evaluate(
+            system,
+            _latestGpuMetrics,
+            peakCpu,
+            peakRam
+        );
+
+        HealthStatusText = health.HealthStateDisplay;
+        HealthStatusMessage = health.HealthMessage;
+        RecentSpikesDisplay = health.RecentSpikesSummary;
+        StartupImpactSummary = health.StartupImpactSummary;
+
+        // If currently scrubbing, do not overwrite historical display values
         if (IsScrubbing) return;
 
-        // 5. Update Live Displays
+        // Update Live Primary Values
         CpuPercent = system.CpuPercent;
         CpuDisplay = $"{system.CpuPercent:F1}%";
-        CpuCoresDisplay = $"{system.LogicalCoreCount} Cores // {system.ProcessorName}";
+        double cpuDelta = Math.Round(system.CpuPercent - _prevCpuPercent, 1);
+        CpuTrendDisplay = cpuDelta >= 0 ? $"+{cpuDelta:F1}%" : $"{cpuDelta:F1}%";
+        _prevCpuPercent = system.CpuPercent;
+        CpuCoresDisplay = $"{system.LogicalCoreCount} cores • {system.ProcessorName}";
 
         double usedGb = system.UsedMemoryBytes / (1024.0 * 1024.0 * 1024.0);
         double totalGb = system.TotalMemoryBytes / (1024.0 * 1024.0 * 1024.0);
         RamDisplay = $"{usedGb:F1} GB";
         RamDetailDisplay = $"{system.MemoryPercent:F1}% of {totalGb:F1} GB";
         RamPercent = system.MemoryPercent;
+        RamTrendDisplay = $"{system.MemoryPercent:F1}%";
 
+        // Disk I/O Rate
         if (system.ProcessIoBytesPerSec > 0)
         {
             DiskIoDisplay = FormatRate(system.ProcessIoBytesPerSec);
-            DiskIoDetailDisplay = "Active Process File/Disk I/O Rate";
+            DiskIoDetailDisplay = "Active process read + write";
             DiskIoProgress = Math.Clamp(system.ProcessIoBytesPerSec / (50.0 * 1024.0 * 1024.0) * 100.0, 2.0, 100.0);
         }
         else
         {
             DiskIoDisplay = "0.0 KB/s";
-            DiskIoDetailDisplay = "No Process File/Disk I/O Activity";
+            DiskIoDetailDisplay = "No active disk I/O";
             DiskIoProgress = 0.0;
         }
 
+        // Network Rate
         double totalNet = system.NetworkReceivedBytesPerSec + system.NetworkSentBytesPerSec;
         NetworkDisplay = FormatRate(totalNet);
-        NetworkDetailDisplay = $"In: {FormatRate(system.NetworkReceivedBytesPerSec)} | Out: {FormatRate(system.NetworkSentBytesPerSec)}";
+        NetworkDetailDisplay = $"In: {FormatRate(system.NetworkReceivedBytesPerSec)} • Out: {FormatRate(system.NetworkSentBytesPerSec)}";
+        NetworkDownloadDisplay = $"{FormatRate(system.NetworkReceivedBytesPerSec)} In";
+        NetworkUploadDisplay = $"{FormatRate(system.NetworkSentBytesPerSec)} Out";
         NetworkProgress = Math.Clamp(totalNet / (10.0 * 1024.0 * 1024.0) * 100.0, 2.0, 100.0);
 
-        ProcessCountDisplay = $"{system.ProcessCount} Processes";
-        StatusPillText = $"KERNEL LINK: ACTIVE // {system.ProcessCount} TASKS";
+        ProcessCountDisplay = $"{system.ProcessCount}";
+        ProcessCountTrend = system.ProcessCount > 400 ? "Elevated" : "Normal";
+        ProcessSubtext = $"{system.ProcessCount} active kernel processes";
+        ProcessCountProgress = Math.Clamp((system.ProcessCount / 500.0) * 100.0, 5.0, 100.0);
+        StatusPillText = $"System online • {system.ProcessCount} processes";
 
         // Update timeline range bounds
         var history = _historyStore.GetHistory();
@@ -325,11 +960,171 @@ public class DashboardViewModel : ViewModelBase
                 ? $"-{Math.Floor(span.TotalMinutes):F0}m {span.Seconds:D2}s"
                 : $"-{span.Seconds:D2}s";
         }
-        TimelineTimeDisplay = "LIVE // STREAMING";
+        TimelineTimeDisplay = "Live • Streaming";
         _scrubberValue = 1.0;
         OnPropertyChanged(nameof(ScrubberValue));
 
-        UpdateTopOffenders(processes);
+        // Update Top Resource Consumers (Top 5 each)
+        UpdateTopOffenders(processes, _latestGpuMetrics);
+    }
+
+    private void UpdateStorageDisplays(StorageMetricsSnapshot storage)
+    {
+        if (storage.PrimaryDrive != null)
+        {
+            PrimaryDriveName = storage.PrimaryDrive.Name;
+            PrimaryDriveLabel = $"{storage.PrimaryDrive.Label} ({storage.PrimaryDrive.FreeGb:F1} GB free)";
+            PrimaryDriveCapacityDisplay = $"{storage.PrimaryDrive.UsedGb:F1} GB / {storage.PrimaryDrive.TotalGb:F1} GB";
+            PrimaryDrivePercent = storage.PrimaryDrive.PercentUsed;
+        }
+        StoragePartitionsSummary = $"{storage.AllDrives.Count} active fixed drives • {storage.TotalCapacityGb:F0} GB total capacity";
+    }
+
+    private void UpdateNetworkDisplays(NetworkAdapterSnapshot net)
+    {
+        NetworkAdapterName = net.Name;
+        NetworkAdapterDescription = net.Description;
+        NetworkInterfaceType = net.InterfaceTypeDisplay;
+        NetworkLinkSpeed = net.LinkSpeedDisplay;
+    }
+
+    private void UpdateChartDisplay()
+    {
+        double width = _cardViewportWidth > 50 ? _cardViewportWidth : 320.0;
+        double height = _cardViewportHeight > 20 ? _cardViewportHeight : 95.0;
+
+        // 1. CPU Waveform & Area
+        CpuWaveformPoints = _cpuHistory.GeneratePoints(width, height, 100.0);
+        CpuCurveGeometry = _cpuHistory.GenerateSmoothCurveGeometry(width, height, 100.0);
+        CpuAreaGeometry = _cpuHistory.GenerateSmoothAreaGeometry(width, height, 100.0);
+
+        // 2. RAM Waveform & Area
+        RamWaveformPoints = _ramHistory.GeneratePoints(width, height, 100.0);
+        RamCurveGeometry = _ramHistory.GenerateSmoothCurveGeometry(width, height, 100.0);
+        RamAreaGeometry = _ramHistory.GenerateSmoothAreaGeometry(width, height, 100.0);
+
+        // 3. GPU Waveform & Area
+        GpuCurveGeometry = _gpuHistory.GenerateSmoothCurveGeometry(width, height, 100.0);
+        GpuAreaGeometry = _gpuHistory.GenerateSmoothAreaGeometry(width, height, 100.0);
+
+        // 4. Disk Throughput Waveform & Area (Dynamic Scale)
+        double maxDisk = Math.Max(10.0, _diskHistory.GetPeak() * 1.2);
+        DiskCurveGeometry = _diskHistory.GenerateSmoothCurveGeometry(width, height, maxDisk);
+        DiskAreaGeometry = _diskHistory.GenerateSmoothAreaGeometry(width, height, maxDisk);
+
+        // 5. Network Activity Waveform & Area (Dynamic Scale)
+        double maxNet = Math.Max(2.0, _netHistory.GetPeak() * 1.2);
+        NetCurveGeometry = _netHistory.GenerateSmoothCurveGeometry(width, height, maxNet);
+        NetAreaGeometry = _netHistory.GenerateSmoothAreaGeometry(width, height, maxNet);
+
+        // Primary / Secondary alias for Overview Dual Stream
+        PrimaryCurveGeometry = CpuCurveGeometry;
+        PrimaryAreaGeometry = CpuAreaGeometry;
+        SecondaryCurveGeometry = RamCurveGeometry;
+        SecondaryAreaGeometry = RamAreaGeometry;
+        IsDualMetric = true;
+
+        // Card header metrics
+        CpuPeakDisplay = $"{_cpuHistory.GetPeak():F1}%";
+        RamPercentDisplay = $"{_ramPercent:F1}%";
+        DiskPeakDisplay = $"{_diskHistory.GetPeak():F1} MB/s";
+        NetPeakDisplay = $"{_netHistory.GetPeak():F2} MB/s";
+
+        double cpuLiveY = PerformanceHistoryBuffer.CalculateY(_cpuHistory.GetLatest(), height, 100.0);
+        double ramLiveY = PerformanceHistoryBuffer.CalculateY(_ramHistory.GetLatest(), height, 100.0);
+        PrimaryLiveY = cpuLiveY;
+        SecondaryLiveY = ramLiveY;
+
+        if (SelectedMetric == "Overview")
+        {
+            IsDualMetric = true;
+            IsOverviewChannel = true;
+            CurrentMetricDisplay = "Overview • CPU & Memory Telemetry";
+            ActiveChannelName = "System Telemetry";
+            ActiveChannelTag = "SYSTEM TELEMETRY";
+            ActiveChannelValue = CpuDisplay;
+            ActiveChannelSubtext = $"CPU: {CpuDisplay} • RAM: {RamDisplay} ({RamPercent:F0}%)";
+            ActiveChannelPeak = $"{_cpuHistory.GetPeak():F1}%";
+            ActiveChannelAverage = $"{_cpuHistory.GetAverage():F1}%";
+            ActiveChannelMin = $"{_cpuHistory.GetMinimum():F1}%";
+            ActiveChannelStatus = "60s Window • 3s Buffer Delay";
+            ActiveChannelColor = "#00FF41";
+        }
+        else if (SelectedMetric == "Cpu")
+        {
+            IsDualMetric = false;
+            IsOverviewChannel = false;
+            CurrentMetricDisplay = $"CPU Utilization • {CpuDisplay}";
+            ActiveChannelName = "CPU Utilization";
+            ActiveChannelTag = "PROCESSOR ARRAY";
+            ActiveChannelValue = CpuDisplay;
+            ActiveChannelSubtext = ProcessorModel;
+            ActiveChannelPeak = $"{_cpuHistory.GetPeak():F1}%";
+            ActiveChannelAverage = $"{_cpuHistory.GetAverage():F1}%";
+            ActiveChannelMin = $"{_cpuHistory.GetMinimum():F1}%";
+            ActiveChannelStatus = _cpuHistory.GetPeak() > 80.0 ? "High Workload Detected" : "Optimal Processing";
+            ActiveChannelColor = "#00FF41";
+        }
+        else if (SelectedMetric == "Memory")
+        {
+            IsDualMetric = false;
+            IsOverviewChannel = false;
+            CurrentMetricDisplay = $"Physical Memory • {RamDisplay} ({RamPercent:F1}%)";
+            ActiveChannelName = "Memory Allocation";
+            ActiveChannelTag = "DDR PHYSICAL RAM";
+            ActiveChannelValue = RamDisplay;
+            ActiveChannelSubtext = RamDetailDisplay;
+            ActiveChannelPeak = $"{_ramHistory.GetPeak():F1}%";
+            ActiveChannelAverage = $"{_ramHistory.GetAverage():F1}%";
+            ActiveChannelMin = $"{_ramHistory.GetMinimum():F1}%";
+            ActiveChannelStatus = "Stable Memory Footprint";
+            ActiveChannelColor = "#00E5FF";
+        }
+        else if (SelectedMetric == "Gpu")
+        {
+            IsDualMetric = false;
+            IsOverviewChannel = false;
+            CurrentMetricDisplay = $"GPU 3D Engine • {GpuDisplay}";
+            ActiveChannelName = "GPU 3D Engine";
+            ActiveChannelTag = "GRAPHICS PIPELINE";
+            ActiveChannelValue = GpuDisplay;
+            ActiveChannelSubtext = GpuSubtext;
+            ActiveChannelPeak = $"{_gpuHistory.GetPeak():F1}%";
+            ActiveChannelAverage = $"{_gpuHistory.GetAverage():F1}%";
+            ActiveChannelMin = $"{_gpuHistory.GetMinimum():F1}%";
+            ActiveChannelStatus = IsGpuSupported ? "DirectX Accelerated" : "Integrated / Software";
+            ActiveChannelColor = "#A855F7";
+        }
+        else if (SelectedMetric == "Disk")
+        {
+            IsDualMetric = false;
+            IsOverviewChannel = false;
+            CurrentMetricDisplay = $"Disk Throughput • {DiskIoDisplay}";
+            ActiveChannelName = "Disk Throughput";
+            ActiveChannelTag = "STORAGE I/O PIPELINE";
+            ActiveChannelValue = DiskIoDisplay;
+            ActiveChannelSubtext = DiskIoDetailDisplay;
+            ActiveChannelPeak = $"{_diskHistory.GetPeak():F1} MB/s";
+            ActiveChannelAverage = $"{_diskHistory.GetAverage():F1} MB/s";
+            ActiveChannelMin = $"{_diskHistory.GetMinimum():F1} MB/s";
+            ActiveChannelStatus = "Storage Controller Active";
+            ActiveChannelColor = "#F59E0B";
+        }
+        else if (SelectedMetric == "Network")
+        {
+            IsDualMetric = false;
+            IsOverviewChannel = false;
+            CurrentMetricDisplay = $"Network Traffic • {NetworkDisplay}";
+            ActiveChannelName = "Network Throughput";
+            ActiveChannelTag = "NETWORK INTERFACE";
+            ActiveChannelValue = NetworkDisplay;
+            ActiveChannelSubtext = NetworkDetailDisplay;
+            ActiveChannelPeak = $"{_netHistory.GetPeak():F2} MB/s";
+            ActiveChannelAverage = $"{_netHistory.GetAverage():F2} MB/s";
+            ActiveChannelMin = $"{_netHistory.GetMinimum():F2} MB/s";
+            ActiveChannelStatus = $"{NetworkAdapterName} • {NetworkLinkSpeed}";
+            ActiveChannelColor = "#F43F5E";
+        }
     }
 
     public void ApplyScrubbedSample(double fraction)
@@ -338,46 +1133,48 @@ public class DashboardViewModel : ViewModelBase
         var sample = _historyStore.GetSampleByFraction(fraction);
         if (sample == null) return;
 
-        // Apply historical sample values
         CpuPercent = sample.CpuPercent;
         CpuDisplay = $"{sample.CpuPercent:F1}%";
-        CpuCoresDisplay = $"HISTORICAL TELEMETRY // {sample.Timestamp:HH:mm:ss}";
+        CpuCoresDisplay = $"Historical • {sample.Timestamp:HH:mm:ss}";
 
         double usedGb = sample.UsedMemoryBytes / (1024.0 * 1024.0 * 1024.0);
         double totalGb = sample.TotalMemoryBytes / (1024.0 * 1024.0 * 1024.0);
         RamDisplay = $"{usedGb:F1} GB";
         RamDetailDisplay = $"{sample.MemoryPercent:F1}% of {totalGb:F1} GB";
         RamPercent = sample.MemoryPercent;
+        RamTrendDisplay = $"{sample.MemoryPercent:F1}%";
 
         if (sample.ProcessIoBytesPerSec > 0)
         {
             DiskIoDisplay = FormatRate(sample.ProcessIoBytesPerSec);
-            DiskIoDetailDisplay = "Historical Process File/Disk I/O";
+            DiskIoDetailDisplay = "Historical process read + write";
             DiskIoProgress = Math.Clamp(sample.ProcessIoBytesPerSec / (50.0 * 1024.0 * 1024.0) * 100.0, 2.0, 100.0);
         }
         else
         {
             DiskIoDisplay = "0.0 KB/s";
-            DiskIoDetailDisplay = "No Process File/Disk I/O Activity";
+            DiskIoDetailDisplay = "No active disk I/O";
             DiskIoProgress = 0.0;
         }
 
         double totalNet = sample.NetworkReceivedBytesPerSec + sample.NetworkSentBytesPerSec;
         NetworkDisplay = FormatRate(totalNet);
-        NetworkDetailDisplay = $"In: {FormatRate(sample.NetworkReceivedBytesPerSec)} | Out: {FormatRate(sample.NetworkSentBytesPerSec)}";
+        NetworkDetailDisplay = $"In: {FormatRate(sample.NetworkReceivedBytesPerSec)} • Out: {FormatRate(sample.NetworkSentBytesPerSec)}";
+        NetworkDownloadDisplay = $"{FormatRate(sample.NetworkReceivedBytesPerSec)} In";
+        NetworkUploadDisplay = $"{FormatRate(sample.NetworkSentBytesPerSec)} Out";
         NetworkProgress = Math.Clamp(totalNet / (10.0 * 1024.0 * 1024.0) * 100.0, 2.0, 100.0);
 
-        ProcessCountDisplay = $"{sample.ProcessCount} Processes";
+        ProcessCountDisplay = $"{sample.ProcessCount}";
+        ProcessCountProgress = Math.Clamp((sample.ProcessCount / 500.0) * 100.0, 5.0, 100.0);
 
         var offset = _lastLiveTimestamp - sample.Timestamp;
         string offsetStr = offset.TotalMinutes >= 1
             ? $"-{Math.Floor(offset.TotalMinutes):F0}m {offset.Seconds:D2}s"
             : $"-{offset.Seconds:D2}s";
 
-        TimelineTimeDisplay = $"SCRUBBING: {offsetStr} [{sample.Timestamp:HH:mm:ss}]";
-        StatusPillText = $"HISTORICAL TELEMETRY // {sample.Timestamp:HH:mm:ss} ({offsetStr})";
+        TimelineTimeDisplay = $"Scrubbing: {offsetStr} ({sample.Timestamp:HH:mm:ss})";
+        StatusPillText = $"Historical • {sample.Timestamp:HH:mm:ss}";
 
-        // Apply historical top offenders
         UpdateTopOffendersFromHistorical(sample.TopProcesses);
     }
 
@@ -420,7 +1217,6 @@ public class DashboardViewModel : ViewModelBase
         }
         catch
         {
-            // Fallback for non-interactive / headless contexts
             var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
             Directory.CreateDirectory(dir);
             targetPath = Path.Combine(dir, defaultFileName);
@@ -451,8 +1247,8 @@ public class DashboardViewModel : ViewModelBase
     {
         if (topProcesses.Count == 0) return;
 
-        var topCpu = topProcesses.OrderByDescending(p => p.CpuPercent).Take(3).ToList();
-        for (int i = 0; i < 3; i++)
+        var topCpu = topProcesses.OrderByDescending(p => p.CpuPercent).Take(5).ToList();
+        for (int i = 0; i < 5; i++)
         {
             if (i < topCpu.Count)
             {
@@ -461,11 +1257,12 @@ public class DashboardViewModel : ViewModelBase
                 TopCpuProcesses[i].Pid = p.Pid;
                 TopCpuProcesses[i].Subtext = p.FlagReason != null ? $"PID {p.Pid} • {p.FlagReason}" : $"PID {p.Pid}";
                 TopCpuProcesses[i].ValueDisplay = $"{p.CpuPercent:F2}%";
+                TopCpuProcesses[i].PercentValue = Math.Clamp(p.CpuPercent, 1.0, 100.0);
             }
         }
 
-        var topRam = topProcesses.OrderByDescending(p => p.RamBytes).Take(3).ToList();
-        for (int i = 0; i < 3; i++)
+        var topRam = topProcesses.OrderByDescending(p => p.RamBytes).Take(5).ToList();
+        for (int i = 0; i < 5; i++)
         {
             if (i < topRam.Count)
             {
@@ -475,22 +1272,23 @@ public class DashboardViewModel : ViewModelBase
                 TopRamProcesses[i].Subtext = $"PID {p.Pid}";
                 double mb = p.RamBytes / (1024.0 * 1024.0);
                 TopRamProcesses[i].ValueDisplay = mb >= 1024.0 ? $"{mb / 1024.0:F2} GB" : $"{mb:F0} MB";
+                TopRamProcesses[i].PercentValue = Math.Clamp((mb / 4096.0) * 100.0, 1.0, 100.0);
             }
         }
     }
 
-    private void UpdateTopOffenders(IReadOnlyList<ProcessSnapshot> processes)
+    private void UpdateTopOffenders(IReadOnlyList<ProcessSnapshot> processes, GpuMetricsSnapshot? gpuMetrics)
     {
-        if (processes.Count == 0) return;
+        if (processes == null || processes.Count == 0) return;
 
-        // Top CPU (excluding System Idle PID 0)
+        // Top 5 CPU
         var topCpu = processes
             .Where(p => p.Pid != 0 && !p.IsAccessDenied)
             .OrderByDescending(p => p.CpuPercent)
-            .Take(3)
+            .Take(5)
             .ToList();
 
-        for (int i = 0; i < 3; i++)
+        for (int i = 0; i < 5; i++)
         {
             if (i < topCpu.Count)
             {
@@ -499,17 +1297,18 @@ public class DashboardViewModel : ViewModelBase
                 TopCpuProcesses[i].Pid = p.Pid;
                 TopCpuProcesses[i].Subtext = $"PID {p.Pid}";
                 TopCpuProcesses[i].ValueDisplay = $"{p.CpuPercent:F2}%";
+                TopCpuProcesses[i].PercentValue = Math.Clamp(p.CpuPercent, 1.0, 100.0);
             }
         }
 
-        // Top RAM
+        // Top 5 RAM
         var topRam = processes
             .Where(p => p.Pid != 0)
             .OrderByDescending(p => p.RamBytes)
-            .Take(3)
+            .Take(5)
             .ToList();
 
-        for (int i = 0; i < 3; i++)
+        for (int i = 0; i < 5; i++)
         {
             if (i < topRam.Count)
             {
@@ -519,6 +1318,44 @@ public class DashboardViewModel : ViewModelBase
                 TopRamProcesses[i].Subtext = $"PID {p.Pid}";
                 double mb = p.RamBytes / (1024.0 * 1024.0);
                 TopRamProcesses[i].ValueDisplay = mb >= 1024.0 ? $"{mb / 1024.0:F2} GB" : $"{mb:F0} MB";
+                TopRamProcesses[i].PercentValue = Math.Clamp((mb / 4096.0) * 100.0, 1.0, 100.0);
+            }
+        }
+
+        // Top 5 GPU
+        if (gpuMetrics != null && gpuMetrics.TopGpuProcesses != null && gpuMetrics.TopGpuProcesses.Count > 0)
+        {
+            for (int i = 0; i < 5; i++)
+            {
+                if (i < gpuMetrics.TopGpuProcesses.Count)
+                {
+                    var g = gpuMetrics.TopGpuProcesses[i];
+                    TopGpuProcesses[i].Name = g.Name;
+                    TopGpuProcesses[i].Pid = g.Pid;
+                    TopGpuProcesses[i].Subtext = $"PID {g.Pid} • 3D Engine";
+                    TopGpuProcesses[i].ValueDisplay = $"{g.GpuPercent:F1}%";
+                    TopGpuProcesses[i].PercentValue = Math.Clamp(g.GpuPercent, 1.0, 100.0);
+                }
+                else
+                {
+                    TopGpuProcesses[i].Name = "—";
+                    TopGpuProcesses[i].Pid = 0;
+                    TopGpuProcesses[i].Subtext = "Idle";
+                    TopGpuProcesses[i].ValueDisplay = "0.0%";
+                    TopGpuProcesses[i].PercentValue = 0.0;
+                }
+            }
+        }
+        else
+        {
+            // Fallback for GPU processes
+            for (int i = 0; i < 5; i++)
+            {
+                TopGpuProcesses[i].Name = i == 0 && (gpuMetrics == null || !gpuMetrics.IsSupported) ? "GPU process metrics unavailable" : "—";
+                TopGpuProcesses[i].Pid = 0;
+                TopGpuProcesses[i].Subtext = i == 0 ? "Hardware counter not present" : "Idle";
+                TopGpuProcesses[i].ValueDisplay = "0.0%";
+                TopGpuProcesses[i].PercentValue = 0.0;
             }
         }
     }

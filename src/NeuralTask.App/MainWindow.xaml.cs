@@ -1,11 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
-using System.Windows.Media.Effects;
 using System.Windows.Media.Imaging;
 using Microsoft.Extensions.DependencyInjection;
 using NeuralTask.App.Services;
@@ -14,15 +16,15 @@ using NeuralTask.App.Views;
 using NeuralTask.Core.Models;
 using NeuralTask.Theming;
 using Wpf.Ui.Controls;
+using Brushes = System.Windows.Media.Brushes;
 
 namespace NeuralTask.App;
 
 public partial class MainWindow : FluentWindow
 {
     private int _currentTabIndex = 0;
-    private Storyboard? _ambientStoryboard;
     private bool _isExplicitExit = false;
-    private readonly List<(SafePluginPanel Panel, Grid NavGrid, System.Windows.Shapes.Rectangle Indicator, System.Windows.Shapes.Path Icon)> _pluginNavItems = new();
+    private readonly List<(SafePluginPanel Panel, Border NavBorder, System.Windows.Shapes.Path Icon, System.Windows.Controls.TextBlock Label)> _pluginNavItems = new();
     private SafePluginPanel? _activePluginPanel;
 
     [System.Runtime.InteropServices.DllImport("user32.dll")]
@@ -45,8 +47,6 @@ public partial class MainWindow : FluentWindow
         ViewStartup.DataContext = ViewModel.Startup;
         ViewSettings.DataContext = ViewModel.Settings;
 
-        SetupAmbientAnimation();
-        ViewModel.Settings.PropertyChanged += OnSettingsPropertyChanged;
         ThemeManager.ThemeChanged += OnThemeChanged;
 
         ViewModel.RequestRestoreWindow += RestoreAndShowWindow;
@@ -108,6 +108,35 @@ public partial class MainWindow : FluentWindow
         ViewModel.PluginManager.PanelFaulted += _ => Dispatcher.BeginInvoke(BuildPluginNavigationRail);
     }
 
+    protected override void OnPreviewKeyDown(System.Windows.Input.KeyEventArgs e)
+    {
+        base.OnPreviewKeyDown(e);
+
+        if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+        {
+            if (e.Key == Key.D1 || e.Key == Key.D)
+            {
+                SelectTab(0);
+                e.Handled = true;
+            }
+            else if (e.Key == Key.D2 || e.Key == Key.P)
+            {
+                SelectTab(1);
+                e.Handled = true;
+            }
+            else if (e.Key == Key.D3 || e.Key == Key.S)
+            {
+                SelectTab(2);
+                e.Handled = true;
+            }
+            else if (e.Key == Key.D4 || e.Key == Key.O)
+            {
+                SelectTab(3);
+                e.Handled = true;
+            }
+        }
+    }
+
     public void RestoreAndShowWindow()
     {
         Show();
@@ -130,59 +159,9 @@ public partial class MainWindow : FluentWindow
         Application.Current.Shutdown();
     }
 
-    private void OnSettingsPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(SettingsViewModel.IsAmbientAnimationEnabled))
-        {
-            var isEnabled = ViewModel.Settings.IsAmbientAnimationEnabled;
-            AmbientAnimationCanvas.Visibility = isEnabled ? Visibility.Visible : Visibility.Collapsed;
-            if (isEnabled)
-            {
-                _ambientStoryboard?.Resume();
-            }
-            else
-            {
-                _ambientStoryboard?.Pause();
-            }
-        }
-    }
-
-    private void SetupAmbientAnimation()
-    {
-        var animX = new DoubleAnimation
-        {
-            From = -100,
-            To = 100,
-            Duration = TimeSpan.FromSeconds(25),
-            AutoReverse = true,
-            RepeatBehavior = RepeatBehavior.Forever
-        };
-
-        var animY = new DoubleAnimation
-        {
-            From = -50,
-            To = 50,
-            Duration = TimeSpan.FromSeconds(18),
-            AutoReverse = true,
-            RepeatBehavior = RepeatBehavior.Forever
-        };
-
-        _ambientStoryboard = new Storyboard();
-        _ambientStoryboard.Children.Add(animX);
-        _ambientStoryboard.Children.Add(animY);
-
-        Storyboard.SetTarget(animX, AmbientTransform);
-        Storyboard.SetTargetProperty(animX, new PropertyPath(TranslateTransform.XProperty));
-
-        Storyboard.SetTarget(animY, AmbientTransform);
-        Storyboard.SetTargetProperty(animY, new PropertyPath(TranslateTransform.YProperty));
-
-        _ambientStoryboard.Begin();
-    }
-
     private void OnThemeChanged(object? sender, ThemeMode theme)
     {
-        // Re-apply nav button highlighting to pick up refreshed theme dynamic brushes
+        // Re-apply navigation highlighting to pick up refreshed theme dynamic brushes
         if (_activePluginPanel != null)
         {
             SelectPluginTab(_activePluginPanel);
@@ -210,44 +189,34 @@ public partial class MainWindow : FluentWindow
             PluginViewportPresenter.Content = null;
         }
 
-        // Apply theme-driven accent stroke & glow to active icon
-        var activeBrush = (Brush)FindResource("BrushAccentPrimary");
-        var inactiveBrush = (Brush)FindResource("BrushTextSecondary");
-        var activeGlowColor = (Color)FindResource("ColorAccentPrimary");
-
-        var activeGlow = new DropShadowEffect
-        {
-            BlurRadius = 8,
-            ShadowDepth = 0,
-            Color = activeGlowColor,
-            Opacity = 0.8
-        };
+        var activeBg = (Brush)FindResource("BrushAccentPrimarySoft");
+        var activeText = (Brush)FindResource("BrushAccentPrimary");
+        var inactiveText = (Brush)FindResource("BrushTextSecondary");
 
         // Reset plugin indicators
         foreach (var item in _pluginNavItems)
         {
-            item.Indicator.Visibility = Visibility.Collapsed;
-            item.Icon.Stroke = inactiveBrush;
-            item.Icon.Effect = null;
+            item.NavBorder.Background = Brushes.Transparent;
+            item.Icon.Stroke = inactiveText;
+            item.Label.Foreground = inactiveText;
         }
 
-        // Reset all indicators
-        IndicatorDashboard.Visibility = index == 0 ? Visibility.Visible : Visibility.Collapsed;
-        IndicatorProcesses.Visibility = index == 1 ? Visibility.Visible : Visibility.Collapsed;
-        IndicatorStartup.Visibility = index == 2 ? Visibility.Visible : Visibility.Collapsed;
-        IndicatorSettings.Visibility = index == 3 ? Visibility.Visible : Visibility.Collapsed;
+        // Apply Clarity tab highlighting
+        BorderDashboard.Background = index == 0 ? activeBg : Brushes.Transparent;
+        IconDashboard.Stroke = index == 0 ? activeText : inactiveText;
+        LabelDashboard.Foreground = index == 0 ? activeText : inactiveText;
 
-        IconDashboard.Stroke = index == 0 ? activeBrush : inactiveBrush;
-        IconDashboard.Effect = index == 0 ? activeGlow : null;
+        BorderProcesses.Background = index == 1 ? activeBg : Brushes.Transparent;
+        IconProcesses.Stroke = index == 1 ? activeText : inactiveText;
+        LabelProcesses.Foreground = index == 1 ? activeText : inactiveText;
 
-        IconProcesses.Stroke = index == 1 ? activeBrush : inactiveBrush;
-        IconProcesses.Effect = index == 1 ? activeGlow : null;
+        BorderStartup.Background = index == 2 ? activeBg : Brushes.Transparent;
+        IconStartup.Stroke = index == 2 ? activeText : inactiveText;
+        LabelStartup.Foreground = index == 2 ? activeText : inactiveText;
 
-        IconStartup.Stroke = index == 2 ? activeBrush : inactiveBrush;
-        IconStartup.Effect = index == 2 ? activeGlow : null;
-
-        IconSettings.Stroke = index == 3 ? activeBrush : inactiveBrush;
-        IconSettings.Effect = index == 3 ? activeGlow : null;
+        BorderSettings.Background = index == 3 ? activeBg : Brushes.Transparent;
+        IconSettings.Stroke = index == 3 ? activeText : inactiveText;
+        LabelSettings.Foreground = index == 3 ? activeText : inactiveText;
 
         // Switch View with smooth fade-in
         SwitchView(index);
@@ -258,29 +227,34 @@ public partial class MainWindow : FluentWindow
         _activePluginPanel = panel;
         _currentTabIndex = -1;
 
-        // Reset built-in indicators and icons
-        IndicatorDashboard.Visibility = Visibility.Collapsed;
-        IndicatorProcesses.Visibility = Visibility.Collapsed;
-        IndicatorStartup.Visibility = Visibility.Collapsed;
-        IndicatorSettings.Visibility = Visibility.Collapsed;
+        var activeBg = (Brush)FindResource("BrushAccentPrimarySoft");
+        var activeText = (Brush)FindResource("BrushAccentPrimary");
+        var inactiveText = (Brush)FindResource("BrushTextSecondary");
 
-        var activeBrush = (Brush)FindResource("BrushAccentPrimary");
-        var inactiveBrush = (Brush)FindResource("BrushTextSecondary");
-        var activeGlowColor = (Color)FindResource("ColorAccentPrimary");
-        var activeGlow = new DropShadowEffect { BlurRadius = 8, ShadowDepth = 0, Color = activeGlowColor, Opacity = 0.8 };
+        // Reset built-in tabs
+        BorderDashboard.Background = Brushes.Transparent;
+        IconDashboard.Stroke = inactiveText;
+        LabelDashboard.Foreground = inactiveText;
 
-        IconDashboard.Stroke = inactiveBrush; IconDashboard.Effect = null;
-        IconProcesses.Stroke = inactiveBrush; IconProcesses.Effect = null;
-        IconStartup.Stroke = inactiveBrush; IconStartup.Effect = null;
-        IconSettings.Stroke = inactiveBrush; IconSettings.Effect = null;
+        BorderProcesses.Background = Brushes.Transparent;
+        IconProcesses.Stroke = inactiveText;
+        LabelProcesses.Foreground = inactiveText;
+
+        BorderStartup.Background = Brushes.Transparent;
+        IconStartup.Stroke = inactiveText;
+        LabelStartup.Foreground = inactiveText;
+
+        BorderSettings.Background = Brushes.Transparent;
+        IconSettings.Stroke = inactiveText;
+        LabelSettings.Foreground = inactiveText;
 
         // Highlight selected plugin tab
         foreach (var item in _pluginNavItems)
         {
             bool isSelected = item.Panel == panel;
-            item.Indicator.Visibility = isSelected ? Visibility.Visible : Visibility.Collapsed;
-            item.Icon.Stroke = isSelected ? activeBrush : inactiveBrush;
-            item.Icon.Effect = isSelected ? activeGlow : null;
+            item.NavBorder.Background = isSelected ? activeBg : Brushes.Transparent;
+            item.Icon.Stroke = isSelected ? activeText : inactiveText;
+            item.Label.Foreground = isSelected ? activeText : inactiveText;
         }
 
         // Hide built-in views and show plugin view
@@ -296,7 +270,7 @@ public partial class MainWindow : FluentWindow
 
             var fadeIn = new DoubleAnimation
             {
-                From = 0.3,
+                From = 0.4,
                 To = 1.0,
                 Duration = TimeSpan.FromMilliseconds(180),
                 EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
@@ -312,48 +286,46 @@ public partial class MainWindow : FluentWindow
         NavRailPluginsContainer.Children.Clear();
         _pluginNavItems.Clear();
 
-        var navButtonStyle = (Style)FindResource("NavRailButtonStyle");
-        var inactiveBrush = (Brush)FindResource("BrushTextSecondary");
-        var activeGlowColor = (Color)FindResource("ColorAccentPrimary");
+        var navButtonStyle = (Style)FindResource("ClarityNavButtonStyle");
+        var inactiveText = (Brush)FindResource("BrushTextSecondary");
 
         foreach (var panel in ViewModel.PluginManager.LoadedPanels)
         {
             if (!panel.IsEnabled) continue;
 
-            var grid = new Grid();
-
-            var indicator = new System.Windows.Shapes.Rectangle
+            var border = new Border
             {
-                HorizontalAlignment = HorizontalAlignment.Left,
-                Width = 3,
-                Height = 28,
-                Fill = (Brush)FindResource("BrushAccentPrimary"),
-                RadiusX = 1.5,
-                RadiusY = 1.5,
-                Margin = new Thickness(-8, 0, 0, 0),
-                Visibility = Visibility.Collapsed,
-                Effect = new DropShadowEffect
-                {
-                    BlurRadius = 8,
-                    ShadowDepth = 0,
-                    Color = activeGlowColor,
-                    Opacity = 0.8
-                }
+                Width = 72,
+                Height = 58,
+                CornerRadius = new CornerRadius(8),
+                Margin = new Thickness(0, 3, 0, 3),
+                Background = Brushes.Transparent
             };
 
             var btn = new Button
             {
                 Style = navButtonStyle,
-                ToolTip = $"{panel.Title} (PRD §8.5 Plugin)"
+                ToolTip = $"{panel.Title} Plugin"
+            };
+            System.Windows.Automation.AutomationProperties.SetName(btn, panel.Title);
+
+            var stack = new StackPanel
+            {
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
             };
 
             var iconPath = new System.Windows.Shapes.Path
             {
-                Stroke = inactiveBrush,
-                StrokeThickness = 1.5,
-                Width = 22,
-                Height = 22,
-                Stretch = Stretch.Uniform
+                Stroke = inactiveText,
+                StrokeThickness = 1.75,
+                StrokeStartLineCap = PenLineCap.Round,
+                StrokeEndLineCap = PenLineCap.Round,
+                StrokeLineJoin = PenLineJoin.Round,
+                Width = 20,
+                Height = 20,
+                Stretch = Stretch.Uniform,
+                HorizontalAlignment = HorizontalAlignment.Center
             };
 
             try
@@ -362,19 +334,31 @@ public partial class MainWindow : FluentWindow
             }
             catch
             {
-                iconPath.Data = Geometry.Parse("M 4,4 L 20,4 L 20,20 L 4,20 Z");
+                iconPath.Data = (Geometry)FindResource("IconGpuGeometry");
             }
 
-            btn.Content = iconPath;
+            string shortTitle = panel.Title.Contains("GPU", StringComparison.OrdinalIgnoreCase) ? "GPU" : panel.Title;
+            var label = new System.Windows.Controls.TextBlock
+            {
+                Text = shortTitle,
+                FontSize = 11,
+                FontWeight = FontWeights.Medium,
+                FontFamily = (FontFamily)FindResource("FontFamilyUI"),
+                Foreground = inactiveText,
+                Margin = new Thickness(0, 4, 0, 0),
+                HorizontalAlignment = HorizontalAlignment.Center
+            };
+
+            stack.Children.Add(iconPath);
+            stack.Children.Add(label);
+            btn.Content = stack;
 
             var targetPanel = panel;
             btn.Click += (_, _) => SelectPluginTab(targetPanel);
 
-            grid.Children.Add(indicator);
-            grid.Children.Add(btn);
-
-            NavRailPluginsContainer.Children.Add(grid);
-            _pluginNavItems.Add((panel, grid, indicator, iconPath));
+            border.Child = btn;
+            NavRailPluginsContainer.Children.Add(border);
+            _pluginNavItems.Add((panel, border, iconPath, label));
         }
     }
 
@@ -396,7 +380,7 @@ public partial class MainWindow : FluentWindow
 
         var fadeIn = new DoubleAnimation
         {
-            From = 0.3,
+            From = 0.4,
             To = 1.0,
             Duration = TimeSpan.FromMilliseconds(180),
             EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
@@ -415,10 +399,17 @@ public partial class MainWindow : FluentWindow
         // 1. Dark Theme - Dashboard (Live metrics with scrubber & export)
         ThemeManager.ApplyTheme(ThemeMode.Dark);
         SelectTab(0);
+        ViewDashboard.ScrollToTop();
         await Task.Delay(400);
         SaveBitmap(Path.Combine(outputDir, "screen_dashboard_dark.png"));
 
-        // 1b. Dark Theme - Dashboard (Scrubbing historical mode)
+        // 1b. Dark Theme - Dashboard Lower Section (Storage, Network, Intelligence)
+        ViewDashboard.ScrollToBottom();
+        await Task.Delay(300);
+        SaveBitmap(Path.Combine(outputDir, "screen_dashboard_intelligence_dark.png"));
+        ViewDashboard.ScrollToTop();
+
+        // 1c. Dark Theme - Dashboard (Scrubbing historical mode)
         ViewModel.Dashboard.ScrubberValue = 0.0;
         await Task.Delay(300);
         SaveBitmap(Path.Combine(outputDir, "screen_dashboard_scrubbing_dark.png"));
@@ -427,13 +418,20 @@ public partial class MainWindow : FluentWindow
 
         // 2. Dark Theme - Processes (Live processes & Heuristic Flags)
         SelectTab(1);
+        ViewModel.ProcessList.IsInspectorVisible = false;
+        ViewModel.ProcessList.TriggerReScan();
+        await Task.Delay(500);
+        SaveBitmap(Path.Combine(outputDir, "screen_processes_dark.png"));
+
+        // 2b. Dark Theme - Process Inspector
         if (ViewModel.ProcessList.FilteredProcesses.Count > 0)
         {
             ViewModel.ProcessList.SelectedProcess = ViewModel.ProcessList.FilteredProcesses[0];
+            ViewModel.ProcessList.IsInspectorVisible = true;
         }
-        ViewModel.ProcessList.TriggerReScan();
-        await Task.Delay(400);
-        SaveBitmap(Path.Combine(outputDir, "screen_processes_dark.png"));
+        await Task.Delay(750);
+        SaveBitmap(Path.Combine(outputDir, "screen_processes_inspector_dark.png"));
+        ViewModel.ProcessList.IsInspectorVisible = false;
 
         // 3. Dark Theme - Startup (PRD §8.3 Matrix)
         SelectTab(2);
@@ -472,7 +470,7 @@ public partial class MainWindow : FluentWindow
         SaveElementBitmap(killDialogDark, Path.Combine(outputDir, "screen_kill_tree_dialog_dark.png"));
         killDialogDark.Close();
 
-        // 5b. Dark Theme - GPU Plugin Panel (PRD §8.5)
+        // 5b. Dark Theme - GPU Plugin Panel
         var gpuPluginDark = ViewModel.PluginManager.LoadedPanels.FirstOrDefault(p => p.Id == "gpu-monitor");
         if (gpuPluginDark != null)
         {
@@ -484,18 +482,32 @@ public partial class MainWindow : FluentWindow
         // 6. Light Theme - Dashboard
         ThemeManager.ApplyTheme(ThemeMode.Light);
         SelectTab(0);
+        ViewDashboard.ScrollToTop();
         await Task.Delay(400);
         SaveBitmap(Path.Combine(outputDir, "screen_dashboard_light.png"));
 
+        // 6b. Light Theme - Dashboard Lower Section (Storage, Network, Intelligence)
+        ViewDashboard.ScrollToBottom();
+        await Task.Delay(300);
+        SaveBitmap(Path.Combine(outputDir, "screen_dashboard_intelligence_light.png"));
+        ViewDashboard.ScrollToTop();
+
         // 7. Light Theme - Processes
         SelectTab(1);
+        ViewModel.ProcessList.IsInspectorVisible = false;
+        ViewModel.ProcessList.TriggerReScan();
+        await Task.Delay(500);
+        SaveBitmap(Path.Combine(outputDir, "screen_processes_light.png"));
+
+        // 7b. Light Theme - Process Inspector
         if (ViewModel.ProcessList.FilteredProcesses.Count > 0)
         {
             ViewModel.ProcessList.SelectedProcess = ViewModel.ProcessList.FilteredProcesses[0];
+            ViewModel.ProcessList.IsInspectorVisible = true;
         }
-        ViewModel.ProcessList.TriggerReScan();
-        await Task.Delay(400);
-        SaveBitmap(Path.Combine(outputDir, "screen_processes_light.png"));
+        await Task.Delay(750);
+        SaveBitmap(Path.Combine(outputDir, "screen_processes_inspector_light.png"));
+        ViewModel.ProcessList.IsInspectorVisible = false;
 
         // 8. Light Theme - Startup
         SelectTab(2);
@@ -532,7 +544,7 @@ public partial class MainWindow : FluentWindow
         SaveElementBitmap(killDialogLight, Path.Combine(outputDir, "screen_kill_tree_dialog_light.png"));
         killDialogLight.Close();
 
-        // 10b. Light Theme - GPU Plugin Panel (PRD §8.5)
+        // 10b. Light Theme - GPU Plugin Panel
         var gpuPluginLight = ViewModel.PluginManager.LoadedPanels.FirstOrDefault(p => p.Id == "gpu-monitor");
         if (gpuPluginLight != null)
         {

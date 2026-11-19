@@ -8,7 +8,7 @@
         xmlns:vm="clr-namespace:NeuralTask.App.ViewModels"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=vm:MainWindowViewModel}"
-        Title="NeuralTask // HUD"
+        Title="NeuralTask"
         Height="720"
         Width="1100"
         MinHeight="560"
@@ -18,29 +18,34 @@
         ShowInTaskbar="True"
         ExtendsContentIntoTitleBar="True"
         WindowBackdropType="None"
-        Background="{DynamicResource BrushBackgroundBase}">
+        TextOptions.TextFormattingMode="Display"
+        TextOptions.TextRenderingMode="ClearType"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        Background="{DynamicResource BrushCanvas}">
 
     <ui:FluentWindow.Resources>
-        <!-- Style for Navigation Rail Icon Buttons -->
-        <Style x:Key="NavRailButtonStyle" TargetType="Button">
+        <!-- Style for Clarity Navigation Rail Buttons -->
+        <Style x:Key="ClarityNavButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Width" Value="52" />
-            <Setter Property="Height" Value="52" />
-            <Setter Property="Margin" Value="0,6" />
+            <Setter Property="Width" Value="72" />
+            <Setter Property="Height" Value="58" />
+            <Setter Property="Margin" Value="0,3" />
             <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="ButtonBorder"
                                 Background="{TemplateBinding Background}"
                                 CornerRadius="8"
-                                Padding="12">
+                                Padding="4">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource BrushPanelSurface}" />
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource BrushSurfaceRaised}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -49,30 +54,7 @@
         </Style>
     </ui:FluentWindow.Resources>
 
-    <Grid Background="{DynamicResource BrushBackgroundBase}">
-        <!-- 0. Ambient Background Animation Layer (GPU Composited) -->
-        <Canvas x:Name="AmbientAnimationCanvas" IsHitTestVisible="False" ClipToBounds="True">
-            <!-- Subtle diagonal data stream lines -->
-            <Path Data="M -200,100 L 1500,-400 M -200,350 L 1500,-150 M -200,600 L 1500,100 M -200,850 L 1500,350"
-                  Stroke="{DynamicResource BrushAccentPrimary}"
-                  StrokeThickness="1"
-                  Opacity="0.04">
-                <Path.RenderTransform>
-                    <TranslateTransform x:Name="AmbientTransform" X="0" Y="0" />
-                </Path.RenderTransform>
-            </Path>
-
-            <!-- Subtle secondary violet wave -->
-            <Path Data="M -200,200 L 1500,-300 M -200,700 L 1500,200"
-                  Stroke="{DynamicResource BrushAccentSecondary}"
-                  StrokeThickness="1"
-                  Opacity="0.03">
-                <Path.RenderTransform>
-                    <TranslateTransform x:Name="AmbientTransformSecondary" X="0" Y="0" />
-                </Path.RenderTransform>
-            </Path>
-        </Canvas>
-
+    <Grid Background="{DynamicResource BrushCanvas}">
         <!-- Main Window Structure -->
         <Grid>
             <Grid.RowDefinitions>
@@ -80,37 +62,42 @@
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
-            <!-- 1. Futuristic HUD TitleBar Chrome -->
+            <!-- 1. Refined Minimal TitleBar -->
             <ui:TitleBar Grid.Row="0"
-                         Title="NEURALTASK // HUD v0.3"
-                         Foreground="{DynamicResource BrushTitleBarForeground}"
-                         Height="42"
-                         Padding="12,0,0,0">
+                         Title="NeuralTask"
+                         Foreground="{DynamicResource BrushTextPrimary}"
+                         Height="40"
+                         Padding="16,0,0,0">
                 <ui:TitleBar.Header>
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Text="{Binding StatusBadgeText, FallbackValue='SYS.NODE: ONLINE'}"
-                                   FontSize="10"
-                                   FontWeight="Bold"
-                                   FontFamily="{DynamicResource FontFamilyNumeric}"
-                                   Foreground="{DynamicResource BrushAccentPrimary}"
-                                   Margin="20,0,0,0" />
+                        <!-- Live Status Dot -->
+                        <Ellipse Width="6" Height="6"
+                                 Fill="{DynamicResource BrushAccentSecondary}"
+                                 Margin="16,0,6,0"
+                                 VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding StatusBadgeText, FallbackValue='System online'}"
+                                   FontSize="11"
+                                   FontWeight="Medium"
+                                   FontFamily="{DynamicResource FontFamilyUI}"
+                                   Foreground="{DynamicResource BrushTextSecondary}"
+                                   VerticalAlignment="Center" />
                     </StackPanel>
                 </ui:TitleBar.Header>
             </ui:TitleBar>
 
-            <!-- 2. Main Shell Layout (Slim Icon Rail + Viewport) -->
+            <!-- 2. Main Shell Layout (Navigation Rail + Viewport) -->
             <Grid Grid.Row="1">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="68" />
+                    <ColumnDefinition Width="88" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <!-- Left Navigation Icon Rail -->
+                <!-- Left Navigation Rail with Visible Labels (PRD §5) -->
                 <Border Grid.Column="0"
-                        Background="{DynamicResource BrushPanelSurface}"
-                        BorderBrush="{DynamicResource BrushAccentPrimary}"
+                        Background="{DynamicResource BrushSurface}"
+                        BorderBrush="{DynamicResource BrushBorderSubtle}"
                         BorderThickness="0,1,1,0"
-                        Padding="0,16,0,16">
+                        Padding="0,12,0,14">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="*" />
@@ -119,125 +106,141 @@
 
                         <!-- Top Navigation Items -->
                         <StackPanel Grid.Row="0" HorizontalAlignment="Center">
-                            <!-- Dashboard Button -->
-                            <Grid>
-                                <Rectangle x:Name="IndicatorDashboard"
-                                           HorizontalAlignment="Left"
-                                           Width="3" Height="28"
-                                           Fill="{DynamicResource BrushAccentPrimary}"
-                                           RadiusX="1.5" RadiusY="1.5"
-                                           Margin="-8,0,0,0">
-                                    <Rectangle.Effect>
-                                        <DropShadowEffect BlurRadius="8" ShadowDepth="0" Color="{DynamicResource ColorAccentPrimary}" Opacity="0.8" />
-                                    </Rectangle.Effect>
-                                </Rectangle>
+                            <!-- Dashboard -->
+                            <Border x:Name="BorderDashboard" CornerRadius="8" Width="72" Height="58" Margin="0,3">
                                 <Button x:Name="NavButtonDashboard"
-                                        Style="{StaticResource NavRailButtonStyle}"
-                                        ToolTip="Telemetry Dashboard"
+                                        Style="{StaticResource ClarityNavButtonStyle}"
+                                        ToolTip="Dashboard (Ctrl+1)"
+                                        AutomationProperties.Name="Dashboard"
+                                        AutomationProperties.ItemType="Navigation Tab"
                                         Click="OnNavDashboardClick">
-                                    <Path x:Name="IconDashboard"
-                                          Data="{StaticResource IconDashboardGeometry}"
-                                          Stroke="{DynamicResource BrushAccentPrimary}"
-                                          StrokeThickness="1.5"
-                                          Width="22" Height="22"
-                                          Stretch="Uniform" />
+                                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <Path x:Name="IconDashboard"
+                                              Data="{StaticResource IconDashboardGeometry}"
+                                              Stroke="{DynamicResource BrushAccentPrimary}"
+                                              StrokeThickness="1.75"
+                                              StrokeStartLineCap="Round"
+                                              StrokeEndLineCap="Round"
+                                              StrokeLineJoin="Round"
+                                              Width="20" Height="20"
+                                              Stretch="Uniform"
+                                              HorizontalAlignment="Center" />
+                                        <TextBlock x:Name="LabelDashboard"
+                                                   Text="Dashboard"
+                                                   FontSize="11"
+                                                   FontWeight="Medium"
+                                                   FontFamily="{DynamicResource FontFamilyUI}"
+                                                   Foreground="{DynamicResource BrushAccentPrimary}"
+                                                   Margin="0,4,0,0"
+                                                   HorizontalAlignment="Center" />
+                                    </StackPanel>
                                 </Button>
-                            </Grid>
+                            </Border>
 
-                            <!-- Process List Button -->
-                            <Grid>
-                                <Rectangle x:Name="IndicatorProcesses"
-                                           HorizontalAlignment="Left"
-                                           Width="3" Height="28"
-                                           Fill="{DynamicResource BrushAccentPrimary}"
-                                           RadiusX="1.5" RadiusY="1.5"
-                                           Margin="-8,0,0,0"
-                                           Visibility="Collapsed">
-                                    <Rectangle.Effect>
-                                        <DropShadowEffect BlurRadius="8" ShadowDepth="0" Color="{DynamicResource ColorAccentPrimary}" Opacity="0.8" />
-                                    </Rectangle.Effect>
-                                </Rectangle>
+                            <!-- Processes -->
+                            <Border x:Name="BorderProcesses" CornerRadius="8" Width="72" Height="58" Margin="0,3">
                                 <Button x:Name="NavButtonProcesses"
-                                        Style="{StaticResource NavRailButtonStyle}"
-                                        ToolTip="Process Matrix"
+                                        Style="{StaticResource ClarityNavButtonStyle}"
+                                        ToolTip="Processes (Ctrl+2)"
+                                        AutomationProperties.Name="Processes"
+                                        AutomationProperties.ItemType="Navigation Tab"
                                         Click="OnNavProcessesClick">
-                                    <Path x:Name="IconProcesses"
-                                          Data="{StaticResource IconProcessesGeometry}"
-                                          Stroke="{DynamicResource BrushTextSecondary}"
-                                          StrokeThickness="1.5"
-                                          Width="22" Height="22"
-                                          Stretch="Uniform" />
+                                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <Path x:Name="IconProcesses"
+                                              Data="{StaticResource IconProcessesGeometry}"
+                                              Stroke="{DynamicResource BrushTextSecondary}"
+                                              StrokeThickness="1.75"
+                                              StrokeStartLineCap="Round"
+                                              StrokeEndLineCap="Round"
+                                              StrokeLineJoin="Round"
+                                              Width="20" Height="20"
+                                              Stretch="Uniform"
+                                              HorizontalAlignment="Center" />
+                                        <TextBlock x:Name="LabelProcesses"
+                                                   Text="Processes"
+                                                   FontSize="11"
+                                                   FontWeight="Medium"
+                                                   FontFamily="{DynamicResource FontFamilyUI}"
+                                                   Foreground="{DynamicResource BrushTextSecondary}"
+                                                   Margin="0,4,0,0"
+                                                   HorizontalAlignment="Center" />
+                                    </StackPanel>
                                 </Button>
-                            </Grid>
+                            </Border>
 
-                            <!-- Startup Impact Button -->
-                            <Grid>
-                                <Rectangle x:Name="IndicatorStartup"
-                                           HorizontalAlignment="Left"
-                                           Width="3" Height="28"
-                                           Fill="{DynamicResource BrushAccentPrimary}"
-                                           RadiusX="1.5" RadiusY="1.5"
-                                           Margin="-8,0,0,0"
-                                           Visibility="Collapsed">
-                                    <Rectangle.Effect>
-                                        <DropShadowEffect BlurRadius="8" ShadowDepth="0" Color="{DynamicResource ColorAccentPrimary}" Opacity="0.8" />
-                                    </Rectangle.Effect>
-                                </Rectangle>
+                            <!-- Startup -->
+                            <Border x:Name="BorderStartup" CornerRadius="8" Width="72" Height="58" Margin="0,3">
                                 <Button x:Name="NavButtonStartup"
-                                        Style="{StaticResource NavRailButtonStyle}"
-                                        ToolTip="Startup Impact Matrix (PRD §8.3)"
+                                        Style="{StaticResource ClarityNavButtonStyle}"
+                                        ToolTip="Startup Apps (Ctrl+3)"
+                                        AutomationProperties.Name="Startup Apps"
+                                        AutomationProperties.ItemType="Navigation Tab"
                                         Click="OnNavStartupClick">
-                                    <Path x:Name="IconStartup"
-                                          Data="{StaticResource IconStartupGeometry}"
-                                          Stroke="{DynamicResource BrushTextSecondary}"
-                                          StrokeThickness="1.5"
-                                          Width="22" Height="22"
-                                          Stretch="Uniform" />
+                                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <Path x:Name="IconStartup"
+                                              Data="{StaticResource IconStartupGeometry}"
+                                              Stroke="{DynamicResource BrushTextSecondary}"
+                                              StrokeThickness="1.75"
+                                              StrokeStartLineCap="Round"
+                                              StrokeEndLineCap="Round"
+                                              StrokeLineJoin="Round"
+                                              Width="20" Height="20"
+                                              Stretch="Uniform"
+                                              HorizontalAlignment="Center" />
+                                        <TextBlock x:Name="LabelStartup"
+                                                   Text="Startup"
+                                                   FontSize="11"
+                                                   FontWeight="Medium"
+                                                   FontFamily="{DynamicResource FontFamilyUI}"
+                                                   Foreground="{DynamicResource BrushTextSecondary}"
+                                                   Margin="0,4,0,0"
+                                                   HorizontalAlignment="Center" />
+                                    </StackPanel>
                                 </Button>
-                            </Grid>
+                            </Border>
 
-                            <!-- Dynamic Extension Plugins Navigation Container -->
+                            <!-- Dynamic Plugins Container -->
                             <StackPanel x:Name="NavRailPluginsContainer" />
 
-                            <!-- Settings Button -->
-                            <Grid>
-                                <Rectangle x:Name="IndicatorSettings"
-                                           HorizontalAlignment="Left"
-                                           Width="3" Height="28"
-                                           Fill="{DynamicResource BrushAccentPrimary}"
-                                           RadiusX="1.5" RadiusY="1.5"
-                                           Margin="-8,0,0,0"
-                                           Visibility="Collapsed">
-                                    <Rectangle.Effect>
-                                        <DropShadowEffect BlurRadius="8" ShadowDepth="0" Color="{DynamicResource ColorAccentPrimary}" Opacity="0.8" />
-                                    </Rectangle.Effect>
-                                </Rectangle>
+                            <!-- Settings -->
+                            <Border x:Name="BorderSettings" CornerRadius="8" Width="72" Height="58" Margin="0,3">
                                 <Button x:Name="NavButtonSettings"
-                                        Style="{StaticResource NavRailButtonStyle}"
-                                        ToolTip="System Settings"
+                                        Style="{StaticResource ClarityNavButtonStyle}"
+                                        ToolTip="Settings (Ctrl+4)"
+                                        AutomationProperties.Name="Settings"
+                                        AutomationProperties.ItemType="Navigation Tab"
                                         Click="OnNavSettingsClick">
-                                    <Path x:Name="IconSettings"
-                                          Data="{StaticResource IconSettingsGeometry}"
-                                          Stroke="{DynamicResource BrushTextSecondary}"
-                                          StrokeThickness="1.5"
-                                          Width="22" Height="22"
-                                          Stretch="Uniform" />
+                                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <Path x:Name="IconSettings"
+                                              Data="{StaticResource IconSettingsGeometry}"
+                                              Stroke="{DynamicResource BrushTextSecondary}"
+                                              StrokeThickness="1.75"
+                                              StrokeStartLineCap="Round"
+                                              StrokeEndLineCap="Round"
+                                              StrokeLineJoin="Round"
+                                              Width="20" Height="20"
+                                              Stretch="Uniform"
+                                              HorizontalAlignment="Center" />
+                                        <TextBlock x:Name="LabelSettings"
+                                                   Text="Settings"
+                                                   FontSize="11"
+                                                   FontWeight="Medium"
+                                                   FontFamily="{DynamicResource FontFamilyUI}"
+                                                   Foreground="{DynamicResource BrushTextSecondary}"
+                                                   Margin="0,4,0,0"
+                                                   HorizontalAlignment="Center" />
+                                    </StackPanel>
                                 </Button>
-                            </Grid>
+                            </Border>
                         </StackPanel>
 
-                        <!-- Bottom Rail Status Pip -->
+                        <!-- Bottom Version Info -->
                         <StackPanel Grid.Row="1" HorizontalAlignment="Center">
-                            <Ellipse Width="6" Height="6" Fill="{DynamicResource BrushAccentPrimary}" Margin="0,0,0,4">
-                                <Ellipse.Effect>
-                                    <DropShadowEffect BlurRadius="6" ShadowDepth="0" Color="{DynamicResource ColorAccentPrimary}" Opacity="0.8" />
-                                </Ellipse.Effect>
-                            </Ellipse>
                             <TextBlock Text="v0.3"
-                                       FontSize="9"
-                                       FontWeight="SemiBold"
-                                       FontFamily="{DynamicResource FontFamilyNumeric}"
-                                       Foreground="{DynamicResource BrushTextSecondary}"
+                                       FontSize="10"
+                                       FontWeight="Medium"
+                                       FontFamily="{DynamicResource FontFamilyUI}"
+                                       Foreground="{DynamicResource BrushTextTertiary}"
                                        HorizontalAlignment="Center" />
                         </StackPanel>
                     </Grid>

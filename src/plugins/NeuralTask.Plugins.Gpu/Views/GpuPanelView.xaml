@@ -7,27 +7,34 @@
              mc:Ignorable="d" 
              d:DataContext="{d:DesignInstance Type=local:GpuPanelViewModel}"
              d:DesignHeight="650" d:DesignWidth="900"
-             Background="Transparent">
+             Background="Transparent"
+             TextOptions.TextFormattingMode="Display"
+             TextOptions.TextRenderingMode="ClearType"
+             SnapsToDevicePixels="True"
+             UseLayoutRounding="True">
 
     <UserControl.Resources>
         <!-- Fallback brushes if host dynamic resources are absent -->
-        <SolidColorBrush x:Key="GpuBrushPanel" Color="#14141F" Opacity="0.85" />
-        <SolidColorBrush x:Key="GpuBrushBorder" Color="#2A2A3C" />
-        <SolidColorBrush x:Key="GpuBrushCyan" Color="#00E5FF" />
-        <SolidColorBrush x:Key="GpuBrushViolet" Color="#9D4EDD" />
-        <SolidColorBrush x:Key="GpuBrushTextPrimary" Color="#F0F0F8" />
-        <SolidColorBrush x:Key="GpuBrushTextSecondary" Color="#8A8A9E" />
+        <SolidColorBrush x:Key="GpuBrushPanel" Color="#181B22" />
+        <SolidColorBrush x:Key="GpuBrushBorder" Color="#262A34" />
+        <SolidColorBrush x:Key="GpuBrushAccent" Color="#5B61F1" />
+        <SolidColorBrush x:Key="GpuBrushSecondary" Color="#11A69C" />
+        <SolidColorBrush x:Key="GpuBrushTextPrimary" Color="#F2F4F8" />
+        <SolidColorBrush x:Key="GpuBrushTextSecondary" Color="#949AA8" />
     </UserControl.Resources>
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="24,18,24,24">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="28,20,28,28">
         <StackPanel Orientation="Vertical">
             <!-- 1. Header Bar -->
-            <Border Background="{DynamicResource BrushPanelSurface}"
-                    BorderBrush="{DynamicResource BrushBorderNormal}"
+            <Border Background="{DynamicResource BrushSurface}"
+                    BorderBrush="{DynamicResource BrushBorderSubtle}"
                     BorderThickness="1"
-                    CornerRadius="8"
-                    Padding="16,12"
+                    CornerRadius="12"
+                    Padding="18,14"
                     Margin="0,0,0,16">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="8" ShadowDepth="1" Direction="270" Color="Black" Opacity="0.04" />
+                </Border.Effect>
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
@@ -41,27 +48,27 @@
                               StrokeThickness="1.5"
                               Width="22" Height="22"
                               Stretch="Uniform"
-                              Margin="0,0,12,0" />
+                              Margin="0,0,14,0" />
                         <StackPanel>
-                            <TextBlock Text="GPU TELEMETRY // HARDWARE ACCELERATOR"
-                                       FontSize="14"
-                                       FontWeight="Bold"
-                                       FontFamily="{DynamicResource FontFamilyCode}"
-                                       Foreground="{DynamicResource BrushAccentPrimary}" />
+                            <TextBlock Text="GPU telemetry"
+                                       FontSize="15"
+                                       FontWeight="SemiBold"
+                                       FontFamily="{DynamicResource FontFamilyUI}"
+                                       Foreground="{DynamicResource BrushTextPrimary}" />
                             <TextBlock Text="{Binding AdapterName, FallbackValue='Detecting GPU...'}"
-                                       FontSize="11"
-                                       FontFamily="{DynamicResource FontFamilyCode}"
-                                       Foreground="{DynamicResource BrushTextSecondary}"
+                                       FontSize="11.5"
+                                       FontFamily="{DynamicResource FontFamilyUI}"
+                                       Foreground="{DynamicResource BrushTextTertiary}"
                                        Margin="0,2,0,0" />
                         </StackPanel>
                     </StackPanel>
 
                     <!-- Status Pip -->
                     <Border Grid.Column="1"
-                            Background="#1A00E5FF"
+                            Background="{DynamicResource BrushAccentPrimarySoft}"
                             BorderBrush="{DynamicResource BrushAccentPrimary}"
                             BorderThickness="1"
-                            CornerRadius="4"
+                            CornerRadius="12"
                             Padding="10,4"
                             VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal">
@@ -69,10 +76,10 @@
                                      Fill="{DynamicResource BrushAccentPrimary}"
                                      Margin="0,0,6,0"
                                      VerticalAlignment="Center" />
-                            <TextBlock Text="D3D12 ENGINE ACTIVE"
-                                       FontSize="10"
-                                       FontWeight="Bold"
-                                       FontFamily="{DynamicResource FontFamilyNumeric}"
+                            <TextBlock Text="Direct3D 12 active"
+                                       FontSize="10.5"
+                                       FontWeight="Medium"
+                                       FontFamily="{DynamicResource FontFamilyUI}"
                                        Foreground="{DynamicResource BrushAccentPrimary}"
                                        VerticalAlignment="Center" />
                         </StackPanel>
@@ -90,129 +97,135 @@
 
                 <!-- Card 1: 3D Engine Utilization & Sparkline -->
                 <Border Grid.Column="0"
-                        Background="{DynamicResource BrushPanelSurface}"
-                        BorderBrush="{DynamicResource BrushBorderNormal}"
+                        Background="{DynamicResource BrushSurface}"
+                        BorderBrush="{DynamicResource BrushBorderSubtle}"
                         BorderThickness="1"
-                        CornerRadius="8"
+                        CornerRadius="12"
                         Padding="18,16">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="8" ShadowDepth="1" Direction="270" Color="Black" Opacity="0.04" />
+                    </Border.Effect>
                     <StackPanel>
-                        <Grid Margin="0,0,0,12">
-                            <TextBlock Text="3D ENGINE UTILIZATION"
-                                       FontSize="11"
-                                       FontWeight="Bold"
-                                       FontFamily="{DynamicResource FontFamilyNumeric}"
+                        <Grid Margin="0,0,0,10">
+                            <TextBlock Text="3D engine utilization"
+                                       FontSize="12"
+                                       FontWeight="SemiBold"
+                                       FontFamily="{DynamicResource FontFamilyUI}"
                                        Foreground="{DynamicResource BrushTextSecondary}" />
                             <TextBlock HorizontalAlignment="Right"
                                        Text="{Binding UtilizationPercent, StringFormat='{}{0:F1}%', FallbackValue='0.0%'}"
                                        FontSize="22"
-                                       FontWeight="Bold"
+                                       FontWeight="SemiBold"
                                        FontFamily="{DynamicResource FontFamilyNumeric}"
                                        Foreground="{DynamicResource BrushAccentPrimary}" />
                         </Grid>
 
                         <!-- Sparkline Graph -->
-                        <Border Background="#120D1C"
-                                BorderBrush="{DynamicResource BrushBorderNormal}"
+                        <Border Background="{DynamicResource BrushSurfaceRaised}"
+                                BorderBrush="{DynamicResource BrushBorderSubtle}"
                                 BorderThickness="1"
-                                CornerRadius="6"
+                                CornerRadius="8"
                                 Height="75"
                                 Padding="4"
-                                Margin="0,0,0,12">
+                                Margin="0,0,0,10">
                             <Path Data="{Binding SparklineGeometry}"
                                   Stroke="{DynamicResource BrushAccentPrimary}"
-                                  StrokeThickness="2"
+                                  StrokeThickness="1.75"
                                   Stretch="Fill"
                                   Height="65"
                                   VerticalAlignment="Center" />
                         </Border>
 
                         <Grid>
-                            <TextBlock Text="PEAK UTILIZATION (LAST 40s)"
-                                       FontSize="9"
-                                       FontFamily="{DynamicResource FontFamilyNumeric}"
-                                       Foreground="{DynamicResource BrushTextSecondary}" />
+                            <TextBlock Text="Utilization (last 40s)"
+                                       FontSize="10"
+                                       FontFamily="{DynamicResource FontFamilyUI}"
+                                       Foreground="{DynamicResource BrushTextTertiary}" />
                             <TextBlock HorizontalAlignment="Right"
-                                       Text="REAL-TIME KERNEL TICK"
-                                       FontSize="9"
-                                       FontFamily="{DynamicResource FontFamilyNumeric}"
-                                       Foreground="{DynamicResource BrushTextSecondary}" />
+                                       Text="Real-time kernel tick"
+                                       FontSize="10"
+                                       FontFamily="{DynamicResource FontFamilyUI}"
+                                       Foreground="{DynamicResource BrushTextTertiary}" />
                         </Grid>
                     </StackPanel>
                 </Border>
 
                 <!-- Card 2: Dedicated Video Memory (VRAM) -->
                 <Border Grid.Column="2"
-                        Background="{DynamicResource BrushPanelSurface}"
-                        BorderBrush="{DynamicResource BrushBorderNormal}"
+                        Background="{DynamicResource BrushSurface}"
+                        BorderBrush="{DynamicResource BrushBorderSubtle}"
                         BorderThickness="1"
-                        CornerRadius="8"
+                        CornerRadius="12"
                         Padding="18,16">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="8" ShadowDepth="1" Direction="270" Color="Black" Opacity="0.04" />
+                    </Border.Effect>
                     <StackPanel>
                         <Grid Margin="0,0,0,8">
-                            <TextBlock Text="DEDICATED VIDEO RAM (VRAM)"
-                                       FontSize="11"
-                                       FontWeight="Bold"
-                                       FontFamily="{DynamicResource FontFamilyNumeric}"
+                            <TextBlock Text="Dedicated video memory (VRAM)"
+                                       FontSize="12"
+                                       FontWeight="SemiBold"
+                                       FontFamily="{DynamicResource FontFamilyUI}"
                                        Foreground="{DynamicResource BrushTextSecondary}" />
                             <TextBlock HorizontalAlignment="Right"
                                        Text="{Binding DedicatedMemoryPercent, StringFormat='{}{0:F1}%', FallbackValue='0.0%'}"
                                        FontSize="22"
-                                       FontWeight="Bold"
+                                       FontWeight="SemiBold"
                                        FontFamily="{DynamicResource FontFamilyNumeric}"
                                        Foreground="{DynamicResource BrushAccentSecondary}" />
                         </Grid>
 
                         <!-- VRAM Usage Bar -->
-                        <Border Background="#1A1A28"
+                        <Border Background="{DynamicResource BrushSurfaceRaised}"
+                                BorderBrush="{DynamicResource BrushBorderSubtle}"
+                                BorderThickness="1"
                                 CornerRadius="4"
                                 Height="8"
-                                Margin="0,4,0,12">
-                            <Grid HorizontalAlignment="Left">
-                                <ProgressBar Value="{Binding DedicatedMemoryPercent, Mode=OneWay, FallbackValue=0}"
-                                             Minimum="0" Maximum="100"
-                                             Height="8"
-                                             Width="360"
-                                             Foreground="{DynamicResource BrushAccentSecondary}"
-                                             Background="Transparent"
-                                             BorderThickness="0" />
-                            </Grid>
+                                Margin="0,4,0,12"
+                                ClipToBounds="True">
+                            <ProgressBar Value="{Binding DedicatedMemoryPercent, Mode=OneWay, FallbackValue=0}"
+                                         Minimum="0" Maximum="100"
+                                         Height="8"
+                                         Foreground="{DynamicResource BrushAccentSecondary}"
+                                         Background="Transparent"
+                                         BorderThickness="0" />
                         </Border>
 
-                        <Grid Margin="0,0,0,6">
-                            <TextBlock Text="USED DEDICATED VRAM:"
+                        <Grid Margin="0,0,0,5">
+                            <TextBlock Text="Used dedicated VRAM:"
                                        FontSize="11"
-                                       FontFamily="{DynamicResource FontFamilyNumeric}"
+                                       FontFamily="{DynamicResource FontFamilyUI}"
                                        Foreground="{DynamicResource BrushTextSecondary}" />
                             <TextBlock HorizontalAlignment="Right"
                                        Text="{Binding DedicatedMemoryUsedMb, StringFormat='{}{0:N0} MB', FallbackValue='0 MB'}"
                                        FontSize="11"
-                                       FontWeight="SemiBold"
+                                       FontWeight="Medium"
                                        FontFamily="{DynamicResource FontFamilyNumeric}"
                                        Foreground="{DynamicResource BrushTextPrimary}" />
                         </Grid>
 
-                        <Grid Margin="0,0,0,6">
-                            <TextBlock Text="TOTAL INSTALLED VRAM:"
+                        <Grid Margin="0,0,0,5">
+                            <TextBlock Text="Total installed VRAM:"
                                        FontSize="11"
-                                       FontFamily="{DynamicResource FontFamilyNumeric}"
+                                       FontFamily="{DynamicResource FontFamilyUI}"
                                        Foreground="{DynamicResource BrushTextSecondary}" />
                             <TextBlock HorizontalAlignment="Right"
                                        Text="{Binding DedicatedMemoryTotalMb, StringFormat='{}{0:N0} MB', FallbackValue='4,096 MB'}"
                                        FontSize="11"
-                                       FontWeight="SemiBold"
+                                       FontWeight="Medium"
                                        FontFamily="{DynamicResource FontFamilyNumeric}"
                                        Foreground="{DynamicResource BrushTextPrimary}" />
                         </Grid>
 
                         <Grid>
-                            <TextBlock Text="SHARED SYSTEM RAM:"
+                            <TextBlock Text="Shared system memory:"
                                        FontSize="11"
-                                       FontFamily="{DynamicResource FontFamilyNumeric}"
+                                       FontFamily="{DynamicResource FontFamilyUI}"
                                        Foreground="{DynamicResource BrushTextSecondary}" />
                             <TextBlock HorizontalAlignment="Right"
                                        Text="{Binding SharedMemoryUsedMb, StringFormat='{}{0:N0} MB', FallbackValue='0 MB'}"
                                        FontSize="11"
-                                       FontWeight="SemiBold"
+                                       FontWeight="Medium"
                                        FontFamily="{DynamicResource FontFamilyNumeric}"
                                        Foreground="{DynamicResource BrushTextPrimary}" />
                         </Grid>
@@ -221,29 +234,32 @@
             </Grid>
 
             <!-- 3. GPU Engine Breakdown Section -->
-            <Border Background="{DynamicResource BrushPanelSurface}"
-                    BorderBrush="{DynamicResource BrushBorderNormal}"
+            <Border Background="{DynamicResource BrushSurface}"
+                    BorderBrush="{DynamicResource BrushBorderSubtle}"
                     BorderThickness="1"
-                    CornerRadius="8"
+                    CornerRadius="12"
                     Padding="18,16">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="8" ShadowDepth="1" Direction="270" Color="Black" Opacity="0.04" />
+                </Border.Effect>
                 <StackPanel>
-                    <TextBlock Text="DIRECTX ENGINE SUBSYSTEMS"
-                               FontSize="12"
-                               FontWeight="Bold"
-                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                    <TextBlock Text="DirectX engine subsystems"
+                               FontSize="13"
+                               FontWeight="SemiBold"
+                               FontFamily="{DynamicResource FontFamilyUI}"
                                Foreground="{DynamicResource BrushTextPrimary}"
                                Margin="0,0,0,14" />
 
                     <!-- 3D Graphics Engine -->
                     <Grid Margin="0,0,0,10">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="150" />
+                            <ColumnDefinition Width="160" />
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="60" />
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="3D Rasterization"
-                                   FontSize="11"
-                                   FontFamily="{DynamicResource FontFamilyCode}"
+                                   FontSize="11.5"
+                                   FontFamily="{DynamicResource FontFamilyUI}"
                                    Foreground="{DynamicResource BrushTextPrimary}"
                                    VerticalAlignment="Center" />
                         <ProgressBar Grid.Column="1"
@@ -251,7 +267,7 @@
                                      Minimum="0" Maximum="100"
                                      Height="6"
                                      Foreground="{DynamicResource BrushAccentPrimary}"
-                                     Background="#1A1A28"
+                                     Background="{DynamicResource BrushSurfaceRaised}"
                                      BorderThickness="0"
                                      VerticalAlignment="Center"
                                      Margin="12,0" />
@@ -267,13 +283,13 @@
                     <!-- Video Decode Engine -->
                     <Grid Margin="0,0,0,10">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="150" />
+                            <ColumnDefinition Width="160" />
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="60" />
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="Video Decode (NVDEC/VCN)"
-                                   FontSize="11"
-                                   FontFamily="{DynamicResource FontFamilyCode}"
+                                   FontSize="11.5"
+                                   FontFamily="{DynamicResource FontFamilyUI}"
                                    Foreground="{DynamicResource BrushTextPrimary}"
                                    VerticalAlignment="Center" />
                         <ProgressBar Grid.Column="1"
@@ -281,7 +297,7 @@
                                      Minimum="0" Maximum="100"
                                      Height="6"
                                      Foreground="{DynamicResource BrushAccentSecondary}"
-                                     Background="#1A1A28"
+                                     Background="{DynamicResource BrushSurfaceRaised}"
                                      BorderThickness="0"
                                      VerticalAlignment="Center"
                                      Margin="12,0" />
@@ -297,13 +313,13 @@
                     <!-- Compute Engine -->
                     <Grid Margin="0,0,0,10">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="150" />
+                            <ColumnDefinition Width="160" />
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="60" />
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="Compute / Shader"
-                                   FontSize="11"
-                                   FontFamily="{DynamicResource FontFamilyCode}"
+                                   FontSize="11.5"
+                                   FontFamily="{DynamicResource FontFamilyUI}"
                                    Foreground="{DynamicResource BrushTextPrimary}"
                                    VerticalAlignment="Center" />
                         <ProgressBar Grid.Column="1"
@@ -311,7 +327,7 @@
                                      Minimum="0" Maximum="100"
                                      Height="6"
                                      Foreground="{DynamicResource BrushAccentPrimary}"
-                                     Background="#1A1A28"
+                                     Background="{DynamicResource BrushSurfaceRaised}"
                                      BorderThickness="0"
                                      VerticalAlignment="Center"
                                      Margin="12,0" />
@@ -327,21 +343,21 @@
                     <!-- DMA / Copy Engine -->
                     <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="150" />
+                            <ColumnDefinition Width="160" />
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="60" />
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="DMA / Blit / Copy"
-                                   FontSize="11"
-                                   FontFamily="{DynamicResource FontFamilyCode}"
+                                   FontSize="11.5"
+                                   FontFamily="{DynamicResource FontFamilyUI}"
                                    Foreground="{DynamicResource BrushTextPrimary}"
                                    VerticalAlignment="Center" />
                         <ProgressBar Grid.Column="1"
                                      Value="{Binding EngineCopyPercent, Mode=OneWay, FallbackValue=0}"
                                      Minimum="0" Maximum="100"
                                      Height="6"
-                                     Foreground="{DynamicResource BrushTextSecondary}"
-                                     Background="#1A1A28"
+                                     Foreground="{DynamicResource BrushTextTertiary}"
+                                     Background="{DynamicResource BrushSurfaceRaised}"
                                      BorderThickness="0"
                                      VerticalAlignment="Center"
                                      Margin="12,0" />
@@ -349,7 +365,7 @@
                                    Text="{Binding EngineCopyPercent, StringFormat='{}{0:F1}%', FallbackValue='0.0%'}"
                                    FontSize="11"
                                    FontFamily="{DynamicResource FontFamilyNumeric}"
-                                   Foreground="{DynamicResource BrushTextSecondary}"
+                                   Foreground="{DynamicResource BrushTextTertiary}"
                                    HorizontalAlignment="Right"
                                    VerticalAlignment="Center" />
                     </Grid>

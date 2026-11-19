@@ -10,22 +10,22 @@ namespace NeuralTask.Core.Tests;
 /// </summary>
 public class ThemeContrastTests
 {
-    // Dark Theme Hex Codes
-    private const string DarkBgBase = "#0A0E14";
-    private const string DarkPanelSurface = "#10141E";
-    private const string DarkTextPrimary = "#E8F1FF";
-    private const string DarkTextSecondary = "#8FA3B8";
-    private const string DarkAccentPrimary = "#00E5FF";
-    private const string DarkAccentSecondary = "#B14EFF";
-    private const string DarkWarning = "#FFB020";
+    // Dark Theme Hex Codes (Clarity Dark)
+    private const string DarkBgBase = "#111319";
+    private const string DarkPanelSurface = "#181B22";
+    private const string DarkTextPrimary = "#F2F4F8";
+    private const string DarkTextSecondary = "#949AA8";
+    private const string DarkAccentPrimary = "#8389FF";
+    private const string DarkAccentSecondary = "#2DD4C6";
+    private const string DarkWarning = "#F0A94E";
 
-    // Light Theme Hex Codes (Redesigned Holo-Glass)
-    private const string LightBgBase = "#F1F5F9";
+    // Light Theme Hex Codes (Clarity Light)
+    private const string LightBgBase = "#F6F7FB";
     private const string LightPanelSurface = "#FFFFFF";
-    private const string LightTextPrimary = "#0F172A";
-    private const string LightTextSecondary = "#475569";
-    private const string LightAccentPrimary = "#00758A";
-    private const string LightAccentSecondary = "#6D28D9";
+    private const string LightTextPrimary = "#151821";
+    private const string LightTextSecondary = "#525866";
+    private const string LightAccentPrimary = "#5B61F1";
+    private const string LightAccentSecondary = "#0D827A";
     private const string LightWarning = "#B45309";
     private const string LightBtnTextOnAccent = "#FFFFFF";
 
@@ -80,7 +80,7 @@ public class ThemeContrastTests
         var invertedDarkAccent = (255 - darkAccent.r, 255 - darkAccent.g, 255 - darkAccent.b);
 
         Assert.NotEqual(invertedDarkAccent, lightAccent);
-        Assert.True(lightAccent.g > lightAccent.r, "Light accent preserves cool cyan-teal identity");
+        Assert.True(lightAccent.b > lightAccent.r, "Light accent preserves cool indigo identity");
     }
 
     /// <summary>

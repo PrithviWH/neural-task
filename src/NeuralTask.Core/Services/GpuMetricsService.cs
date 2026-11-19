@@ -1,0 +1,339 @@
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Management;
+using System.Text.RegularExpressions;
+using NeuralTask.Core.Models;
+
+namespace NeuralTask.Core.Services;
+
+/// <summary>
+/// Native Windows GPU metrics service utilizing WMI and GPU Engine Performance Counters.
+/// Provides total GPU engine load, dedicated VRAM metrics, and per-process GPU utilization.
+/// </summary>
+public class GpuMetricsService : IGpuMetricsService, IDisposable
+{
+    public static readonly GpuMetricsService Instance = new();
+
+    private readonly object _syncLock = new();
+    private string? _cachedAdapterName;
+    private long _cachedDedicatedTotalBytes;
+    private bool _checkedWmi;
+    private bool _isSupported = true;
+
+    private readonly List<PerformanceCounter> _totalEngineCounters = new();
+    private readonly List<PerformanceCounter> _memoryDedicatedCounters = new();
+    private readonly Dictionary<string, PerformanceCounter> _processCounters = new();
+    private bool _countersInitialized;
+
+    public bool IsSupported => _isSupported;
+
+    public string AdapterName
+    {
+        get
+        {
+            if (!_checkedWmi)
+            {
+                InitializeAdapterInfo();
+            }
+            return _cachedAdapterName ?? "DirectX Hardware GPU";
+        }
+    }
+
+    public long DedicatedTotalBytes
+    {
+        get
+        {
+            if (!_checkedWmi)
+            {
+                InitializeAdapterInfo();
+            }
+            return _cachedDedicatedTotalBytes > 0 ? _cachedDedicatedTotalBytes : 4L * 1024 * 1024 * 1024;
+        }
+    }
+
+    public GpuMetricsService()
+    {
+    }
+
+    private void InitializeAdapterInfo()
+    {
+        lock (_syncLock)
+        {
+            if (_checkedWmi) return;
+            _checkedWmi = true;
+
+            try
+            {
+                if (!OperatingSystem.IsWindows())
+                {
+                    _isSupported = false;
+                    _cachedAdapterName = "Non-Windows Platform";
+                    return;
+                }
+
+                using var searcher = new ManagementObjectSearcher("SELECT Name, AdapterRAM FROM Win32_VideoController");
+                foreach (ManagementObject obj in searcher.Get())
+                {
+                    var name = obj["Name"]?.ToString();
+                    if (!string.IsNullOrWhiteSpace(name) &&
+                        !name.Contains("Virtual", StringComparison.OrdinalIgnoreCase) &&
+                        !name.Contains("Remote", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _cachedAdapterName = name;
+                        if (obj["AdapterRAM"] != null && long.TryParse(obj["AdapterRAM"].ToString(), out var ram) && ram > 0)
+                        {
+                            _cachedDedicatedTotalBytes = ram;
+                        }
+                        break;
+                    }
+                }
+
+                _cachedAdapterName ??= "DirectX Hardware GPU";
+            }
+            catch
+            {
+                _cachedAdapterName = "DirectX Hardware GPU";
+                _cachedDedicatedTotalBytes = 4L * 1024 * 1024 * 1024;
+            }
+        }
+    }
+
+    private void EnsureCountersInitialized()
+    {
+        if (_countersInitialized) return;
+        _countersInitialized = true;
+
+        try
+        {
+            if (!OperatingSystem.IsWindows() || !PerformanceCounterCategory.Exists("GPU Engine"))
+            {
+                _isSupported = false;
+                return;
+            }
+
+            var category = new PerformanceCounterCategory("GPU Engine");
+            var instanceNames = category.GetInstanceNames();
+
+            // Select 3D and Compute instances across adapters
+            var targetInstances = instanceNames
+                .Where(i => i.Contains("engtype_3D", StringComparison.OrdinalIgnoreCase) ||
+                            i.Contains("engtype_Compute", StringComparison.OrdinalIgnoreCase))
+                .Take(16)
+                .ToList();
+
+            foreach (var inst in targetInstances)
+            {
+                try
+                {
+                    var counter = new PerformanceCounter("GPU Engine", "Utilization Percentage", inst, readOnly: true);
+                    counter.NextValue();
+                    _totalEngineCounters.Add(counter);
+                }
+                catch
+                {
+                }
+            }
+
+            // Dedicated memory counters
+            if (PerformanceCounterCategory.Exists("GPU Adapter Memory"))
+            {
+                var memCat = new PerformanceCounterCategory("GPU Adapter Memory");
+                foreach (var inst in memCat.GetInstanceNames())
+                {
+                    try
+                    {
+                        var dedCounter = new PerformanceCounter("GPU Adapter Memory", "Dedicated Usage", inst, readOnly: true);
+                        dedCounter.NextValue();
+                        _memoryDedicatedCounters.Add(dedCounter);
+                    }
+                    catch
+                    {
+                    }
+                }
+            }
+        }
+        catch
+        {
+            _isSupported = false;
+        }
+    }
+
+    public GpuMetricsSnapshot CollectSnapshot(IReadOnlyList<ProcessSnapshot> processes)
+    {
+        lock (_syncLock)
+        {
+            if (!_checkedWmi)
+            {
+                InitializeAdapterInfo();
+            }
+
+            EnsureCountersInitialized();
+
+            if (!_isSupported)
+            {
+                return GpuMetricsSnapshot.Unsupported;
+            }
+
+            double totalUtil = 0.0;
+            try
+            {
+                foreach (var counter in _totalEngineCounters)
+                {
+                    try
+                    {
+                        var val = counter.NextValue();
+                        if (val > totalUtil)
+                        {
+                            totalUtil = val;
+                        }
+                    }
+                    catch
+                    {
+                    }
+                }
+            }
+            catch
+            {
+            }
+
+            totalUtil = Math.Clamp(Math.Round(totalUtil, 1), 0.0, 100.0);
+
+            long dedicatedUsed = 0;
+            try
+            {
+                foreach (var counter in _memoryDedicatedCounters)
+                {
+                    try
+                    {
+                        var val = counter.NextValue();
+                        if (val > 0) dedicatedUsed += (long)val;
+                    }
+                    catch
+                    {
+                    }
+                }
+            }
+            catch
+            {
+            }
+
+            // Per-process GPU sampling for top processes
+            var topGpuList = new List<GpuProcessMetric>();
+            try
+            {
+                if (processes != null && processes.Count > 0 && PerformanceCounterCategory.Exists("GPU Engine"))
+                {
+                    var category = new PerformanceCounterCategory("GPU Engine");
+                    var instances = category.GetInstanceNames();
+
+                    // Map instances by PID
+                    var pidUtilMap = new Dictionary<int, double>();
+                    var pidRegex = new Regex(@"pid_(\d+)_", RegexOptions.Compiled);
+
+                    // Consider instances for active processes
+                    var activePids = new HashSet<int>(processes.Select(p => p.Pid));
+
+                    foreach (var inst in instances)
+                    {
+                        var match = pidRegex.Match(inst);
+                        if (!match.Success) continue;
+                        if (!int.TryParse(match.Groups[1].Value, out int pid)) continue;
+                        if (!activePids.Contains(pid)) continue;
+
+                        if (!inst.Contains("engtype_3D", StringComparison.OrdinalIgnoreCase) &&
+                            !inst.Contains("engtype_Compute", StringComparison.OrdinalIgnoreCase))
+                        {
+                            continue;
+                        }
+
+                        if (!_processCounters.TryGetValue(inst, out var counter))
+                        {
+                            try
+                            {
+                                counter = new PerformanceCounter("GPU Engine", "Utilization Percentage", inst, readOnly: true);
+                                counter.NextValue();
+                                _processCounters[inst] = counter;
+                            }
+                            catch
+                            {
+                                continue;
+                            }
+                        }
+
+                        try
+                        {
+                            var val = counter.NextValue();
+                            if (val > 0.0)
+                            {
+                                pidUtilMap[pid] = pidUtilMap.TryGetValue(pid, out var current) ? Math.Max(current, val) : val;
+                            }
+                        }
+                        catch
+                        {
+                        }
+                    }
+
+                    // Clean up counters for terminated instances
+                    if (_processCounters.Count > 60)
+                    {
+                        var currentInstanceSet = new HashSet<string>(instances);
+                        var toRemove = _processCounters.Keys.Where(k => !currentInstanceSet.Contains(k)).ToList();
+                        foreach (var k in toRemove)
+                        {
+                            try { _processCounters[k].Dispose(); } catch { }
+                            _processCounters.Remove(k);
+                        }
+                    }
+
+                    // Build Top GPU processes
+                    var processLookup = processes.ToDictionary(p => p.Pid, p => p.Name);
+                    foreach (var kvp in pidUtilMap.OrderByDescending(x => x.Value).Take(5))
+                    {
+                        string name = processLookup.TryGetValue(kvp.Key, out var n) ? n : $"Process {kvp.Key}";
+                        topGpuList.Add(new GpuProcessMetric(kvp.Key, name, Math.Round(kvp.Value, 1)));
+                    }
+                }
+            }
+            catch
+            {
+            }
+
+            return new GpuMetricsSnapshot(
+                IsSupported: true,
+                AdapterName: AdapterName,
+                UtilizationPercent: totalUtil,
+                DedicatedMemoryUsedBytes: dedicatedUsed,
+                DedicatedMemoryTotalBytes: DedicatedTotalBytes,
+                TopGpuProcesses: topGpuList
+            );
+        }
+    }
+
+    public void Dispose()
+    {
+        lock (_syncLock)
+        {
+            foreach (var c in _totalEngineCounters)
+            {
+                try { c.Dispose(); } catch { }
+            }
+            _totalEngineCounters.Clear();
+
+            foreach (var c in _memoryDedicatedCounters)
+            {
+                try { c.Dispose(); } catch { }
+            }
+            _memoryDedicatedCounters.Clear();
+
+            foreach (var c in _processCounters.Values)
+            {
+                try { c.Dispose(); } catch { }
+            }
+            _processCounters.Clear();
+
+            _countersInitialized = false;
+        }
+    }
+}

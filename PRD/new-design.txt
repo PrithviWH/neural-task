@@ -1,0 +1,252 @@
+NeuralTask — Clarity Redesign Directive
+A complete design-direction prompt for moving NeuralTask away from the current "AI Hologram / Hacker HUD" aesthetic toward a professional, premium, soft-color interface. This whole document is written to be pasted, as-is, into whichever tool is building the UI (an AI coding agent, Antigravity, Claude Code, or a human designer) — it's meant to be actionable on its own, not just a mood board.
+The one-paragraph version
+If you only want to paste one block into an AI coding tool, paste this: "Redesign NeuralTask's entire visual language. Remove the cyberpunk/neon/hacker-HUD aesthetic completely — no more electric cyan or magenta, no glow effects, no looping ambient particle background, no laser-sweep scan animation, no icon-only navigation, no ALL-CAPS sci-fi copy. Replace it with a calm, premium, professional design language called 'Clarity': soft neutral canvases (#F6F7FB light / #111319 dark, never pure white or pure black), a single considered accent color family built around a soft indigo (#5B61F1 light-mode accent, #8389FF dark-mode accent) plus a muted teal, amber and rose for status and chart series. Keep Inter for UI text and JetBrains Mono strictly for numeric/data values. Flatten all drop shadows to soft, neutral, low-opacity elevation (no colored glow). Redraw every chart as a smoothed, gradient-filled area/line chart with horizontal-only gridlines instead of jagged glowing polylines. Add visible text labels to the navigation rail. Fix every existing accessibility defect (keyboard focus, AutomationProperties, contrast, empty/loading states) as part of this pass, not after it. The result should look and feel like Linear, Raycast, or the Windows 11 Settings app — not like a hacker terminal." The sections below give the exact values and rules behind that paragraph.
+0. What to retire, specifically
+• The neon cyan/magenta/violet palette (#00E5FF, #B14EFF) and every glow/bloom drop-shadow applied to borders, icons, or text.
+• The infinite looping ambient particle/line background animation — this is likely the single biggest contributor to the "cheap website" feeling, because constant ambient motion behind static content reads as a theme/template effect, not a crafted product.
+• The laser-sweep scan animation in its current form (too arcade-like for a "premium" positioning).
+• Icon-only navigation rail items with no visible label.
+• Heavy ALL-CAPS copy as the default voice for headers and body text ("ACTIVE TASK TREE // LIVE WIN32 KERNEL BUFFER").
+• Pure-black canvases (#0A0E14 reads as flat/harsh) and any hardcoded one-off hex color living outside the token system.
+None of the underlying functionality changes. Kill-tree safety, startup scoring, telemetry history, fuzzy search, CSV/JSON export — all stay exactly as they are. This is a visual and interaction-layer redesign only.
+1. Direction: "Clarity"
+Brief: build the system monitor you'd expect from a well-funded, design-led product team — closer to Linear, Raycast, Arc, or the Windows 11 Settings app than to a hacker terminal. Confident and quiet, data-dense but calm. One considered accent color family instead of a rainbow of neon, generous whitespace, and typography and layout doing the work that glow effects used to do.
+2. Color system
+Two palettes, both built on soft neutrals — never pure white, never pure black.
+Clarity Light
+Token
+Hex
+Use
+ColorCanvas
+#F6F7FB
+App background
+ColorSurface
+#FFFFFF
+Cards, panels
+ColorSurfaceRaised
+#FBFBFE
+Hover / elevated card
+ColorBorderSubtle
+#E6E8F0
+Default hairlines
+ColorBorderStrong
+#D7DAE5
+Emphasized dividers
+ColorTextPrimary
+#15172B
+Headings, primary content
+ColorTextSecondary
+#5B5F73
+Body, labels
+ColorTextTertiary
+#9497A8
+Captions, metadata
+ColorAccentPrimary
+#5B61F1
+Brand accent — soft indigo
+ColorAccentPrimarySoft
+#ECEDFD
+Tinted backgrounds for selected/active states
+ColorAccentSecondary
+#11A69C
+Teal — "healthy / positive" data
+ColorAccentWarning
+#D98C1F
+Muted amber
+ColorAccentDanger
+#DD4F55
+Muted rose-red
+Clarity Dark (a soft blue-black, not #000000)
+Token
+Hex
+Use
+ColorCanvas
+#111319
+App background
+ColorSurface
+#181B22
+Cards, panels
+ColorSurfaceRaised
+#1E222B
+Hover / elevated card
+ColorBorderSubtle
+#2A2E3A
+Default hairlines
+ColorBorderStrong
+#383D4C
+Emphasized dividers
+ColorTextPrimary
+#EDEEF4
+Headings, primary content
+ColorTextSecondary
+#A3A7BA
+Body, labels
+ColorTextTertiary
+#71758A
+Captions, metadata
+ColorAccentPrimary
+#8389FF
+Lightened indigo for dark-bg legibility
+ColorAccentPrimarySoft
+#262A47
+Tinted backgrounds for selected/active states
+ColorAccentSecondary
+#2DD4C6
+Teal
+ColorAccentWarning
+#F0A94E
+Muted amber
+ColorAccentDanger
+#F2777C
+Muted rose-red
+Chart series mapping (same family, used consistently everywhere): CPU → indigo, RAM → teal, Disk/IO → amber, Network → rose. Reuse this mapping on the Dashboard, Process Matrix, and Startup view so a color always means the same thing.
+These numbers are a strong starting point, not gospel — before shipping, re-check every text/background and icon/background pairing against WCAG AA (4.5:1 for text, 3:1 for UI components) with an actual contrast checker, since rendering and gamma can shift perceived contrast slightly from the math.
+3. Typography
+• UI typeface: keep Inter (400/500/600/700). Inter was never the problem — it's a genuinely premium, highly legible face used by Linear, Vercel, GitHub, and Figma. The problem was how it was used (over-tracked all-caps everywhere, plus the silent fallback bug from the missing FontFamilyCode token).
+• Data/numeric typeface: keep JetBrains Mono (400/500), but scope it strictly to actual data — PIDs, percentages, timestamps, hashes. Not labels, not headers, not decoration.
+• Scale:
+    ◦ Display metric numbers (big CPU%/RAM% figures): 30px, Semibold, tabular figures, −0.01em tracking
+    ◦ Section/page title: 19px, Semibold
+    ◦ Card title: 14px, Medium
+    ◦ Body / table cell: 13px, Regular, ~1.4 line-height
+    ◦ Caption / metadata / eyebrow: 11px, Medium, +0.03em tracking
+• Rule: at most one small ALL-CAPS eyebrow label per card or section. Everything else is sentence case. This single rule does more to make the app feel "premium" than any color change.
+4. Iconography
+• Single consistent grammar: 24×24 viewbox, 1.75px stroke, rounded caps and joins, no fill except in the "active/selected" state.
+• Match the clean, consistent line-icon style of an established set such as Lucide or Phosphor (Regular weight) and redraw the existing custom icons to that grammar, rather than the current sharper 1.5px style.
+• No glow or drop-shadow on icons, ever. Selected/active state = solid accent-colored icon sitting on a soft rounded accent-tint pill (ColorAccentPrimarySoft) behind it — not a glowing edge or bar.
+5. Layout & components
+• Navigation rail: widen to ~84–96px and give every item a visible 10–11px label under its icon — icon-only navigation is an immediate "what does this do" barrier for new users. Selected state = rounded-rect soft accent-tint background behind icon + label.
+• Cards: 12px corner radius, 1px ColorBorderSubtle border, ColorSurface background, soft neutral elevation only — a shadow with ~16–20px blur, 2–4px y-offset, 6–10% opacity black/navy. No colored/glow shadows anywhere.
+• Buttons: Primary = solid ColorAccentPrimary fill, white text, 8px radius, subtle lift + shadow on hover. Secondary = 1px ColorBorderSubtle border on ColorSurface, fills with ColorAccentPrimarySoft on hover. Destructive = solid ColorAccentDanger fill.
+• Spacing: the existing 8px-based grid (8/16/24/32) was genuinely good — keep it.
+• Chrome density: in the Process Matrix specifically, consolidate the stacked header bars (title + actions + status banner + search + disclaimer strip) so the chrome above the first row drops well under the current ~235px — for example, fold the permanent disclaimer strip into a one-time dismissible tooltip or a line in Settings, so small windows show more than 6 rows at once.
+6. Charts & telemetry visualization
+This is the area the audit flagged hardest and worth rebuilding, not just restyling:
+• Lines: smoothed, monotone-cubic interpolated curves — never a raw jagged polyline — 2px stroke in the metric's assigned accent color.
+• Fill: a soft linear gradient under the line, accent color at ~18–22% opacity at the top fading to 0% at the chart floor, instead of a glow.
+• Grid: horizontal gridlines only, 1px, ColorBorderSubtle — drop vertical gridlines entirely, they add clutter without adding information.
+• Axis labels: 10–11px, ColorTextTertiary; monospace only for the numeric Y-axis ticks.
+• Hover state: a thin crosshair guide plus a floating tooltip card (ColorSurfaceRaised background, 8px radius, soft shadow) showing the exact value in monospace.
+• Timeline scrubber: redraw as a 4px rounded track (ColorBorderSubtle) with an ColorAccentPrimary-filled "played" segment and a small circular thumb with a soft shadow — and give it a real accessible name plus live value announcement (this was already flagged and should ship together with the visual rework, not separately).
+• Startup impact meter: redraw the two-tone split bar as a two-segment rounded capsule in indigo/teal — same information (duration vs. resource), softer rendering.
+• If a dedicated charting library is easier to maintain than extending the custom renderer, something like LiveCharts2, ScottPlot.WPF, or OxyPlot can be restyled to match these tokens; otherwise extend the existing Path-based renderer with cubic Bezier smoothing and a gradient brush.
+7. Motion
+• Remove the always-on ambient background loop entirely. Replace the canvas with a flat, token-based background — at most one static (non-animated) subtle gradient for depth.
+• Replace the laser-sweep scan with a calmer shimmer/pulse at lower opacity and a shorter 400–600ms duration — keep the delight, dial it down from "arcade" to "premium app confirming it did something."
+• Standardize timing: 150ms ease-out for hover/focus, 200–240ms ease-in-out for view transitions and expand/collapse. Nothing loops indefinitely except a genuinely live indicator (e.g. a small, slow "breathing" dot for a [LIVE] state) — and even that should be restrained, not another glow effect.
+8. Copy & terminology
+Keep the NeuralTask identity and a little technical personality, but drop dense sci-fi jargon as the default voice. "ACTIVE TASK TREE // LIVE WIN32 KERNEL BUFFER" becomes a plain "Processes" header, with the technical detail demoted to a small, sentence-case caption underneath if it's wanted at all ("Live Win32 kernel buffer"). Reserve full caps for the rare small eyebrow label only, per the typography rule above.
+9. Accessibility — non-negotiable, carried forward unchanged
+The new look doesn't get to regress any of this:
+• Every interactive element is a real focusable control (Button/ToggleButton), never a Border with MouseDown.
+• Every icon-only control gets AutomationProperties.Name; sliders get a name plus value announcement.
+• Modal dialogs support Escape-to-cancel and a sensible default button for Enter.
+• Every new color pairing is checked against WCAG AA (4.5:1 text / 3:1 UI components) in both palettes before merging.
+• Empty and loading states are required wherever a list or table can legitimately be empty or still loading.
+10. WPF rendering notes ("HD" requirements)
+"HD/premium" in a desktop app is as much a rendering-quality problem as a palette problem:
+• Set TextOptions.TextFormattingMode="Display" and TextOptions.TextRenderingMode="ClearType" (or "Grayscale" if ClearType looks off against the Mica/Acrylic backdrop) at the window level for crisp text.
+• Set UseLayoutRounding="True" and SnapsToDevicePixels="True" on root containers to stop sub-pixel blur on borders and icons at non-100% DPI scaling.
+• Keep every icon as vector Path/Geometry — never rasterize — and leave RenderOptions.EdgeMode at its anti-aliased default rather than "Aliased".
+• Declare every DynamicResource token that's actually referenced, and add a startup assertion (or test) that walks each theme dictionary and fails loudly if a referenced key is missing — this is exactly what let the old FontFamilyCode and BrushAccentWarning bugs ship unnoticed.
+• Confirm the app manifest declares PerMonitorV2 DPI awareness so text and icons stay sharp across multi-monitor and mixed-DPI setups.
+11. Drop-in starter theme files
+A starting point for LightTheme.xaml and DarkTheme.xaml, using the same naming convention as the existing resource dictionaries so it's a near drop-in replacement:
+<!-- LightTheme.xaml — "Clarity Light" -->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Canvas & Surfaces -->
+    <Color x:Key="ColorCanvas">#FFF6F7FB</Color>
+    <Color x:Key="ColorSurface">#FFFFFFFF</Color>
+    <Color x:Key="ColorSurfaceRaised">#FFFBFBFE</Color>
+    <Color x:Key="ColorBorderSubtle">#FFE6E8F0</Color>
+    <Color x:Key="ColorBorderStrong">#FFD7DAE5</Color>
+
+    <!-- Text -->
+    <Color x:Key="ColorTextPrimary">#FF15172B</Color>
+    <Color x:Key="ColorTextSecondary">#FF5B5F73</Color>
+    <Color x:Key="ColorTextTertiary">#FF9497A8</Color>
+
+    <!-- Accents -->
+    <Color x:Key="ColorAccentPrimary">#FF5B61F1</Color>
+    <Color x:Key="ColorAccentPrimaryHover">#FF4C52E0</Color>
+    <Color x:Key="ColorAccentPrimarySoft">#FFECEDFD</Color>
+    <Color x:Key="ColorAccentSecondary">#FF11A69C</Color>
+    <Color x:Key="ColorAccentWarning">#FFD98C1F</Color>
+    <Color x:Key="ColorAccentDanger">#FFDD4F55</Color>
+
+    <!-- Brushes -->
+    <SolidColorBrush x:Key="BrushCanvas" Color="{StaticResource ColorCanvas}" />
+    <SolidColorBrush x:Key="BrushSurface" Color="{StaticResource ColorSurface}" />
+    <SolidColorBrush x:Key="BrushSurfaceRaised" Color="{StaticResource ColorSurfaceRaised}" />
+    <SolidColorBrush x:Key="BrushBorderSubtle" Color="{StaticResource ColorBorderSubtle}" />
+    <SolidColorBrush x:Key="BrushBorderStrong" Color="{StaticResource ColorBorderStrong}" />
+    <SolidColorBrush x:Key="BrushTextPrimary" Color="{StaticResource ColorTextPrimary}" />
+    <SolidColorBrush x:Key="BrushTextSecondary" Color="{StaticResource ColorTextSecondary}" />
+    <SolidColorBrush x:Key="BrushTextTertiary" Color="{StaticResource ColorTextTertiary}" />
+    <SolidColorBrush x:Key="BrushAccentPrimary" Color="{StaticResource ColorAccentPrimary}" />
+    <SolidColorBrush x:Key="BrushAccentPrimaryHover" Color="{StaticResource ColorAccentPrimaryHover}" />
+    <SolidColorBrush x:Key="BrushAccentPrimarySoft" Color="{StaticResource ColorAccentPrimarySoft}" />
+    <SolidColorBrush x:Key="BrushAccentSecondary" Color="{StaticResource ColorAccentSecondary}" />
+    <SolidColorBrush x:Key="BrushAccentWarning" Color="{StaticResource ColorAccentWarning}" />
+    <SolidColorBrush x:Key="BrushAccentDanger" Color="{StaticResource ColorAccentDanger}" />
+    <SolidColorBrush x:Key="BrushBorderNormal" Color="{StaticResource ColorBorderSubtle}" />
+    <SolidColorBrush x:Key="BrushBorderDefault" Color="{StaticResource ColorBorderSubtle}" />
+
+    <!-- Typography -->
+    <FontFamily x:Key="FontFamilyUI">Inter, Segoe UI Variable, Segoe UI</FontFamily>
+    <FontFamily x:Key="FontFamilyCode">JetBrains Mono, Cascadia Code, Consolas</FontFamily>
+
+</ResourceDictionary>
+<!-- DarkTheme.xaml — "Clarity Dark" -->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Canvas & Surfaces -->
+    <Color x:Key="ColorCanvas">#FF111319</Color>
+    <Color x:Key="ColorSurface">#FF181B22</Color>
+    <Color x:Key="ColorSurfaceRaised">#FF1E222B</Color>
+    <Color x:Key="ColorBorderSubtle">#FF2A2E3A</Color>
+    <Color x:Key="ColorBorderStrong">#FF383D4C</Color>
+
+    <!-- Text -->
+    <Color x:Key="ColorTextPrimary">#FFEDEEF4</Color>
+    <Color x:Key="ColorTextSecondary">#FFA3A7BA</Color>
+    <Color x:Key="ColorTextTertiary">#FF71758A</Color>
+
+    <!-- Accents -->
+    <Color x:Key="ColorAccentPrimary">#FF8389FF</Color>
+    <Color x:Key="ColorAccentPrimaryHover">#FF9499FF</Color>
+    <Color x:Key="ColorAccentPrimarySoft">#FF262A47</Color>
+    <Color x:Key="ColorAccentSecondary">#FF2DD4C6</Color>
+    <Color x:Key="ColorAccentWarning">#FFF0A94E</Color>
+    <Color x:Key="ColorAccentDanger">#FFF2777C</Color>
+
+    <!-- Brushes -->
+    <SolidColorBrush x:Key="BrushCanvas" Color="{StaticResource ColorCanvas}" />
+    <SolidColorBrush x:Key="BrushSurface" Color="{StaticResource ColorSurface}" />
+    <SolidColorBrush x:Key="BrushSurfaceRaised" Color="{StaticResource ColorSurfaceRaised}" />
+    <SolidColorBrush x:Key="BrushBorderSubtle" Color="{StaticResource ColorBorderSubtle}" />
+    <SolidColorBrush x:Key="BrushBorderStrong" Color="{StaticResource ColorBorderStrong}" />
+    <SolidColorBrush x:Key="BrushTextPrimary" Color="{StaticResource ColorTextPrimary}" />
+    <SolidColorBrush x:Key="BrushTextSecondary" Color="{StaticResource ColorTextSecondary}" />
+    <SolidColorBrush x:Key="BrushTextTertiary" Color="{StaticResource ColorTextTertiary}" />
+    <SolidColorBrush x:Key="BrushAccentPrimary" Color="{StaticResource ColorAccentPrimary}" />
+    <SolidColorBrush x:Key="BrushAccentPrimaryHover" Color="{StaticResource ColorAccentPrimaryHover}" />
+    <SolidColorBrush x:Key="BrushAccentPrimarySoft" Color="{StaticResource ColorAccentPrimarySoft}" />
+    <SolidColorBrush x:Key="BrushAccentSecondary" Color="{StaticResource ColorAccentSecondary}" />
+    <SolidColorBrush x:Key="BrushAccentWarning" Color="{StaticResource ColorAccentWarning}" />
+    <SolidColorBrush x:Key="BrushAccentDanger" Color="{StaticResource ColorAccentDanger}" />
+    <SolidColorBrush x:Key="BrushBorderNormal" Color="{StaticResource ColorBorderSubtle}" />
+    <SolidColorBrush x:Key="BrushBorderDefault" Color="{StaticResource ColorBorderSubtle}" />
+
+    <!-- Typography -->
+    <FontFamily x:Key="FontFamilyUI">Inter, Segoe UI Variable, Segoe UI</FontFamily>
+    <FontFamily x:Key="FontFamilyCode">JetBrains Mono, Cascadia Code, Consolas</FontFamily>
+
+</ResourceDictionary>
+12. Definition of done
+The redesign is finished when someone unfamiliar with the project could see a screenshot and guess "well-funded SaaS dashboard" before they'd guess "hacker HUD theme," and: no hardcoded hex colors remain outside the token files, every chart uses smoothed/gradient rendering with the consistent per-metric color mapping, the nav rail has visible labels, no animation loops forever except one restrained live-indicator, and every item in Section 9's accessibility list is still true.

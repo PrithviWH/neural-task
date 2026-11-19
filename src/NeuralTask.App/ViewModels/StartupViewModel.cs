@@ -44,8 +44,16 @@ public class StartupViewModel : ViewModelBase
     public bool IsLoading
     {
         get => _isLoading;
-        set => SetProperty(ref _isLoading, value);
+        set
+        {
+            if (SetProperty(ref _isLoading, value))
+            {
+                OnPropertyChanged(nameof(HasNoEntries));
+            }
+        }
     }
+
+    public bool HasNoEntries => FilteredEntries.Count == 0 && !IsLoading;
 
     public int TotalStartupApps
     {
@@ -95,6 +103,7 @@ public class StartupViewModel : ViewModelBase
     public ICommand RelaunchAsAdminCommand { get; }
     public ICommand DismissBannerCommand { get; }
     public ICommand DismissStatusNotificationCommand { get; }
+    public ICommand ClearSearchCommand { get; }
 
     public StartupViewModel(IStartupScoreEngine engine, IProcessMonitorService monitorService)
     {
@@ -107,6 +116,7 @@ public class StartupViewModel : ViewModelBase
         RelaunchAsAdminCommand = new RelayCommand(RelaunchAsAdministrator);
         DismissBannerCommand = new RelayCommand(() => AdminBannerVisible = false);
         DismissStatusNotificationCommand = new RelayCommand(() => IsStatusVisible = false);
+        ClearSearchCommand = new RelayCommand(() => SearchText = string.Empty);
     }
 
     public async Task LoadEntriesAsync()
@@ -160,6 +170,7 @@ public class StartupViewModel : ViewModelBase
         {
             FilteredEntries.Add(item);
         }
+        OnPropertyChanged(nameof(HasNoEntries));
     }
 
     private void ShowNotification(string message, bool isError)

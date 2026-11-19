@@ -25,11 +25,11 @@ public class StartupEntryItemViewModel : ViewModelBase
 
     public string SourceTypeDisplay => _entry.SourceType switch
     {
-        StartupSourceType.RegistryRunCurrentUser => "HKCU // USER RUN",
-        StartupSourceType.RegistryRunLocalMachine => "HKLM // SYSTEM RUN",
-        StartupSourceType.StartupFolderUser => "STARTUP // USER FOLDER",
-        StartupSourceType.StartupFolderCommon => "STARTUP // ALL USERS",
-        _ => "SCHEDULED TASK"
+        StartupSourceType.RegistryRunCurrentUser => "User registry (HKCU)",
+        StartupSourceType.RegistryRunLocalMachine => "System registry (HKLM)",
+        StartupSourceType.StartupFolderUser => "Startup folder (User)",
+        StartupSourceType.StartupFolderCommon => "Startup folder (All users)",
+        _ => "Scheduled task"
     };
 
     public bool IsEnabled
@@ -43,7 +43,7 @@ public class StartupEntryItemViewModel : ViewModelBase
                 if (success)
                 {
                     OnPropertyChanged();
-                    _onStatusNotification($"'{Name}' is now {(value ? "ENABLED" : "DISABLED")}.", false);
+                    _onStatusNotification($"'{Name}' is now {(value ? "enabled" : "disabled")}.", false);
                 }
                 else
                 {
@@ -90,11 +90,11 @@ public class StartupEntryItemViewModel : ViewModelBase
         {
             return Score switch
             {
-                >= 80 => new SolidColorBrush(Color.FromRgb(0xFF, 0x44, 0x44)), // Severe: Red
-                >= 60 => new SolidColorBrush(Color.FromRgb(0xFF, 0x8C, 0x00)), // High: Orange
-                >= 40 => new SolidColorBrush(Color.FromRgb(0x79, 0x28, 0xCA)), // Moderate: Violet
-                >= 20 => new SolidColorBrush(Color.FromRgb(0x00, 0xF0, 0xFF)), // Low: Neon Cyan
-                _ => new SolidColorBrush(Color.FromRgb(0x00, 0xE5, 0x99))      // Minimal: Mint Green
+                >= 80 => new SolidColorBrush(Color.FromRgb(0xDD, 0x4F, 0x55)), // Severe: Clarity Rose Red
+                >= 60 => new SolidColorBrush(Color.FromRgb(0xD9, 0x8C, 0x1F)), // High: Clarity Amber
+                >= 40 => new SolidColorBrush(Color.FromRgb(0x5B, 0x61, 0xF1)), // Moderate: Clarity Indigo
+                >= 20 => new SolidColorBrush(Color.FromRgb(0x11, 0xA6, 0x9C)), // Low: Clarity Teal
+                _ => new SolidColorBrush(Color.FromRgb(0x16, 0xA3, 0x4A))      // Minimal: Calm Green
             };
         }
     }

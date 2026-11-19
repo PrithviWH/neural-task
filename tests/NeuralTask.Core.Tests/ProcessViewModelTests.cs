@@ -170,6 +170,44 @@ public class ProcessViewModelTests
     }
 
     [Fact]
+    public void ProcessListViewModel_StableSortingLocksOrderOnMicroFluctuations()
+    {
+        var vm = new ProcessListViewModel();
+        // Initial snapshot with two idle processes
+        var t1 = new List<ProcessSnapshot>
+        {
+            new(100, "procA.exe", 0, 0.01, 1000, 0, 0, null, null, false),
+            new(200, "procB.exe", 0, 0.02, 1000, 0, 0, null, null, false)
+        };
+        vm.ApplySnapshot(t1);
+
+        int initialFirstPid = vm.FilteredProcesses[0].Pid;
+        int initialSecondPid = vm.FilteredProcesses[1].Pid;
+
+        // Next tick: micro-fluctuation where CPU shifts by 0.01% (below 0.25% noise deadband)
+        var t2 = new List<ProcessSnapshot>
+        {
+            new(100, "procA.exe", 0, 0.02, 1000, 0, 0, null, null, false),
+            new(200, "procB.exe", 0, 0.01, 1000, 0, 0, null, null, false)
+        };
+        vm.ApplySnapshot(t2);
+
+        // Order must remain stable despite micro-fluctuation
+        Assert.Equal(initialFirstPid, vm.FilteredProcesses[0].Pid);
+        Assert.Equal(initialSecondPid, vm.FilteredProcesses[1].Pid);
+
+        // Genuine shift (> 0.25%) reorders
+        var t3 = new List<ProcessSnapshot>
+        {
+            new(100, "procA.exe", 0, 5.0, 1000, 0, 0, null, null, false),
+            new(200, "procB.exe", 0, 0.01, 1000, 0, 0, null, null, false)
+        };
+        vm.ApplySnapshot(t3);
+        Assert.Equal(100, vm.FilteredProcesses[0].Pid);
+        Assert.Equal(200, vm.FilteredProcesses[1].Pid);
+    }
+
+    [Fact]
     public void DashboardViewModel_SelectsTopCpuAndMemoryProcesses()
     {
         var vm = new DashboardViewModel();
@@ -288,5 +326,162 @@ public class ProcessViewModelTests
 
         coordinator.Dispose();
         Assert.False(coordinator.IsRunning);
+    }
+
+    [Fact]
+    public void ProcessItemViewModel_SystemProcessAndActionSafetyIdentified()
+    {
+        // 1. Critical System Process (PID 4)
+        var kernelSnap = new ProcessSnapshot(4, "System", 0, 0.5, 1024 * 1024 * 10, 0, 0, null, null, true);
+        var kernelVm = new ProcessItemViewModel(kernelSnap);
+        Assert.True(kernelVm.IsSystemProcess);
+        Assert.True(kernelVm.IsCriticalSystemProcess);
+        Assert.False(kernelVm.CanTerminate);
+
+        // 2. Windows Service in System32
+        var svcSnap = new ProcessSnapshot(1234, "svchost.exe", 4, 1.2, 1024 * 1024 * 30, 0, 0, null, @"C:\Windows\System32\svchost.exe", false);
+        var svcVm = new ProcessItemViewModel(svcSnap);
+        Assert.True(svcVm.IsSystemProcess);
+        Assert.False(svcVm.IsCriticalSystemProcess);
+        Assert.True(svcVm.CanTerminate);
+
+        // 3. User application
+        var userSnap = new ProcessSnapshot(5678, "Code.exe", 100, 18.5, 1024L * 1024L * 1500L, 0, 0, null, @"C:\Users\User\AppData\Local\Programs\Microsoft VS Code\Code.exe", false);
+        var userVm = new ProcessItemViewModel(userSnap);
+        Assert.False(userVm.IsSystemProcess);
+        Assert.False(userVm.IsCriticalSystemProcess);
+        Assert.True(userVm.CanTerminate);
+        Assert.True(userVm.IsHighCpu);
+        Assert.True(userVm.IsHighRam);
+        Assert.Equal(18.5, userVm.CpuBarPercent);
+    }
+
+    [Fact]
+    public void ProcessListViewModel_ActionSafetyEnforcesSelectionAndCriticalProtection()
+    {
+        var vm = new ProcessListViewModel();
+        var data = new List<ProcessSnapshot>
+        {
+            new(4, "System", 0, 0.5, 1024 * 1024 * 10, 0, 0, null, null, true),
+            new(200, "user_app.exe", 1, 2.0, 1024 * 1024 * 50, 0, 0, null, null, false)
+        };
+        vm.ApplySnapshot(data);
+
+        // Initially nothing selected
+        Assert.Null(vm.SelectedProcess);
+        Assert.False(vm.HasSelectedProcess);
+        Assert.False(vm.CanTerminateSelected);
+        Assert.False(vm.CanTerminateTreeSelected);
+
+        // Select critical system process
+        vm.SelectedProcess = vm.FilteredProcesses.First(p => p.Pid == 4);
+        Assert.True(vm.HasSelectedProcess);
+        Assert.False(vm.CanTerminateSelected);
+        Assert.False(vm.CanTerminateTreeSelected);
+
+        // Select user app
+        vm.SelectedProcess = vm.FilteredProcesses.First(p => p.Pid == 200);
+        Assert.True(vm.HasSelectedProcess);
+        Assert.True(vm.CanTerminateSelected);
+        Assert.True(vm.CanTerminateTreeSelected);
+    }
+
+    [Fact]
+    public void ProcessListViewModel_CategoryFilteringWorksAccurately()
+    {
+        var vm = new ProcessListViewModel();
+        var data = new List<ProcessSnapshot>
+        {
+            new(4, "System", 0, 0.5, 1024 * 1024 * 10, 0, 0, null, null, true),
+            new(100, "notepad.exe", 1, 1.0, 1024 * 1024 * 20, 0, 0, null, @"C:\Tools\notepad.exe", false),
+            new(200, "heavy_app.exe", 1, 25.0, 1024L * 1024L * 800L, 0, 0, null, @"C:\Tools\heavy.exe", false)
+        };
+        vm.ApplySnapshot(data);
+
+        // 1. All
+        vm.SelectedFilterCategory = "All";
+        Assert.Equal(3, vm.FilteredProcesses.Count);
+
+        // 2. Apps
+        vm.SelectedFilterCategory = "Apps";
+        Assert.Equal(2, vm.FilteredProcesses.Count);
+        Assert.DoesNotContain(vm.FilteredProcesses, p => p.Pid == 4);
+
+        // 3. System
+        vm.SelectedFilterCategory = "System";
+        Assert.Single(vm.FilteredProcesses);
+        Assert.Equal(4, vm.FilteredProcesses[0].Pid);
+
+        // 4. High Usage (CPU >= 5% or RAM >= 500MB)
+        vm.SelectedFilterCategory = "HighUsage";
+        Assert.Single(vm.FilteredProcesses);
+        Assert.Equal(200, vm.FilteredProcesses[0].Pid);
+    }
+
+    [Fact]
+    public void ProcessListViewModel_TreeViewModeFlattensHierarchyAndCollapses()
+    {
+        var vm = new ProcessListViewModel();
+        var parentSnap = new ProcessSnapshot(10, "parent.exe", 0, 1.0, 1000, 0, 0, null, null, false);
+        var child1Snap = new ProcessSnapshot(11, "child1.exe", 10, 2.0, 2000, 0, 0, null, null, false);
+        var child2Snap = new ProcessSnapshot(12, "child2.exe", 10, 3.0, 3000, 0, 0, null, null, false);
+
+        vm.ApplySnapshot(new[] { parentSnap, child1Snap, child2Snap });
+
+        // Switch to Tree View
+        vm.IsTreeViewMode = true;
+        Assert.True(vm.IsTreeViewMode);
+
+        var parentItem = vm.FilteredProcesses.First(p => p.Pid == 10);
+        Assert.True(parentItem.HasChildren);
+        Assert.Equal(2, parentItem.ChildrenCount);
+        Assert.Equal(0, parentItem.Depth);
+
+        // With parent expanded (default), all 3 are visible
+        Assert.Equal(3, vm.FilteredProcesses.Count);
+
+        // Collapse parent
+        parentItem.IsExpanded = false;
+        // Only parent is visible
+        Assert.Single(vm.FilteredProcesses);
+        Assert.Equal(10, vm.FilteredProcesses[0].Pid);
+
+        // Re-expand parent
+        parentItem.IsExpanded = true;
+        Assert.Equal(3, vm.FilteredProcesses.Count);
+    }
+
+    [Fact]
+    public void ProcessInspectorViewModel_SanitizesSensitiveCommandLineArguments()
+    {
+        string raw = @"C:\App\service.exe --port 8080 --token=super_secret_token_12345 --env=prod";
+        string sanitized = ProcessInspectorViewModel.SanitizeCommandLine(raw);
+        Assert.DoesNotContain("super_secret_token_12345", sanitized);
+        Assert.Contains("--token=********", sanitized);
+        Assert.Contains("--port 8080", sanitized);
+    }
+
+    [Fact]
+    public async Task ProcessListViewModel_TerminateSelected_PromptsConfirmationCallback()
+    {
+        var vm = new ProcessListViewModel();
+        var data = new List<ProcessSnapshot>
+        {
+            new(300, "app_to_kill.exe", 1, 1.0, 1024 * 1024 * 10, 0, 0, null, @"C:\Tools\app.exe", false)
+        };
+        vm.ApplySnapshot(data);
+        vm.SelectedProcess = vm.FilteredProcesses.First(p => p.Pid == 300);
+
+        bool promptInvoked = false;
+        vm.ConfirmKillProcessCallback = target =>
+        {
+            promptInvoked = true;
+            Assert.Equal(300, target.Pid);
+            Assert.Equal("app_to_kill.exe", target.Name);
+            return Task.FromResult(false); // Simulated user cancel
+        };
+
+        await vm.TerminateSelectedAsync();
+        Assert.True(promptInvoked);
     }
 }

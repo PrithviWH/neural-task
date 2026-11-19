@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Windows;
@@ -11,6 +12,17 @@ public partial class ProcessListView : UserControl
 {
     private ProcessListViewModel? ViewModel => DataContext as ProcessListViewModel;
 
+    private readonly Dictionary<string, double> _defaultColumnWidths = new()
+    {
+        { "ColPid", 65.0 },
+        { "ColCpu", 110.0 },
+        { "ColRam", 120.0 },
+        { "ColIo", 85.0 },
+        { "ColNet", 75.0 },
+        { "ColParentPid", 65.0 },
+        { "ColStartTime", 95.0 }
+    };
+
     public ProcessListView()
     {
         InitializeComponent();
@@ -22,6 +34,7 @@ public partial class ProcessListView : UserControl
         if (ViewModel != null)
         {
             ViewModel.ConfirmKillTreeCallback = ShowKillTreeDialog;
+            ViewModel.ConfirmKillProcessCallback = ShowConfirmKillDialog;
             ViewModel.RequestScannerSweep += PlayScannerSweepAnimation;
         }
     }
@@ -33,21 +46,21 @@ public partial class ProcessListView : UserControl
 
     private void PlayScannerSweepAnimation()
     {
-        var height = Math.Max(ActualHeight - 120, 400);
+        var height = Math.Max(ActualHeight - 80, 300);
 
         var moveAnim = new System.Windows.Media.Animation.DoubleAnimation
         {
             From = 0,
             To = height,
-            Duration = System.TimeSpan.FromMilliseconds(750),
-            EasingFunction = new System.Windows.Media.Animation.QuadraticEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseInOut }
+            Duration = TimeSpan.FromMilliseconds(450),
+            EasingFunction = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut }
         };
 
         var opacityAnim = new System.Windows.Media.Animation.DoubleAnimationUsingKeyFrames();
-        opacityAnim.KeyFrames.Add(new System.Windows.Media.Animation.LinearDoubleKeyFrame(0.0, System.Windows.Media.Animation.KeyTime.FromTimeSpan(System.TimeSpan.Zero)));
-        opacityAnim.KeyFrames.Add(new System.Windows.Media.Animation.LinearDoubleKeyFrame(1.0, System.Windows.Media.Animation.KeyTime.FromTimeSpan(System.TimeSpan.FromMilliseconds(100))));
-        opacityAnim.KeyFrames.Add(new System.Windows.Media.Animation.LinearDoubleKeyFrame(1.0, System.Windows.Media.Animation.KeyTime.FromTimeSpan(System.TimeSpan.FromMilliseconds(650))));
-        opacityAnim.KeyFrames.Add(new System.Windows.Media.Animation.LinearDoubleKeyFrame(0.0, System.Windows.Media.Animation.KeyTime.FromTimeSpan(System.TimeSpan.FromMilliseconds(750))));
+        opacityAnim.KeyFrames.Add(new System.Windows.Media.Animation.LinearDoubleKeyFrame(0.0, System.Windows.Media.Animation.KeyTime.FromTimeSpan(TimeSpan.Zero)));
+        opacityAnim.KeyFrames.Add(new System.Windows.Media.Animation.LinearDoubleKeyFrame(0.25, System.Windows.Media.Animation.KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(80))));
+        opacityAnim.KeyFrames.Add(new System.Windows.Media.Animation.LinearDoubleKeyFrame(0.25, System.Windows.Media.Animation.KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(320))));
+        opacityAnim.KeyFrames.Add(new System.Windows.Media.Animation.LinearDoubleKeyFrame(0.0, System.Windows.Media.Animation.KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(450))));
 
         System.Windows.Media.Animation.Storyboard.SetTarget(moveAnim, ScannerTransform);
         System.Windows.Media.Animation.Storyboard.SetTargetProperty(moveAnim, new PropertyPath(System.Windows.Media.TranslateTransform.YProperty));
@@ -74,6 +87,72 @@ public partial class ProcessListView : UserControl
         return Task.FromResult((dialog.IsConfirmed, dialog.TerminateEntireTree));
     }
 
+    private Task<bool> ShowConfirmKillDialog(ProcessSnapshot target)
+    {
+        var ownerWindow = Window.GetWindow(this);
+        var dialog = new ConfirmKillDialog(target);
+        if (ownerWindow != null)
+        {
+            dialog.Owner = ownerWindow;
+        }
+
+        dialog.ShowDialog();
+        return Task.FromResult(dialog.IsConfirmed);
+    }
+
+    private void OnGridViewColumnHeaderClick(object sender, RoutedEventArgs e)
+    {
+        if (e.OriginalSource is GridViewColumnHeader header && header.Column != null)
+        {
+            if (header.Column.Header is FrameworkElement fe && fe.Tag is string tag)
+            {
+                ViewModel?.SortBy(tag);
+            }
+            else if (header.Tag is string headerTag)
+            {
+                ViewModel?.SortBy(headerTag);
+            }
+        }
+    }
+
+    private void OnCloseInspectorClick(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel != null)
+        {
+            ViewModel.IsInspectorVisible = false;
+        }
+    }
+
+    private void OnClearSearchClick(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel != null)
+        {
+            ViewModel.SearchText = string.Empty;
+        }
+    }
+
+    private void OnContextMenuInspectClick(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel != null)
+        {
+            ViewModel.IsInspectorVisible = true;
+        }
+    }
+
+    private void OnContextMenuCopyPathClick(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel?.SelectedProcess?.ExecutablePath != null)
+        {
+            System.Windows.Clipboard.SetText(ViewModel.SelectedProcess.ExecutablePath);
+            ViewModel.ShowStatus($"Copied executable path for {ViewModel.SelectedProcess.Name}", false);
+        }
+    }
+
+    private void OnContextMenuOpenFolderClick(object sender, RoutedEventArgs e)
+    {
+        ViewModel?.OpenContainingFolder();
+    }
+
     private async void OnKillClick(object sender, RoutedEventArgs e)
     {
         if (ViewModel != null)
@@ -86,7 +165,7 @@ public partial class ProcessListView : UserControl
     {
         if (ViewModel != null)
         {
-            await ViewModel.TerminateSelectedAsync();
+            await ViewModel.TerminateTreeSelectedAsync();
         }
     }
 
@@ -98,7 +177,7 @@ public partial class ProcessListView : UserControl
         }
     }
 
-    private async void OnCopyInfoClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    private async void OnCopyInfoClick(object sender, RoutedEventArgs e)
     {
         if (ViewModel != null)
         {
@@ -118,7 +197,7 @@ public partial class ProcessListView : UserControl
     {
         if (ViewModel != null)
         {
-            await ViewModel.TerminateSelectedAsync();
+            await ViewModel.TerminateTreeSelectedAsync();
         }
     }
 
@@ -126,10 +205,4 @@ public partial class ProcessListView : UserControl
     {
         ViewModel?.DismissStatus();
     }
-
-    private void OnHeaderNameClick(object sender, RoutedEventArgs e) => ViewModel?.SortBy("Name");
-    private void OnHeaderPidClick(object sender, RoutedEventArgs e) => ViewModel?.SortBy("Pid");
-    private void OnHeaderCpuClick(object sender, RoutedEventArgs e) => ViewModel?.SortBy("CpuPercent");
-    private void OnHeaderRamClick(object sender, RoutedEventArgs e) => ViewModel?.SortBy("RamBytes");
-    private void OnHeaderIoClick(object sender, RoutedEventArgs e) => ViewModel?.SortBy("DiskBytesPerSec");
 }

@@ -6,10 +6,14 @@
              xmlns:vm="clr-namespace:NeuralTask.App.ViewModels"
              mc:Ignorable="d" 
              d:DataContext="{d:DesignInstance Type=vm:SettingsViewModel}"
-             d:DesignHeight="700" d:DesignWidth="900">
+             d:DesignHeight="700" d:DesignWidth="900"
+             TextOptions.TextFormattingMode="Display"
+             TextOptions.TextRenderingMode="ClearType"
+             SnapsToDevicePixels="True"
+             UseLayoutRounding="True">
 
     <ScrollViewer x:Name="SettingsScrollViewer" VerticalScrollBarVisibility="Auto">
-        <Grid Margin="32,24,32,32">
+        <Grid Margin="28,20,28,32">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -23,37 +27,40 @@
             </Grid.RowDefinitions>
 
             <!-- 1. Header -->
-            <Grid Grid.Row="0" Margin="0,0,0,24">
+            <Grid Grid.Row="0" Margin="0,0,0,20">
                 <StackPanel>
-                    <TextBlock Text="SYSTEM SETTINGS"
+                    <TextBlock Text="Settings"
                                FontSize="20"
                                FontWeight="SemiBold"
                                FontFamily="{DynamicResource FontFamilyUI}"
                                Foreground="{DynamicResource BrushTextPrimary}" />
-                    <TextBlock Text="HUD CONFIGURATION // DISPLAY ENGINE &amp; TELEMETRY TUNING"
-                               FontSize="11"
-                               FontFamily="{DynamicResource FontFamilyNumeric}"
-                               Foreground="{DynamicResource BrushTextSecondary}"
-                               Margin="0,4,0,0" />
+                    <TextBlock Text="Preferences • Display, telemetry and plugin configuration"
+                               FontSize="12"
+                               FontFamily="{DynamicResource FontFamilyUI}"
+                               Foreground="{DynamicResource BrushTextTertiary}"
+                               Margin="0,3,0,0" />
                 </StackPanel>
             </Grid>
 
-            <!-- 2. Visual Theme Card (Dark Hologram vs Light Holo-Glass) -->
+            <!-- 2. Visual Theme Card (Clarity Dark vs Clarity Light) -->
             <Border Grid.Row="1"
-                    Margin="0,0,0,20"
-                    Background="{DynamicResource BrushPanelSurface}"
-                    BorderBrush="{DynamicResource BrushPanelBorder}"
+                    Margin="0,0,0,16"
+                    Background="{DynamicResource BrushSurface}"
+                    BorderBrush="{DynamicResource BrushBorderSubtle}"
                     BorderThickness="1"
-                    CornerRadius="8"
-                    Padding="24,20">
+                    CornerRadius="12"
+                    Padding="22,18">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="8" ShadowDepth="1" Direction="270" Color="Black" Opacity="0.04" />
+                </Border.Effect>
                 <StackPanel>
-                    <TextBlock Text="VISUAL PALETTE &amp; THEME ENGINE"
-                               FontSize="13"
+                    <TextBlock Text="Appearance"
+                               FontSize="14"
                                FontWeight="SemiBold"
-                               FontFamily="{DynamicResource FontFamilyNumeric}"
-                               Foreground="{DynamicResource BrushAccentPrimary}"
-                               Margin="0,0,0,6" />
-                    <TextBlock Text="Switch between native Dark Hologram and High-Contrast Holo-Glass lab palettes live without restarting."
+                               FontFamily="{DynamicResource FontFamilyUI}"
+                               Foreground="{DynamicResource BrushTextPrimary}"
+                               Margin="0,0,0,4" />
+                    <TextBlock Text="Switch between Clarity Dark and Clarity Light palettes live without restarting."
                                FontSize="12"
                                FontFamily="{DynamicResource FontFamilyUI}"
                                Foreground="{DynamicResource BrushTextSecondary}"
@@ -63,32 +70,33 @@
                     <Grid Margin="0,4,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="20" />
+                            <ColumnDefinition Width="16" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
 
                         <!-- Dark Theme Option Card -->
                         <Border Grid.Column="0"
-                                Background="{DynamicResource BrushBackgroundBase}"
-                                BorderBrush="{DynamicResource BrushAccentPrimary}"
-                                BorderThickness="1.5"
-                                CornerRadius="6"
+                                Background="{DynamicResource BrushSurfaceRaised}"
+                                BorderBrush="{DynamicResource BrushBorderSubtle}"
+                                BorderThickness="1"
+                                CornerRadius="8"
                                 Padding="16,14"
                                 Cursor="Hand">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                                     <RadioButton GroupName="ThemeGroup"
                                                  IsChecked="{Binding IsDarkThemeSelected, Mode=TwoWay}"
-                                                 VerticalAlignment="Center" />
-                                    <TextBlock Text="DARK (HOLOGRAM)"
+                                                 VerticalAlignment="Center"
+                                                 AutomationProperties.Name="Select Clarity Dark theme" />
+                                    <TextBlock Text="Clarity Dark"
                                                FontSize="13"
-                                               FontWeight="Bold"
-                                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                                               FontWeight="SemiBold"
+                                               FontFamily="{DynamicResource FontFamilyUI}"
                                                Foreground="{DynamicResource BrushTextPrimary}"
                                                Margin="8,0,0,0"
                                                VerticalAlignment="Center" />
                                 </StackPanel>
-                                <TextBlock Text="Deep space obsidian (#0A0E14) canvas with glowing electric cyan HUD accents and translucent Mica glass depth."
+                                <TextBlock Text="Refined dark slate canvas (#111319) with deep charcoal cards (#181B22) and soft indigo accents."
                                            FontSize="11"
                                            FontFamily="{DynamicResource FontFamilyUI}"
                                            Foreground="{DynamicResource BrushTextSecondary}"
@@ -98,26 +106,27 @@
 
                         <!-- Light Theme Option Card -->
                         <Border Grid.Column="2"
-                                Background="{DynamicResource BrushBackgroundBase}"
-                                BorderBrush="{DynamicResource BrushTextSecondary}"
+                                Background="{DynamicResource BrushSurfaceRaised}"
+                                BorderBrush="{DynamicResource BrushBorderSubtle}"
                                 BorderThickness="1"
-                                CornerRadius="6"
+                                CornerRadius="8"
                                 Padding="16,14"
                                 Cursor="Hand">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                                     <RadioButton GroupName="ThemeGroup"
                                                  IsChecked="{Binding IsLightThemeSelected, Mode=TwoWay}"
-                                                 VerticalAlignment="Center" />
-                                    <TextBlock Text="LIGHT (HOLO-GLASS)"
+                                                 VerticalAlignment="Center"
+                                                 AutomationProperties.Name="Select Clarity Light theme" />
+                                    <TextBlock Text="Clarity Light"
                                                FontSize="13"
-                                               FontWeight="Bold"
-                                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                                               FontWeight="SemiBold"
+                                               FontFamily="{DynamicResource FontFamilyUI}"
                                                Foreground="{DynamicResource BrushTextPrimary}"
                                                Margin="8,0,0,0"
                                                VerticalAlignment="Center" />
                                 </StackPanel>
-                                <TextBlock Text="Cleanroom medical lab aesthetic (#F4F6FA) with frosty acrylic glass, crisp obsidian text, and deep cyan tokens."
+                                <TextBlock Text="Calm off-white canvas (#F6F7FB) with crisp white cards (#FFFFFF), high contrast text, and indigo accents."
                                            FontSize="11"
                                            FontFamily="{DynamicResource FontFamilyUI}"
                                            Foreground="{DynamicResource BrushTextSecondary}"
@@ -130,12 +139,15 @@
 
             <!-- 3. Ambient Animation Layer Toggle -->
             <Border Grid.Row="2"
-                    Margin="0,0,0,20"
-                    Background="{DynamicResource BrushPanelSurface}"
-                    BorderBrush="{DynamicResource BrushPanelBorder}"
+                    Margin="0,0,0,16"
+                    Background="{DynamicResource BrushSurface}"
+                    BorderBrush="{DynamicResource BrushBorderSubtle}"
                     BorderThickness="1"
-                    CornerRadius="8"
-                    Padding="24,20">
+                    CornerRadius="12"
+                    Padding="22,18">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="8" ShadowDepth="1" Direction="270" Color="Black" Opacity="0.04" />
+                </Border.Effect>
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
@@ -143,13 +155,13 @@
                     </Grid.ColumnDefinitions>
 
                     <StackPanel Grid.Column="0">
-                        <TextBlock Text="GPU AMBIENT DATA-FLOW ANIMATION"
-                                   FontSize="13"
+                        <TextBlock Text="Background effects"
+                                   FontSize="14"
                                    FontWeight="SemiBold"
-                                   FontFamily="{DynamicResource FontFamilyNumeric}"
-                                   Foreground="{DynamicResource BrushAccentPrimary}"
-                                   Margin="0,0,0,6" />
-                        <TextBlock Text="Renders subtle GPU-composited telemetry data streams on the canvas background. Disable for low-power mode or static preference."
+                                   FontFamily="{DynamicResource FontFamilyUI}"
+                                   Foreground="{DynamicResource BrushTextPrimary}"
+                                   Margin="0,0,0,4" />
+                        <TextBlock Text="Enables calm background canvas gradients. Disable for minimal power consumption."
                                    FontSize="12"
                                    FontFamily="{DynamicResource FontFamilyUI}"
                                    Foreground="{DynamicResource BrushTextSecondary}"
@@ -158,69 +170,79 @@
 
                     <CheckBox Grid.Column="1"
                               IsChecked="{Binding IsAmbientAnimationEnabled, Mode=TwoWay}"
-                              Content="ACTIVE"
+                              Content="Enabled"
                               FontSize="12"
-                              FontWeight="Bold"
-                              FontFamily="{DynamicResource FontFamilyNumeric}"
-                              Foreground="{DynamicResource BrushAccentPrimary}"
-                              VerticalAlignment="Center" />
+                              FontWeight="Medium"
+                              FontFamily="{DynamicResource FontFamilyUI}"
+                              Foreground="{DynamicResource BrushTextPrimary}"
+                              VerticalAlignment="Center"
+                              AutomationProperties.Name="Enable background effects" />
                 </Grid>
             </Border>
 
             <!-- 4. Telemetry Sampling Frequency -->
             <Border Grid.Row="3"
-                    Margin="0,0,0,20"
-                    Background="{DynamicResource BrushPanelSurface}"
-                    BorderBrush="{DynamicResource BrushPanelBorder}"
+                    Margin="0,0,0,16"
+                    Background="{DynamicResource BrushSurface}"
+                    BorderBrush="{DynamicResource BrushBorderSubtle}"
                     BorderThickness="1"
-                    CornerRadius="8"
-                    Padding="24,20">
+                    CornerRadius="12"
+                    Padding="22,18">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="8" ShadowDepth="1" Direction="270" Color="Black" Opacity="0.04" />
+                </Border.Effect>
                 <StackPanel>
-                    <TextBlock Text="SAMPLING INTERVAL // REFRESH RATE"
-                               FontSize="13"
+                    <TextBlock Text="Telemetry refresh rate"
+                               FontSize="14"
                                FontWeight="SemiBold"
-                               FontFamily="{DynamicResource FontFamilyNumeric}"
-                               Foreground="{DynamicResource BrushAccentPrimary}"
-                               Margin="0,0,0,6" />
-                    <TextBlock Text="Controls the frequency of native Win32 process enumeration and delta calculations without loop restart."
+                               FontFamily="{DynamicResource FontFamilyUI}"
+                               Foreground="{DynamicResource BrushTextPrimary}"
+                               Margin="0,0,0,4" />
+                    <TextBlock Text="Controls the sampling frequency for process enumeration and resource delta calculations."
                                FontSize="12"
                                FontFamily="{DynamicResource FontFamilyUI}"
                                Foreground="{DynamicResource BrushTextSecondary}"
                                Margin="0,0,0,14" />
 
                     <StackPanel Orientation="Horizontal">
-                        <RadioButton Content="500 ms (High Performance)"
+                        <RadioButton Content="500 ms (Fast)"
                                      GroupName="IntervalGroup"
                                      IsChecked="{Binding IsInterval500, Mode=TwoWay}"
                                      FontSize="12"
-                                     FontFamily="{DynamicResource FontFamilyNumeric}"
+                                     FontFamily="{DynamicResource FontFamilyUI}"
                                      Foreground="{DynamicResource BrushTextPrimary}"
-                                     Margin="0,0,24,0" />
-                        <RadioButton Content="1000 ms (Default Balanced)"
+                                     Margin="0,0,24,0"
+                                     AutomationProperties.Name="500 milliseconds refresh rate" />
+                        <RadioButton Content="1000 ms (Recommended)"
                                      GroupName="IntervalGroup"
                                      IsChecked="{Binding IsInterval1000, Mode=TwoWay}"
                                      FontSize="12"
-                                     FontFamily="{DynamicResource FontFamilyNumeric}"
+                                     FontFamily="{DynamicResource FontFamilyUI}"
                                      Foreground="{DynamicResource BrushAccentPrimary}"
-                                     Margin="0,0,24,0" />
-                        <RadioButton Content="2000 ms (Power Saver)"
+                                     Margin="0,0,24,0"
+                                     AutomationProperties.Name="1000 milliseconds refresh rate" />
+                        <RadioButton Content="2000 ms (Power saver)"
                                      GroupName="IntervalGroup"
                                      IsChecked="{Binding IsInterval2000, Mode=TwoWay}"
                                      FontSize="12"
-                                     FontFamily="{DynamicResource FontFamilyNumeric}"
-                                     Foreground="{DynamicResource BrushTextPrimary}" />
+                                     FontFamily="{DynamicResource FontFamilyUI}"
+                                     Foreground="{DynamicResource BrushTextPrimary}"
+                                     AutomationProperties.Name="2000 milliseconds refresh rate" />
                     </StackPanel>
                 </StackPanel>
             </Border>
 
             <!-- 5. System Tray Engine & Mini-Graph -->
             <Border Grid.Row="4"
-                    Margin="0,0,0,20"
-                    Background="{DynamicResource BrushPanelSurface}"
-                    BorderBrush="{DynamicResource BrushPanelBorder}"
+                    Margin="0,0,0,16"
+                    Background="{DynamicResource BrushSurface}"
+                    BorderBrush="{DynamicResource BrushBorderSubtle}"
                     BorderThickness="1"
-                    CornerRadius="8"
-                    Padding="24,20">
+                    CornerRadius="12"
+                    Padding="22,18">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="8" ShadowDepth="1" Direction="270" Color="Black" Opacity="0.04" />
+                </Border.Effect>
                 <StackPanel>
                     <Grid Margin="0,0,0,12">
                         <Grid.ColumnDefinitions>
@@ -228,13 +250,13 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <StackPanel Grid.Column="0">
-                            <TextBlock Text="SYSTEM TRAY ENGINE // MINIMIZE-TO-TRAY"
-                                       FontSize="13"
+                            <TextBlock Text="System tray"
+                                       FontSize="14"
                                        FontWeight="SemiBold"
-                                       FontFamily="{DynamicResource FontFamilyNumeric}"
-                                       Foreground="{DynamicResource BrushAccentPrimary}"
+                                       FontFamily="{DynamicResource FontFamilyUI}"
+                                       Foreground="{DynamicResource BrushTextPrimary}"
                                        Margin="0,0,0,4" />
-                            <TextBlock Text="Hides HUD to the Windows taskbar system tray on minimize or close. Clicking the tray icon restores the window."
+                            <TextBlock Text="Minimizes to the Windows notification area on window close. Click the tray icon to restore."
                                        FontSize="12"
                                        FontFamily="{DynamicResource FontFamilyUI}"
                                        Foreground="{DynamicResource BrushTextSecondary}"
@@ -242,97 +264,106 @@
                         </StackPanel>
                         <CheckBox Grid.Column="1"
                                   IsChecked="{Binding IsMinimizeToTrayEnabled, Mode=TwoWay}"
-                                  Content="ENABLED"
+                                  Content="Enabled"
                                   FontSize="12"
-                                  FontWeight="Bold"
-                                  FontFamily="{DynamicResource FontFamilyNumeric}"
-                                  Foreground="{DynamicResource BrushAccentPrimary}"
-                                  VerticalAlignment="Center" />
+                                  FontWeight="Medium"
+                                  FontFamily="{DynamicResource FontFamilyUI}"
+                                  Foreground="{DynamicResource BrushTextPrimary}"
+                                  VerticalAlignment="Center"
+                                  AutomationProperties.Name="Minimize to system tray" />
                     </Grid>
 
-                    <TextBlock Text="LIVE TRAY ICON MINI-GRAPH METRIC"
+                    <TextBlock Text="Tray icon live metric"
                                FontSize="11"
-                               FontWeight="SemiBold"
-                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                               FontWeight="Medium"
+                               FontFamily="{DynamicResource FontFamilyUI}"
                                Foreground="{DynamicResource BrushTextSecondary}"
-                               Margin="0,8,0,8" />
+                               Margin="0,6,0,8" />
 
                     <StackPanel Orientation="Horizontal">
-                        <RadioButton Content="CPU Load (Electric Cyan)"
+                        <RadioButton Content="CPU load (Indigo)"
                                      GroupName="TrayMetricGroup"
                                      IsChecked="{Binding IsTrayMetricCpu, Mode=TwoWay}"
                                      FontSize="12"
-                                     FontFamily="{DynamicResource FontFamilyNumeric}"
+                                     FontFamily="{DynamicResource FontFamilyUI}"
                                      Foreground="{DynamicResource BrushAccentPrimary}"
-                                     Margin="0,0,24,0" />
-                        <RadioButton Content="RAM Load (Neon Magenta)"
+                                     Margin="0,0,24,0"
+                                     AutomationProperties.Name="Show CPU load in tray icon" />
+                        <RadioButton Content="RAM load (Teal)"
                                      GroupName="TrayMetricGroup"
                                      IsChecked="{Binding IsTrayMetricRam, Mode=TwoWay}"
                                      FontSize="12"
-                                     FontFamily="{DynamicResource FontFamilyNumeric}"
-                                     Foreground="{DynamicResource BrushAccentSecondary}" />
+                                     FontFamily="{DynamicResource FontFamilyUI}"
+                                     Foreground="{DynamicResource BrushAccentSecondary}"
+                                     AutomationProperties.Name="Show RAM load in tray icon" />
                     </StackPanel>
                 </StackPanel>
             </Border>
 
-            <!-- 6. Local Heuristic Engine & Non-AV Disclaimer (PRD §8.4 / §11) -->
+            <!-- 6. Local Heuristic Engine & Non-AV Disclaimer -->
             <Border Grid.Row="5"
-                    Margin="0,0,0,20"
-                    Background="{DynamicResource BrushPanelSurface}"
-                    BorderBrush="{DynamicResource BrushAccentWarning}"
+                    Margin="0,0,0,16"
+                    Background="{DynamicResource BrushSurface}"
+                    BorderBrush="{DynamicResource BrushBorderSubtle}"
                     BorderThickness="1"
-                    CornerRadius="8"
-                    Padding="24,20">
+                    CornerRadius="12"
+                    Padding="22,18">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="8" ShadowDepth="1" Direction="270" Color="Black" Opacity="0.04" />
+                </Border.Effect>
                 <StackPanel>
-                    <TextBlock Text="LOCAL HEURISTIC ENGINE // ANOMALY TRIAGE (PRD §8.4)"
-                               FontSize="13"
+                    <TextBlock Text="Anomaly detection"
+                               FontSize="14"
                                FontWeight="SemiBold"
-                               FontFamily="{DynamicResource FontFamilyNumeric}"
-                               Foreground="{DynamicResource BrushAccentWarning}"
+                               FontFamily="{DynamicResource FontFamilyUI}"
+                               Foreground="{DynamicResource BrushTextPrimary}"
                                Margin="0,0,0,4" />
-                    <TextBlock Text="Transparent, explainable flags highlighting unusual execution directories (%TEMP%, Downloads), unsigned binaries, and handle count spikes."
+                    <TextBlock Text="Highlights unusual execution directories (%TEMP%, Downloads), unsigned binaries, and sudden resource spikes."
                                FontSize="12"
                                FontFamily="{DynamicResource FontFamilyUI}"
                                Foreground="{DynamicResource BrushTextSecondary}"
-                               Margin="0,0,0,16" />
+                               Margin="0,0,0,14" />
 
                     <!-- Sensitivity Radios -->
-                    <TextBlock Text="HEURISTIC SENSITIVITY PROFILE"
+                    <TextBlock Text="Heuristic sensitivity profile"
                                FontSize="11"
-                               FontWeight="SemiBold"
-                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                               FontWeight="Medium"
+                               FontFamily="{DynamicResource FontFamilyUI}"
                                Foreground="{DynamicResource BrushTextSecondary}"
                                Margin="0,0,0,8" />
 
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                        <RadioButton Content="Conservative (Dev-Friendly)"
+                        <RadioButton Content="Conservative (Developer friendly)"
                                      GroupName="SensitivityGroup"
                                      IsChecked="{Binding IsSensitivityConservative, Mode=TwoWay}"
                                      FontSize="12"
-                                     FontFamily="{DynamicResource FontFamilyNumeric}"
+                                     FontFamily="{DynamicResource FontFamilyUI}"
                                      Foreground="{DynamicResource BrushAccentPrimary}"
                                      Margin="0,0,20,0"
-                                     ToolTip="Suppresses alerts on normal developer installations (Programs, npm, cargo, scoop)." />
+                                     ToolTip="Suppresses alerts on developer directories (npm, cargo, venv)."
+                                     AutomationProperties.Name="Conservative sensitivity profile" />
                         <RadioButton Content="Standard"
                                      GroupName="SensitivityGroup"
                                      IsChecked="{Binding IsSensitivityStandard, Mode=TwoWay}"
                                      FontSize="12"
-                                     FontFamily="{DynamicResource FontFamilyNumeric}"
+                                     FontFamily="{DynamicResource FontFamilyUI}"
                                      Foreground="{DynamicResource BrushTextPrimary}"
-                                     Margin="0,0,20,0" />
+                                     Margin="0,0,20,0"
+                                     AutomationProperties.Name="Standard sensitivity profile" />
                         <RadioButton Content="Aggressive"
                                      GroupName="SensitivityGroup"
                                      IsChecked="{Binding IsSensitivityAggressive, Mode=TwoWay}"
                                      FontSize="12"
-                                     FontFamily="{DynamicResource FontFamilyNumeric}"
-                                     Foreground="{DynamicResource BrushAccentWarning}" />
+                                     FontFamily="{DynamicResource FontFamilyUI}"
+                                     Foreground="{DynamicResource BrushAccentWarning}"
+                                     AutomationProperties.Name="Aggressive sensitivity profile" />
                     </StackPanel>
 
                     <!-- Persistent Disclaimer Callout Box -->
-                    <Border Background="{DynamicResource BrushSurfaceCallout}"
-                            BorderBrush="{DynamicResource BrushAccentWarning}"
+                    <Border Background="{DynamicResource BrushSurfaceRaised}"
+                            BorderBrush="{DynamicResource BrushBorderSubtle}"
                             BorderThickness="1"
-                            CornerRadius="6"
+                            CornerRadius="8"
                             Padding="16,12">
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -344,37 +375,40 @@
                                   Data="{StaticResource IconShieldGeometry}"
                                   Stroke="{DynamicResource BrushAccentWarning}"
                                   StrokeThickness="1.5"
-                                  Width="20" Height="20"
+                                  Width="18" Height="18"
                                   Stretch="Uniform"
                                   Margin="0,0,14,0"
                                   VerticalAlignment="Center" />
 
                             <StackPanel Grid.Column="1">
-                                <TextBlock Text="MANDATORY DISCLAIMER: NOT AN ANTIVIRUS OR MALWARE SCANNER"
-                                           FontSize="11"
-                                           FontWeight="Bold"
-                                           FontFamily="{DynamicResource FontFamilyNumeric}"
+                                <TextBlock Text="Diagnostic notice: Not an antivirus or malware scanner"
+                                           FontSize="11.5"
+                                           FontWeight="SemiBold"
+                                           FontFamily="{DynamicResource FontFamilyUI}"
                                            Foreground="{DynamicResource BrushAccentWarning}" />
-                                <TextBlock Text="NeuralTask's heuristic flags are local diagnostic aids intended solely to highlight potential anomalies for user triage. This software is explicitly NOT an antivirus, antimalware, or security product, does not provide endpoint threat protection, and must never be relied upon as a substitute for certified antivirus software (PRD §8.4 &amp; §11)."
-                                           FontSize="10"
+                                <TextBlock Text="NeuralTask heuristic flags are diagnostic aids intended solely to highlight potential anomalies for user triage. This software is not an antivirus product, does not provide endpoint threat protection, and must not be used as a substitute for certified security software."
+                                           FontSize="11"
                                            FontFamily="{DynamicResource FontFamilyUI}"
                                            Foreground="{DynamicResource BrushTextSecondary}"
                                            TextWrapping="Wrap"
-                                           Margin="0,4,0,0" />
+                                           Margin="0,3,0,0" />
                             </StackPanel>
                         </Grid>
                     </Border>
                 </StackPanel>
             </Border>
 
-            <!-- 7. Historical Telemetry & Persistence (PRD §6.3 - 3.1) -->
+            <!-- 7. Historical Telemetry & Persistence -->
             <Border Grid.Row="6"
-                    Margin="0,0,0,20"
-                    Background="{DynamicResource BrushPanelSurface}"
-                    BorderBrush="{DynamicResource BrushPanelBorder}"
+                    Margin="0,0,0,16"
+                    Background="{DynamicResource BrushSurface}"
+                    BorderBrush="{DynamicResource BrushBorderSubtle}"
                     BorderThickness="1"
-                    CornerRadius="8"
-                    Padding="24,20">
+                    CornerRadius="12"
+                    Padding="22,18">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="8" ShadowDepth="1" Direction="270" Color="Black" Opacity="0.04" />
+                </Border.Effect>
                 <StackPanel>
                     <Grid Margin="0,0,0,12">
                         <Grid.ColumnDefinitions>
@@ -382,11 +416,11 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <StackPanel Grid.Column="0">
-                            <TextBlock Text="HISTORICAL TELEMETRY BUFFER &amp; RESTART PERSISTENCE"
-                                       FontSize="13"
+                            <TextBlock Text="Historical telemetry"
+                                       FontSize="14"
                                        FontWeight="SemiBold"
-                                       FontFamily="{DynamicResource FontFamilyNumeric}"
-                                       Foreground="{DynamicResource BrushAccentPrimary}"
+                                       FontFamily="{DynamicResource FontFamilyUI}"
+                                       Foreground="{DynamicResource BrushTextPrimary}"
                                        Margin="0,0,0,4" />
                             <TextBlock Text="Retains a rolling telemetry buffer enabling timeline scrubbing. Optionally persist samples to local disk across restarts."
                                        FontSize="12"
@@ -396,87 +430,93 @@
                         </StackPanel>
                         <CheckBox Grid.Column="1"
                                   IsChecked="{Binding IsHistoryPersistenceEnabled, Mode=TwoWay}"
-                                  Content="PERSIST ON DISK"
+                                  Content="Persist to disk"
                                   FontSize="12"
-                                  FontWeight="Bold"
-                                  FontFamily="{DynamicResource FontFamilyNumeric}"
-                                  Foreground="{DynamicResource BrushAccentPrimary}"
-                                  VerticalAlignment="Center" />
+                                  FontWeight="Medium"
+                                  FontFamily="{DynamicResource FontFamilyUI}"
+                                  Foreground="{DynamicResource BrushTextPrimary}"
+                                  VerticalAlignment="Center"
+                                  AutomationProperties.Name="Persist telemetry buffer to disk" />
                     </Grid>
 
-                    <TextBlock Text="ROLLING RETENTION WINDOW"
+                    <TextBlock Text="Rolling retention window"
                                FontSize="11"
-                               FontWeight="SemiBold"
-                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                               FontWeight="Medium"
+                               FontFamily="{DynamicResource FontFamilyUI}"
                                Foreground="{DynamicResource BrushTextSecondary}"
                                Margin="0,4,0,8" />
 
                     <StackPanel Orientation="Horizontal">
-                        <RadioButton Content="15 Minutes"
+                        <RadioButton Content="15 minutes"
                                      GroupName="RetentionGroup"
                                      IsChecked="{Binding IsRetention15, Mode=TwoWay}"
                                      FontSize="12"
-                                     FontFamily="{DynamicResource FontFamilyNumeric}"
+                                     FontFamily="{DynamicResource FontFamilyUI}"
                                      Foreground="{DynamicResource BrushTextPrimary}"
-                                     Margin="0,0,24,0" />
-                        <RadioButton Content="30 Minutes (Recommended)"
+                                     Margin="0,0,24,0"
+                                     AutomationProperties.Name="15 minutes retention window" />
+                        <RadioButton Content="30 minutes (Recommended)"
                                      GroupName="RetentionGroup"
                                      IsChecked="{Binding IsRetention30, Mode=TwoWay}"
                                      FontSize="12"
-                                     FontFamily="{DynamicResource FontFamilyNumeric}"
+                                     FontFamily="{DynamicResource FontFamilyUI}"
                                      Foreground="{DynamicResource BrushAccentPrimary}"
-                                     Margin="0,0,24,0" />
-                        <RadioButton Content="60 Minutes (Deep Buffer)"
+                                     Margin="0,0,24,0"
+                                     AutomationProperties.Name="30 minutes retention window" />
+                        <RadioButton Content="60 minutes"
                                      GroupName="RetentionGroup"
                                      IsChecked="{Binding IsRetention60, Mode=TwoWay}"
                                      FontSize="12"
-                                     FontFamily="{DynamicResource FontFamilyNumeric}"
-                                     Foreground="{DynamicResource BrushAccentSecondary}" />
+                                     FontFamily="{DynamicResource FontFamilyUI}"
+                                     Foreground="{DynamicResource BrushTextPrimary}"
+                                     AutomationProperties.Name="60 minutes retention window" />
                     </StackPanel>
                 </StackPanel>
             </Border>
 
-            <!-- 8. Extension Plugins (PRD §8.5) -->
+            <!-- 8. Extension Plugins -->
             <Border Grid.Row="7"
-                    Background="{DynamicResource BrushPanelSurface}"
-                    BorderBrush="{DynamicResource BrushBorderNormal}"
+                    Background="{DynamicResource BrushSurface}"
+                    BorderBrush="{DynamicResource BrushBorderSubtle}"
                     BorderThickness="1"
-                    CornerRadius="8"
-                    Padding="24,20"
-                    Margin="0,0,0,24">
+                    CornerRadius="12"
+                    Padding="22,18"
+                    Margin="0,0,0,16">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="8" ShadowDepth="1" Direction="270" Color="Black" Opacity="0.04" />
+                </Border.Effect>
                 <StackPanel>
                     <Grid Margin="0,0,0,12">
                         <StackPanel>
-                            <TextBlock Text="EXTENSION PLUGINS (PRD §8.5)"
+                            <TextBlock Text="Extension plugins"
                                        FontSize="14"
                                        FontWeight="SemiBold"
                                        FontFamily="{DynamicResource FontFamilyUI}"
                                        Foreground="{DynamicResource BrushTextPrimary}" />
-                            <TextBlock Text="Discovers and dynamically isolates third-party DLL widgets from the local /plugins folder."
-                                       FontSize="11"
-                                       FontFamily="{DynamicResource FontFamilyNumeric}"
+                            <TextBlock Text="Discovers and dynamically isolates third-party DLL panels from the local /plugins directory."
+                                       FontSize="12"
+                                       FontFamily="{DynamicResource FontFamilyUI}"
                                        Foreground="{DynamicResource BrushTextSecondary}"
                                        Margin="0,2,0,0" />
                         </StackPanel>
                     </Grid>
 
-                    <Border Background="#14141F"
-                            BorderBrush="{DynamicResource BrushBorderNormal}"
+                    <Border Background="{DynamicResource BrushSurfaceRaised}"
+                            BorderBrush="{DynamicResource BrushBorderSubtle}"
                             BorderThickness="1"
                             CornerRadius="6"
                             Padding="12,8"
-                            Margin="0,0,0,16">
+                            Margin="0,0,0,14">
                         <Grid>
-                            <TextBlock Text="PLUGINS DIRECTORY:"
-                                       FontSize="10"
-                                       FontWeight="Bold"
-                                       FontFamily="{DynamicResource FontFamilyNumeric}"
+                            <TextBlock Text="Plugins directory:"
+                                       FontSize="11"
+                                       FontFamily="{DynamicResource FontFamilyUI}"
                                        Foreground="{DynamicResource BrushTextSecondary}"
                                        VerticalAlignment="Center" />
                             <TextBlock HorizontalAlignment="Right"
                                        Text="{Binding PluginsDirectory, FallbackValue='(local)/plugins'}"
                                        FontSize="11"
-                                       FontFamily="{DynamicResource FontFamilyCode}"
+                                       FontFamily="{DynamicResource FontFamilyNumeric}"
                                        Foreground="{DynamicResource BrushAccentPrimary}"
                                        VerticalAlignment="Center" />
                         </Grid>
@@ -486,12 +526,12 @@
                     <ItemsControl ItemsSource="{Binding LoadedPlugins}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="#1A1A28"
-                                        BorderBrush="{DynamicResource BrushBorderNormal}"
+                                <Border Background="{DynamicResource BrushSurfaceRaised}"
+                                        BorderBrush="{DynamicResource BrushBorderSubtle}"
                                         BorderThickness="1"
-                                        CornerRadius="6"
+                                        CornerRadius="8"
                                         Padding="14,10"
-                                        Margin="0,0,0,10">
+                                        Margin="0,0,0,8">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
@@ -501,14 +541,14 @@
                                         <StackPanel Grid.Column="0">
                                             <StackPanel Orientation="Horizontal">
                                                 <TextBlock Text="{Binding Title}"
-                                                           FontSize="12"
-                                                           FontWeight="Bold"
+                                                           FontSize="12.5"
+                                                           FontWeight="SemiBold"
                                                            FontFamily="{DynamicResource FontFamilyUI}"
                                                            Foreground="{DynamicResource BrushTextPrimary}" />
                                                 <TextBlock Text="{Binding Id, StringFormat='  [{0}]'}"
                                                            FontSize="11"
-                                                           FontFamily="{DynamicResource FontFamilyCode}"
-                                                           Foreground="{DynamicResource BrushAccentPrimary}" />
+                                                           FontFamily="{DynamicResource FontFamilyNumeric}"
+                                                           Foreground="{DynamicResource BrushTextTertiary}" />
                                             </StackPanel>
                                             <TextBlock Text="{Binding Description}"
                                                        FontSize="11"
@@ -518,16 +558,16 @@
                                         </StackPanel>
 
                                         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                            <Border Background="#1A00E5FF"
+                                            <Border Background="{DynamicResource BrushAccentPrimarySoft}"
                                                     BorderBrush="{DynamicResource BrushAccentPrimary}"
                                                     BorderThickness="1"
                                                     CornerRadius="4"
                                                     Padding="8,3"
-                                                    Margin="0,0,10,0">
-                                                <TextBlock Text="LOADED // ACTIVE"
-                                                           FontSize="9"
-                                                           FontWeight="Bold"
-                                                           FontFamily="{DynamicResource FontFamilyNumeric}"
+                                                    Margin="0,0,4,0">
+                                                <TextBlock Text="Active"
+                                                           FontSize="10"
+                                                           FontWeight="Medium"
+                                                           FontFamily="{DynamicResource FontFamilyUI}"
                                                            Foreground="{DynamicResource BrushAccentPrimary}" />
                                             </Border>
                                         </StackPanel>
@@ -541,11 +581,14 @@
 
             <!-- 9. Privacy & Platform Attribution -->
             <Border Grid.Row="8"
-                    Background="{DynamicResource BrushPanelSurface}"
-                    BorderBrush="{DynamicResource BrushAccentPrimary}"
+                    Background="{DynamicResource BrushSurface}"
+                    BorderBrush="{DynamicResource BrushBorderSubtle}"
                     BorderThickness="1"
-                    CornerRadius="8"
-                    Padding="24,18">
+                    CornerRadius="12"
+                    Padding="22,16">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="8" ShadowDepth="1" Direction="270" Color="Black" Opacity="0.04" />
+                </Border.Effect>
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
@@ -556,22 +599,22 @@
                           Data="{StaticResource IconShieldGeometry}"
                           Stroke="{DynamicResource BrushAccentPrimary}"
                           StrokeThickness="1.5"
-                          Width="22" Height="22"
+                          Width="20" Height="20"
                           Stretch="Uniform"
                           Margin="0,0,16,0"
                           VerticalAlignment="Center" />
 
                     <StackPanel Grid.Column="1">
-                        <TextBlock Text="LOCAL TELEMETRY ONLY // ZERO EXTERNAL NETWORK CALLS"
+                        <TextBlock Text="Local telemetry only • Zero external network calls"
                                    FontSize="12"
                                    FontWeight="SemiBold"
-                                   FontFamily="{DynamicResource FontFamilyNumeric}"
-                                   Foreground="{DynamicResource BrushAccentPrimary}" />
+                                   FontFamily="{DynamicResource FontFamilyUI}"
+                                   Foreground="{DynamicResource BrushTextPrimary}" />
                         <TextBlock Text="NeuralTask operates strictly on native local Win32 kernel structures. No process identifiers, memory snapshots, or telemetry pings ever leave your machine."
                                    FontSize="11"
                                    FontFamily="{DynamicResource FontFamilyUI}"
                                    Foreground="{DynamicResource BrushTextSecondary}"
-                                   Margin="0,4,0,0" />
+                                   Margin="0,2,0,0" />
                     </StackPanel>
                 </Grid>
             </Border>
