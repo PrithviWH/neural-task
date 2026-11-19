@@ -31,7 +31,7 @@ public class ProcessListViewModel : ViewModelBase
     private string _statusBannerMessage = string.Empty;
     private bool _statusBannerIsError;
 
-    private bool _isInspectorVisible;
+    private bool _isInspectorVisible = true;
     private ProcessInspectorViewModel? _inspectorDetails;
     private bool _isTreeViewMode;
     private string _selectedFilterCategory = "All";
@@ -123,6 +123,7 @@ public class ProcessListViewModel : ViewModelBase
                 {
                     InspectorDetails = new ProcessInspectorViewModel(_selectedProcess, _processInfoService);
                     InspectorDetails.RequestShowStatus += (msg, isErr) => ShowStatus(msg, isErr);
+                    IsInspectorVisible = true;
                 }
                 else
                 {

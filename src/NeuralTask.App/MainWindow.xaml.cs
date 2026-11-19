@@ -416,22 +416,16 @@ public partial class MainWindow : FluentWindow
         ViewModel.Dashboard.ResumeLive();
         await Task.Delay(200);
 
-        // 2. Dark Theme - Processes (Live processes & Heuristic Flags)
+        // 2. Dark Theme - Processes (Default with Inspector Sidecar)
         SelectTab(1);
-        ViewModel.ProcessList.IsInspectorVisible = false;
         ViewModel.ProcessList.TriggerReScan();
-        await Task.Delay(500);
-        SaveBitmap(Path.Combine(outputDir, "screen_processes_dark.png"));
-
-        // 2b. Dark Theme - Process Inspector
-        if (ViewModel.ProcessList.FilteredProcesses.Count > 0)
+        if (ViewModel.ProcessList.FilteredProcesses.Count > 0 && ViewModel.ProcessList.SelectedProcess == null)
         {
             ViewModel.ProcessList.SelectedProcess = ViewModel.ProcessList.FilteredProcesses[0];
-            ViewModel.ProcessList.IsInspectorVisible = true;
         }
         await Task.Delay(750);
+        SaveBitmap(Path.Combine(outputDir, "screen_processes_dark.png"));
         SaveBitmap(Path.Combine(outputDir, "screen_processes_inspector_dark.png"));
-        ViewModel.ProcessList.IsInspectorVisible = false;
 
         // 3. Dark Theme - Startup (PRD §8.3 Matrix)
         SelectTab(2);
@@ -492,22 +486,16 @@ public partial class MainWindow : FluentWindow
         SaveBitmap(Path.Combine(outputDir, "screen_dashboard_intelligence_light.png"));
         ViewDashboard.ScrollToTop();
 
-        // 7. Light Theme - Processes
+        // 7. Light Theme - Processes (Default with Inspector Sidecar)
         SelectTab(1);
-        ViewModel.ProcessList.IsInspectorVisible = false;
         ViewModel.ProcessList.TriggerReScan();
-        await Task.Delay(500);
-        SaveBitmap(Path.Combine(outputDir, "screen_processes_light.png"));
-
-        // 7b. Light Theme - Process Inspector
-        if (ViewModel.ProcessList.FilteredProcesses.Count > 0)
+        if (ViewModel.ProcessList.FilteredProcesses.Count > 0 && ViewModel.ProcessList.SelectedProcess == null)
         {
             ViewModel.ProcessList.SelectedProcess = ViewModel.ProcessList.FilteredProcesses[0];
-            ViewModel.ProcessList.IsInspectorVisible = true;
         }
         await Task.Delay(750);
+        SaveBitmap(Path.Combine(outputDir, "screen_processes_light.png"));
         SaveBitmap(Path.Combine(outputDir, "screen_processes_inspector_light.png"));
-        ViewModel.ProcessList.IsInspectorVisible = false;
 
         // 8. Light Theme - Startup
         SelectTab(2);

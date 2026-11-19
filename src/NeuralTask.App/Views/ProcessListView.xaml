@@ -430,7 +430,7 @@
 
                 <!-- Copy Process Telemetry Info Button -->
                 <Button Style="{StaticResource ClarityButtonStyle}"
-                        Margin="0,0,6,0"
+                        Margin="0,0,8,0"
                         Click="OnCopyInfoClick"
                         ToolTip="Copy diagnostic report with SHA-256 hash (Ctrl+C)"
                         AutomationProperties.Name="Copy process diagnostics">
@@ -440,21 +440,6 @@
                               StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
                               Width="13" Height="13" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center" />
                         <TextBlock Text="Copy" VerticalAlignment="Center" />
-                    </StackPanel>
-                </Button>
-
-                <!-- Inspector Panel Toggle Button -->
-                <Button Style="{StaticResource ClarityButtonStyle}"
-                        Margin="0,0,8,0"
-                        Command="{Binding ToggleInspectorCommand}"
-                        ToolTip="Toggle Process Inspector Details Sidecar"
-                        AutomationProperties.Name="Toggle inspector panel">
-                    <StackPanel Orientation="Horizontal">
-                        <Path Data="{StaticResource IconInspectorGeometry}"
-                              Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
-                              StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
-                              Width="13" Height="13" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center" />
-                        <TextBlock Text="Inspector" VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
 
@@ -1142,8 +1127,11 @@
                     CornerRadius="12"
                     Padding="16"
                     Effect="{StaticResource ClarityCardShadow}">
-                <Grid DataContext="{Binding InspectorDetails}">
-                    <Grid.RowDefinitions>
+                <Grid>
+                    <!-- State A: Active Process Inspector (Visible when HasSelectedProcess is true) -->
+                    <Grid Visibility="{Binding HasSelectedProcess, Converter={StaticResource BooleanToVisibilityConverter}}"
+                          DataContext="{Binding InspectorDetails}">
+                        <Grid.RowDefinitions>
                         <!-- Row 0: Pinned Hero Header -->
                         <RowDefinition Height="Auto" />
                         <!-- Row 1: Scrollable Telemetry & Metadata Body -->
@@ -1726,6 +1714,90 @@
                             </Button>
                         </Grid>
                     </Border>
+                    </Grid>
+
+                    <!-- State B: Sleek Empty State Guide (Visible when HasSelectedProcess is false) -->
+                    <Grid Visibility="{Binding HasSelectedProcess, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <StackPanel Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="24">
+                            <Border Width="56" Height="56" CornerRadius="16"
+                                    Background="{DynamicResource BrushSurfaceRaised}"
+                                    BorderBrush="{DynamicResource BrushBorderSubtle}"
+                                    BorderThickness="1"
+                                    Margin="0,0,0,16"
+                                    HorizontalAlignment="Center"
+                                    Effect="{StaticResource ClarityCardShadow}">
+                                <Path Data="{StaticResource IconInspectorGeometry}"
+                                      Stroke="{DynamicResource BrushAccentPrimary}"
+                                      StrokeThickness="1.75"
+                                      Width="24" Height="24" Stretch="Uniform"
+                                      HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <TextBlock Text="Process Inspector"
+                                       FontSize="15" FontWeight="SemiBold"
+                                       FontFamily="{DynamicResource FontFamilyUI}"
+                                       Foreground="{DynamicResource BrushTextPrimary}"
+                                       HorizontalAlignment="Center" Margin="0,0,0,6" />
+                            <TextBlock Text="Select any process from the matrix to inspect live telemetry, Authenticode digital signatures, SHA-256 hashes, and execution paths."
+                                       FontSize="12"
+                                       FontFamily="{DynamicResource FontFamilyUI}"
+                                       Foreground="{DynamicResource BrushTextSecondary}"
+                                       TextAlignment="Center" TextWrapping="Wrap" MaxWidth="260" LineHeight="18" Margin="0,0,0,16" />
+                            <Border Background="{DynamicResource BrushSurfaceRaised}"
+                                    BorderBrush="{DynamicResource BrushBorderSubtle}"
+                                    BorderThickness="1"
+                                    CornerRadius="6"
+                                    Padding="10,6"
+                                    HorizontalAlignment="Center">
+                                <TextBlock Text="↑ / ↓ Navigate • Del End Task"
+                                           FontSize="10"
+                                           FontFamily="{DynamicResource FontFamilyCode}"
+                                           Foreground="{DynamicResource BrushTextTertiary}" />
+                            </Border>
+                        </StackPanel>
+
+                        <!-- Pinned Bottom Actions (Disabled when nothing selected) -->
+                        <Border Grid.Row="1"
+                                BorderThickness="0,1,0,0"
+                                BorderBrush="{DynamicResource BrushBorderSubtle}"
+                                Padding="0,12,0,0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="8" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Button Grid.Column="0"
+                                        Style="{StaticResource ClarityButtonStyle}"
+                                        IsEnabled="False">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Data="{StaticResource IconTreeGeometry}"
+                                              Stroke="{DynamicResource BrushTextTertiary}"
+                                              StrokeThickness="1.5"
+                                              Width="12" Height="12" Stretch="Uniform"
+                                              Margin="0,0,6,0" VerticalAlignment="Center" />
+                                        <TextBlock Text="End Tree" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Grid.Column="2"
+                                        Style="{StaticResource ClarityDangerButtonStyle}"
+                                        IsEnabled="False">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Data="{StaticResource IconKillGeometry}"
+                                              Stroke="#FFFFFFFF"
+                                              StrokeThickness="1.5"
+                                              Width="12" Height="12" Stretch="Uniform"
+                                              Margin="0,0,6,0" VerticalAlignment="Center" />
+                                        <TextBlock Text="End Task" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
+                        </Border>
+                    </Grid>
                 </Grid>
             </Border>
         </Grid>

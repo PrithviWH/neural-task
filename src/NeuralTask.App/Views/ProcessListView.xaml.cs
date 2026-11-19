@@ -27,15 +27,47 @@ public partial class ProcessListView : UserControl
     {
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
+        Loaded += OnLoaded;
+    }
+
+    private void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel != null)
+        {
+            ViewModel.IsInspectorVisible = true;
+            if (ViewModel.SelectedProcess == null && ViewModel.FilteredProcesses.Count > 0)
+            {
+                ViewModel.SelectedProcess = ViewModel.FilteredProcesses[0];
+            }
+        }
     }
 
     private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
     {
+        if (e.OldValue is ProcessListViewModel oldVm)
+        {
+            oldVm.FilteredProcesses.CollectionChanged -= OnFilteredProcessesChanged;
+        }
+
         if (ViewModel != null)
         {
             ViewModel.ConfirmKillTreeCallback = ShowKillTreeDialog;
             ViewModel.ConfirmKillProcessCallback = ShowConfirmKillDialog;
             ViewModel.RequestScannerSweep += PlayScannerSweepAnimation;
+
+            ViewModel.FilteredProcesses.CollectionChanged += OnFilteredProcessesChanged;
+            if (ViewModel.SelectedProcess == null && ViewModel.FilteredProcesses.Count > 0)
+            {
+                ViewModel.SelectedProcess = ViewModel.FilteredProcesses[0];
+            }
+        }
+    }
+
+    private void OnFilteredProcessesChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+    {
+        if (ViewModel != null && ViewModel.SelectedProcess == null && ViewModel.FilteredProcesses.Count > 0 && ViewModel.IsInspectorVisible)
+        {
+            ViewModel.SelectedProcess = ViewModel.FilteredProcesses[0];
         }
     }
 
