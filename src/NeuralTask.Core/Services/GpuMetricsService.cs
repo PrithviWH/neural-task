@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Management;
 using System.Text.RegularExpressions;
+using NeuralTask.Core.Common;
 using NeuralTask.Core.Models;
 
 namespace NeuralTask.Core.Services;
@@ -349,7 +350,12 @@ public class GpuMetricsService : IGpuMetricsService, IDisposable
                     var processLookup = processes.ToDictionary(p => p.Pid, p => p.Name);
                     foreach (var kvp in pidUtilMap.OrderByDescending(x => x.Value).Take(5))
                     {
-                        string name = processLookup.TryGetValue(kvp.Key, out var n) ? n : $"Process {kvp.Key}";
+                        string rawName = processLookup.TryGetValue(kvp.Key, out var n) ? n : $"Process {kvp.Key}";
+                        string name = ProcessNameHelper.NormalizeProcessName(rawName);
+                        if (string.IsNullOrEmpty(name))
+                        {
+                            name = $"Process {kvp.Key}";
+                        }
                         topGpuList.Add(new GpuProcessMetric(kvp.Key, name, Math.Round(kvp.Value, 1)));
                     }
                 }

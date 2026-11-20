@@ -146,6 +146,9 @@ public class GpuTelemetryTests
                 {
                     Assert.Null(p.MemoryMb);
                 }
+
+                // Verify normalized process names have no duplicate .exe suffixes
+                Assert.DoesNotContain(".exe.exe", p.Name, StringComparison.OrdinalIgnoreCase);
             }
         }
     }

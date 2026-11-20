@@ -6,6 +6,7 @@ using System.Management;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.Win32;
+using NeuralTask.Core.Common;
 
 namespace NeuralTask.Plugins.Gpu;
 
@@ -707,7 +708,9 @@ public class GpuTelemetrySampler : IDisposable, IAsyncDisposable
         try
         {
             using var proc = Process.GetProcessById(pid);
-            var name = proc.ProcessName;
+            var rawName = proc.ProcessName;
+            var name = ProcessNameHelper.NormalizeProcessName(rawName);
+            if (string.IsNullOrWhiteSpace(name)) name = $"PID {pid}";
             _processNameCache[pid] = name;
             return name;
         }
