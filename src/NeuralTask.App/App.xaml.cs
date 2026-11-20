@@ -23,6 +23,8 @@ public partial class App : Application
         DispatcherUnhandledException += (s, args) =>
         {
             try { File.WriteAllText("crash.log", args.Exception?.ToString() ?? "Unknown dispatcher exception"); } catch { }
+            // Prevent non-fatal dispatcher UI errors (such as unexpected view/binding exceptions) from terminating the app
+            args.Handled = true;
         };
 
         ShutdownMode = ShutdownMode.OnMainWindowClose;
@@ -81,8 +83,7 @@ public partial class App : Application
     {
         try
         {
-            var coordinator = AppHost.Services.GetService<ProcessMonitorCoordinator>();
-            coordinator?.Dispose();
+            AppHost.DisposeServices();
         }
         catch
         {

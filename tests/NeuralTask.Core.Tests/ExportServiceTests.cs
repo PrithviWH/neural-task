@@ -258,9 +258,9 @@ public class ExportServiceTests
 
         var heuristics = new Dictionary<int, ProcessHeuristicResult>
         {
-            [5001] = new ProcessHeuristicResult(5001, "=cmd|'/c calc'!A0", 50, new List<HeuristicFlag>
+            [5001] = new ProcessHeuristicResult(5001, "=cmd|'/c calc'!A0", new[]
             {
-                new HeuristicFlag(HeuristicFlagCategory.SuspiciousLocation, HeuristicSeverity.High, "@FLAG_FORMULA")
+                new ProcessHeuristicFlag("SUSPICIOUS_NAME", "Suspicious Formula", "@FLAG_FORMULA", HeuristicSeverity.Warning)
             })
         };
 

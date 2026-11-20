@@ -18,6 +18,7 @@ public class ProcessListViewModel : ViewModelBase, IDisposable, IAsyncDisposable
     private readonly IProcessActionService _actionService;
     private readonly IHeuristicFlagEngine _heuristicEngine;
     private readonly IProcessInfoService _processInfoService;
+    private readonly IProcessInspectorViewModelFactory _inspectorFactory;
     private readonly Dictionary<int, ProcessItemViewModel> _allProcessesMap = new();
     private readonly List<ProcessItemViewModel> _allProcessesList = new();
     private readonly ConcurrentDictionary<int, ProcessHeuristicResult> _heuristicCache = new();
@@ -131,7 +132,7 @@ public class ProcessListViewModel : ViewModelBase, IDisposable, IAsyncDisposable
 
                 if (_selectedProcess != null)
                 {
-                    InspectorDetails = new ProcessInspectorViewModel(_selectedProcess, _processInfoService);
+                    InspectorDetails = _inspectorFactory.Create(_selectedProcess);
                     InspectorDetails.RequestShowStatus += (msg, isErr) => ShowStatus(msg, isErr);
                     IsInspectorVisible = true;
                 }
@@ -328,11 +329,13 @@ public class ProcessListViewModel : ViewModelBase, IDisposable, IAsyncDisposable
     public ProcessListViewModel(
         IProcessActionService? actionService = null,
         IHeuristicFlagEngine? heuristicEngine = null,
-        IProcessInfoService? processInfoService = null)
+        IProcessInfoService? processInfoService = null,
+        IProcessInspectorViewModelFactory? inspectorFactory = null)
     {
         _actionService = actionService ?? new ProcessActionService();
         _heuristicEngine = heuristicEngine ?? new HeuristicFlagEngine();
         _processInfoService = processInfoService ?? ProcessInfoService.Instance;
+        _inspectorFactory = inspectorFactory ?? new ProcessInspectorViewModelFactory(_processInfoService);
 
         ReScanCommand = new RelayCommand(TriggerReScan);
         CopyProcessInfoCommand = new RelayCommand(async () => await CopyProcessInfoAsync());
@@ -862,8 +865,13 @@ public class ProcessListViewModel : ViewModelBase, IDisposable, IAsyncDisposable
         });
     }
 
+    public int DisposeAsyncCount { get; private set; }
+    public int DisposeCount { get; private set; }
+    public int TotalDisposalCount => DisposeCount + DisposeAsyncCount;
+
     public async ValueTask DisposeAsync()
     {
+        DisposeAsyncCount++;
         Task? taskToWait = null;
         lock (_terminationStateLock)
         {
@@ -911,6 +919,7 @@ public class ProcessListViewModel : ViewModelBase, IDisposable, IAsyncDisposable
 
     public void Dispose()
     {
+        DisposeCount++;
         lock (_terminationStateLock)
         {
             if (_isDisposed) return;

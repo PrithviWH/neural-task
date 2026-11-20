@@ -262,8 +262,15 @@ public class StartupViewModel : ViewModelBase, IDisposable
         }
     }
 
+    private bool _isDisposed;
+    public int DisposeCount { get; private set; }
+
     public void Dispose()
     {
+        DisposeCount++;
+        if (_isDisposed) return;
+        _isDisposed = true;
+
         _allEntries.Clear();
         if (System.Windows.Application.Current?.Dispatcher is { } d && !d.CheckAccess())
         {

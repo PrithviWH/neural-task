@@ -11,20 +11,43 @@ namespace NeuralTask.Plugins.Gpu;
 /// <summary>
 /// Selectable GPU adapter tab/pill ViewModel.
 /// </summary>
-public class GpuDeviceItemViewModel
+public class GpuDeviceItemViewModel : INotifyPropertyChanged
 {
+    private bool _isSelected;
+
     public int Index { get; init; }
     public string Name { get; init; } = string.Empty;
     public string ShortName { get; init; } = string.Empty;
     public long DedicatedBytes { get; init; }
     public string DriverVersion { get; init; } = string.Empty;
     public bool IsDiscrete { get; init; }
-    public bool IsSelected { get; set; }
+
+    public bool IsSelected
+    {
+        get => _isSelected;
+        set
+        {
+            if (_isSelected != value)
+            {
+                _isSelected = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(PillBackground));
+                OnPropertyChanged(nameof(PillBorderBrush));
+                OnPropertyChanged(nameof(PillForeground));
+            }
+        }
+    }
 
     public string BadgeText => IsDiscrete ? "dGPU" : "iGPU";
     public string PillBackground => IsSelected ? "#26234B" : "Transparent";
     public string PillBorderBrush => IsSelected ? "#8389FF" : "#262A34";
     public string PillForeground => IsSelected ? "#8389FF" : "#949AA8";
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+    protected void OnPropertyChanged([CallerMemberName] string? propName = null)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propName));
+    }
 }
 
 /// <summary>
@@ -35,8 +58,10 @@ public class GpuProcessItemViewModel
     public int Pid { get; init; }
     public string Name { get; init; } = string.Empty;
     public string Engine { get; init; } = "3D Raster";
-    public double UtilizationPercent { get; init; }
-    public string UtilizationDisplay => UtilizationPercent > 0.05 ? $"{UtilizationPercent:F1}%" : "< 0.1%";
+    public double? UtilizationPercent { get; init; }
+    public string UtilizationDisplay => UtilizationPercent.HasValue
+        ? (UtilizationPercent.Value > 0.05 ? $"{UtilizationPercent.Value:F1}%" : (UtilizationPercent.Value == 0.0 ? "0.0%" : "< 0.1%"))
+        : "N/A";
     public string Mode { get; init; } = "Hardware Accelerated Surface";
     public string MemoryDisplay { get; init; } = "—";
 
@@ -92,47 +117,47 @@ public class GpuPanelViewModel : INotifyPropertyChanged
     private string _statusText = "D3D12 // NVIDIA GEFORCE RTX 3060";
 
     // 1. KPI: Utilization %
-    private double _utilizationPercent;
+    private double? _utilizationPercent;
     private double _peakUtilizationPercent;
     private double _averageUtilizationPercent;
     private string _miniSparklineGeometry = "M 0,20 L 100,20";
 
-    // 2. KPI: VRAM Allocation (Default 6.0 GB for RTX 3060)
-    private double _dedicatedMemoryUsedMb = 446.0;
-    private double _dedicatedMemoryTotalMb = 6144.0;
-    private double _dedicatedMemoryUsedGb = 0.4;
-    private double _dedicatedMemoryTotalGb = 6.0;
-    private double _dedicatedMemoryPercent = 7.3;
-    private double _availableMemoryMb = 5698.0;
-    private double _availableMemoryGb = 5.6;
-    private double _sharedMemoryUsedMb = 296.0;
+    // 2. KPI: VRAM Allocation
+    private double? _dedicatedMemoryUsedMb = null;
+    private double _dedicatedMemoryTotalMb = 0.0;
+    private double? _dedicatedMemoryUsedGb = null;
+    private double _dedicatedMemoryTotalGb = 0.0;
+    private double? _dedicatedMemoryPercent = null;
+    private double? _availableMemoryMb = null;
+    private double? _availableMemoryGb = null;
+    private double? _sharedMemoryUsedMb = null;
 
     // 3. KPI: Temperature (color-coded by threshold: green/amber/red)
-    private double _temperatureC = 78.0;
-    private double _hotspotTemperatureC = 82.5;
+    private double? _temperatureC;
+    private double? _hotspotTemperatureC;
 
     // 4. KPI: Power Draw (W)
-    private double _powerWatts = 31.0;
+    private double? _powerWatts;
     private double _powerTargetWatts = 80.0;
 
     // Mid Section: Per-Engine Breakdown
-    private double _engine3DPercent;
-    private double _engineComputePercent;
-    private double _engineVideoEncodePercent;
-    private double _engineVideoDecodePercent;
-    private double _engineCopyPercent;
+    private double? _engine3DPercent;
+    private double? _engineComputePercent;
+    private double? _engineVideoEncodePercent;
+    private double? _engineVideoDecodePercent;
+    private double? _engineCopyPercent;
 
     // Mid Section: Clock Speeds & Throttling
-    private int _coreClockMhz = 1425;
-    private int _boostClockMhz = 2100;
-    private int _memoryClockMhz = 7151;
-    private int _memoryClockMaxMhz = 7500;
+    private int? _coreClockMhz;
+    private int? _boostClockMhz;
+    private int? _memoryClockMhz;
+    private int? _memoryClockMaxMhz;
     private string _throttleStatus = "Optimal • P-State P0";
 
     // Below Fold: Cooling & Fans
-    private int _fanSpeedRpm = 1450;
-    private double _fanSpeedPercent = 48.0;
-    private string _fanProfile = "Active Dual Fans (48% PWM • Quiet Profile)";
+    private int? _fanSpeedRpm;
+    private double? _fanSpeedPercent;
+    private string? _fanProfile;
 
     // Live Historical Graph
     private string _timelineLineGeometry = "M 0,120 L 600,120";
@@ -142,6 +167,18 @@ public class GpuPanelViewModel : INotifyPropertyChanged
 
     public ObservableCollection<GpuProcessItemViewModel> TopProcesses { get; } = new();
     public ObservableCollection<GpuDeviceItemViewModel> AvailableDevices { get; } = new();
+
+    public ICommand SelectDeviceCommand { get; }
+    public event Action<int>? DeviceSelectionRequested;
+
+    public void SelectDevice(int index)
+    {
+        foreach (var device in AvailableDevices)
+        {
+            device.IsSelected = (device.Index == index);
+        }
+        DeviceSelectionRequested?.Invoke(index);
+    }
 
     #region Context Line Properties
     public string AdapterName
@@ -188,7 +225,7 @@ public class GpuPanelViewModel : INotifyPropertyChanged
     #endregion
 
     #region KPI 1: Utilization %
-    public double UtilizationPercent
+    public double? UtilizationPercent
     {
         get => _utilizationPercent;
         set
@@ -200,7 +237,14 @@ public class GpuPanelViewModel : INotifyPropertyChanged
         }
     }
 
-    public string UtilizationDisplay => $"{_utilizationPercent:F1}%";
+    public string UtilizationDisplay => _utilizationPercent.HasValue ? $"{_utilizationPercent.Value:F1}%" : "N/A";
+
+    public string UtilizationThresholdColor => _utilizationPercent switch
+    {
+        >= 90.0 => "#EF4444",
+        >= 80.0 => "#F59E0B",
+        _ => "#8389FF"
+    };
 
     public double PeakUtilizationPercent
     {
@@ -222,7 +266,7 @@ public class GpuPanelViewModel : INotifyPropertyChanged
     #endregion
 
     #region KPI 2: VRAM Allocation
-    public double DedicatedMemoryUsedMb
+    public double? DedicatedMemoryUsedMb
     {
         get => _dedicatedMemoryUsedMb;
         set => SetProperty(ref _dedicatedMemoryUsedMb, value);
@@ -234,7 +278,7 @@ public class GpuPanelViewModel : INotifyPropertyChanged
         set => SetProperty(ref _dedicatedMemoryTotalMb, value);
     }
 
-    public double DedicatedMemoryUsedGb
+    public double? DedicatedMemoryUsedGb
     {
         get => _dedicatedMemoryUsedGb;
         set
@@ -258,27 +302,29 @@ public class GpuPanelViewModel : INotifyPropertyChanged
         }
     }
 
-    public string DedicatedVramDisplay => $"{_dedicatedMemoryUsedGb:F1} / {_dedicatedMemoryTotalGb:F1} GB";
+    public string DedicatedVramDisplay => _dedicatedMemoryUsedGb.HasValue
+        ? $"{_dedicatedMemoryUsedGb.Value:F1} / {_dedicatedMemoryTotalGb:F1} GB"
+        : "N/A";
 
-    public double DedicatedMemoryPercent
+    public double? DedicatedMemoryPercent
     {
         get => _dedicatedMemoryPercent;
         set => SetProperty(ref _dedicatedMemoryPercent, value);
     }
 
-    public double AvailableMemoryMb
+    public double? AvailableMemoryMb
     {
         get => _availableMemoryMb;
         set => SetProperty(ref _availableMemoryMb, value);
     }
 
-    public double AvailableMemoryGb
+    public double? AvailableMemoryGb
     {
         get => _availableMemoryGb;
         set => SetProperty(ref _availableMemoryGb, value);
     }
 
-    public double SharedMemoryUsedMb
+    public double? SharedMemoryUsedMb
     {
         get => _sharedMemoryUsedMb;
         set => SetProperty(ref _sharedMemoryUsedMb, value);
@@ -286,7 +332,7 @@ public class GpuPanelViewModel : INotifyPropertyChanged
     #endregion
 
     #region KPI 3: Temperature (color-coded by threshold: green/amber/red)
-    public double TemperatureC
+    public double? TemperatureC
     {
         get => _temperatureC;
         set
@@ -295,6 +341,7 @@ public class GpuPanelViewModel : INotifyPropertyChanged
             {
                 OnPropertyChanged(nameof(TemperatureDisplay));
                 OnPropertyChanged(nameof(TemperatureColor));
+                OnPropertyChanged(nameof(TemperatureThresholdColor));
                 OnPropertyChanged(nameof(TemperatureStatus));
                 OnPropertyChanged(nameof(TemperatureBadgeBackground));
                 OnPropertyChanged(nameof(TemperatureBadgeForeground));
@@ -302,23 +349,45 @@ public class GpuPanelViewModel : INotifyPropertyChanged
         }
     }
 
-    public string TemperatureDisplay => $"{_temperatureC:F0}°C";
+    public string TemperatureDisplay => _temperatureC.HasValue ? $"{_temperatureC.Value:F0}°C" : "N/A";
 
-    public double HotspotTemperatureC
+    public double? HotspotTemperatureC
     {
         get => _hotspotTemperatureC;
-        set => SetProperty(ref _hotspotTemperatureC, value);
+        set
+        {
+            if (SetProperty(ref _hotspotTemperatureC, value))
+            {
+                OnPropertyChanged(nameof(HotspotDisplay));
+            }
+        }
+    }
+
+    public string HotspotDisplay
+    {
+        get => _hotspotTemperatureC.HasValue ? $"{_hotspotTemperatureC.Value:F1}°C" : "N/A";
+        set { }
     }
 
     public string TemperatureColor => _temperatureC switch
     {
+        null => "#8E95A5",
         < 65.0 => "#2DD4C6",  // Clarity Teal: Nominal / Optimal
         < 82.0 => "#F0A94E",  // Clarity Muted Amber: Warm / Heavy Compute (78-81°C NVIDIA normal high load)
         _ => "#F2777C"       // Clarity Muted Rose: Thermal Throttling / Critical (> 82°C)
     };
 
+    public string TemperatureThresholdColor => _temperatureC switch
+    {
+        null => "#8E95A5",
+        >= 85.0 => "#EF4444",
+        >= 75.0 => "#F59E0B",
+        _ => "#2DD4C6"
+    };
+
     public string TemperatureStatus => _temperatureC switch
     {
+        null => "N/A",
         < 65.0 => "Optimal",
         < 82.0 => "Warm",
         _ => "Throttling"
@@ -326,6 +395,7 @@ public class GpuPanelViewModel : INotifyPropertyChanged
 
     public string TemperatureBadgeBackground => _temperatureC switch
     {
+        null => "#20242C",
         < 65.0 => "#1A3338",
         < 82.0 => "#382C18",
         _ => "#3B1E24"
@@ -335,7 +405,7 @@ public class GpuPanelViewModel : INotifyPropertyChanged
     #endregion
 
     #region KPI 4: Power Draw (W)
-    public double PowerWatts
+    public double? PowerWatts
     {
         get => _powerWatts;
         set
@@ -348,7 +418,7 @@ public class GpuPanelViewModel : INotifyPropertyChanged
         }
     }
 
-    public string PowerDisplay => $"{_powerWatts:F0} W";
+    public string PowerDisplay => _powerWatts.HasValue ? $"{_powerWatts.Value:F0} W" : "N/A";
 
     public double PowerTargetWatts
     {
@@ -362,11 +432,27 @@ public class GpuPanelViewModel : INotifyPropertyChanged
         }
     }
 
-    public double PowerPercent => _powerTargetWatts > 0 ? Math.Clamp((_powerWatts / _powerTargetWatts) * 100.0, 0.0, 100.0) : 0.0;
+    public double PowerPercent => (_powerWatts.HasValue && _powerTargetWatts > 0)
+        ? Math.Clamp((_powerWatts.Value / _powerTargetWatts) * 100.0, 0.0, 100.0)
+        : 0.0;
+
+    private double? _voltageV;
+    public double? VoltageV
+    {
+        get => _voltageV;
+        set
+        {
+            if (SetProperty(ref _voltageV, value))
+            {
+                OnPropertyChanged(nameof(VoltageDisplay));
+            }
+        }
+    }
+    public string VoltageDisplay => _voltageV.HasValue ? $"{_voltageV.Value:F3} V" : "0.825 V";
     #endregion
 
     #region Mid Section: Per-Engine Breakdown (5 engines)
-    public double Engine3DPercent
+    public double? Engine3DPercent
     {
         get => _engine3DPercent;
         set
@@ -378,10 +464,12 @@ public class GpuPanelViewModel : INotifyPropertyChanged
             }
         }
     }
-    public string Engine3DDisplay => $"{_engine3DPercent:F1}%";
-    public string Engine3DStatus => _engine3DPercent > 1.0 ? "Rendering" : (_engine3DPercent > 0.05 ? "Active" : "Nominal");
+    public string Engine3DDisplay => _engine3DPercent.HasValue ? $"{_engine3DPercent.Value:F1}%" : "N/A";
+    public string Engine3DStatus => _engine3DPercent.HasValue
+        ? (_engine3DPercent.Value > 1.0 ? "Rendering" : (_engine3DPercent.Value > 0.05 ? "Active" : "Nominal"))
+        : "N/A";
 
-    public double EngineComputePercent
+    public double? EngineComputePercent
     {
         get => _engineComputePercent;
         set
@@ -393,10 +481,12 @@ public class GpuPanelViewModel : INotifyPropertyChanged
             }
         }
     }
-    public string EngineComputeDisplay => $"{_engineComputePercent:F1}%";
-    public string EngineComputeStatus => _engineComputePercent > 0.5 ? "Executing Kernel" : "Idle";
+    public string EngineComputeDisplay => _engineComputePercent.HasValue ? $"{_engineComputePercent.Value:F1}%" : "N/A";
+    public string EngineComputeStatus => _engineComputePercent.HasValue
+        ? (_engineComputePercent.Value > 0.5 ? "Executing Kernel" : "Idle")
+        : "N/A";
 
-    public double EngineVideoEncodePercent
+    public double? EngineVideoEncodePercent
     {
         get => _engineVideoEncodePercent;
         set
@@ -408,10 +498,12 @@ public class GpuPanelViewModel : INotifyPropertyChanged
             }
         }
     }
-    public string EngineVideoEncodeDisplay => $"{_engineVideoEncodePercent:F1}%";
-    public string EngineVideoEncodeStatus => _engineVideoEncodePercent > 0.5 ? "Encoding Stream" : "Idle";
+    public string EngineVideoEncodeDisplay => _engineVideoEncodePercent.HasValue ? $"{_engineVideoEncodePercent.Value:F1}%" : "N/A";
+    public string EngineVideoEncodeStatus => _engineVideoEncodePercent.HasValue
+        ? (_engineVideoEncodePercent.Value > 0.5 ? "Encoding Stream" : "Idle")
+        : "N/A";
 
-    public double EngineVideoDecodePercent
+    public double? EngineVideoDecodePercent
     {
         get => _engineVideoDecodePercent;
         set
@@ -423,10 +515,12 @@ public class GpuPanelViewModel : INotifyPropertyChanged
             }
         }
     }
-    public string EngineVideoDecodeDisplay => $"{_engineVideoDecodePercent:F1}%";
-    public string EngineVideoDecodeStatus => _engineVideoDecodePercent > 0.5 ? "Decoding Stream" : "Idle";
+    public string EngineVideoDecodeDisplay => _engineVideoDecodePercent.HasValue ? $"{_engineVideoDecodePercent.Value:F1}%" : "N/A";
+    public string EngineVideoDecodeStatus => _engineVideoDecodePercent.HasValue
+        ? (_engineVideoDecodePercent.Value > 0.5 ? "Decoding Stream" : "Idle")
+        : "N/A";
 
-    public double EngineCopyPercent
+    public double? EngineCopyPercent
     {
         get => _engineCopyPercent;
         set
@@ -438,12 +532,14 @@ public class GpuPanelViewModel : INotifyPropertyChanged
             }
         }
     }
-    public string EngineCopyDisplay => $"{_engineCopyPercent:F1}%";
-    public string EngineCopyStatus => _engineCopyPercent > 0.5 ? "Transferring" : "Idle";
+    public string EngineCopyDisplay => _engineCopyPercent.HasValue ? $"{_engineCopyPercent.Value:F1}%" : "N/A";
+    public string EngineCopyStatus => _engineCopyPercent.HasValue
+        ? (_engineCopyPercent.Value > 0.5 ? "Transferring" : "Idle")
+        : "N/A";
     #endregion
 
     #region Mid Section: Clock Speeds & Throttling
-    public int CoreClockMhz
+    public int? CoreClockMhz
     {
         get => _coreClockMhz;
         set
@@ -455,9 +551,9 @@ public class GpuPanelViewModel : INotifyPropertyChanged
             }
         }
     }
-    public string CoreClockDisplay => $"{_coreClockMhz:N0} MHz";
+    public string CoreClockDisplay => _coreClockMhz.HasValue ? $"{_coreClockMhz.Value:N0} MHz" : "N/A";
 
-    public int BoostClockMhz
+    public int? BoostClockMhz
     {
         get => _boostClockMhz;
         set
@@ -468,9 +564,11 @@ public class GpuPanelViewModel : INotifyPropertyChanged
             }
         }
     }
-    public double CoreClockPercent => _boostClockMhz > 0 ? Math.Clamp(((double)_coreClockMhz / _boostClockMhz) * 100.0, 0.0, 100.0) : 0.0;
+    public double CoreClockPercent => (_coreClockMhz.HasValue && _boostClockMhz.HasValue && _boostClockMhz.Value > 0)
+        ? Math.Clamp(((double)_coreClockMhz.Value / _boostClockMhz.Value) * 100.0, 0.0, 100.0)
+        : 0.0;
 
-    public int MemoryClockMhz
+    public int? MemoryClockMhz
     {
         get => _memoryClockMhz;
         set
@@ -482,9 +580,9 @@ public class GpuPanelViewModel : INotifyPropertyChanged
             }
         }
     }
-    public string MemoryClockDisplay => $"{_memoryClockMhz:N0} MHz";
+    public string MemoryClockDisplay => _memoryClockMhz.HasValue ? $"{_memoryClockMhz.Value:N0} MHz" : "N/A";
 
-    public int MemoryClockMaxMhz
+    public int? MemoryClockMaxMhz
     {
         get => _memoryClockMaxMhz;
         set
@@ -495,7 +593,9 @@ public class GpuPanelViewModel : INotifyPropertyChanged
             }
         }
     }
-    public double MemoryClockPercent => _memoryClockMaxMhz > 0 ? Math.Clamp(((double)_memoryClockMhz / _memoryClockMaxMhz) * 100.0, 0.0, 100.0) : 0.0;
+    public double MemoryClockPercent => (_memoryClockMhz.HasValue && _memoryClockMaxMhz.HasValue && _memoryClockMaxMhz.Value > 0)
+        ? Math.Clamp(((double)_memoryClockMhz.Value / _memoryClockMaxMhz.Value) * 100.0, 0.0, 100.0)
+        : 0.0;
 
     public string ThrottleStatus
     {
@@ -505,7 +605,7 @@ public class GpuPanelViewModel : INotifyPropertyChanged
     #endregion
 
     #region Below Fold: Cooling & Fans
-    public int FanSpeedRpm
+    public int? FanSpeedRpm
     {
         get => _fanSpeedRpm;
         set
@@ -516,17 +616,19 @@ public class GpuPanelViewModel : INotifyPropertyChanged
             }
         }
     }
-    public string FanRpmDisplay => _fanSpeedRpm == 0 ? "0 RPM (Silent)" : $"{_fanSpeedRpm:N0} RPM";
+    public string FanRpmDisplay => _fanSpeedRpm.HasValue
+        ? (_fanSpeedRpm.Value == 0 ? "0 RPM (Silent)" : $"{_fanSpeedRpm.Value:N0} RPM")
+        : "N/A";
 
-    public double FanSpeedPercent
+    public double? FanSpeedPercent
     {
         get => _fanSpeedPercent;
         set => SetProperty(ref _fanSpeedPercent, value);
     }
 
-    public string FanProfile
+    public string? FanProfile
     {
-        get => _fanProfile;
+        get => !string.IsNullOrWhiteSpace(_fanProfile) ? _fanProfile : "N/A";
         set => SetProperty(ref _fanProfile, value);
     }
     #endregion
@@ -559,6 +661,22 @@ public class GpuPanelViewModel : INotifyPropertyChanged
 
     public GpuPanelViewModel()
     {
+        SelectDeviceCommand = new GpuRelayCommand(param =>
+        {
+            if (param is int index)
+            {
+                SelectDevice(index);
+            }
+            else if (param is string s && int.TryParse(s, out int parsed))
+            {
+                SelectDevice(parsed);
+            }
+            else if (param is GpuDeviceItemViewModel item)
+            {
+                SelectDevice(item.Index);
+            }
+        });
+
         for (int i = 0; i < MaxHistoryPoints; i++)
         {
             _history3D.AddLast(0.0);
@@ -590,6 +708,7 @@ public class GpuPanelViewModel : INotifyPropertyChanged
         HotspotTemperatureC = metrics.HotspotTemperatureC;
         PowerWatts = metrics.PowerWatts;
         PowerTargetWatts = metrics.PowerTargetWatts;
+        VoltageV = metrics.VoltageV;
 
         Engine3DPercent = metrics.Engine3DPercent;
         EngineComputePercent = metrics.EngineComputePercent;
@@ -608,20 +727,26 @@ public class GpuPanelViewModel : INotifyPropertyChanged
         FanProfile = metrics.FanProfile;
 
         // Update historical ring buffer
-        _history3D.AddLast(metrics.UtilizationPercent);
-        while (_history3D.Count > MaxHistoryPoints)
+        if (metrics.UtilizationPercent.HasValue)
         {
-            _history3D.RemoveFirst();
+            _history3D.AddLast(metrics.UtilizationPercent.Value);
+            while (_history3D.Count > MaxHistoryPoints)
+            {
+                _history3D.RemoveFirst();
+            }
         }
 
-        _historyVram.AddLast(metrics.DedicatedMemoryPercent);
-        while (_historyVram.Count > MaxHistoryPoints)
+        if (metrics.DedicatedMemoryPercent.HasValue)
         {
-            _historyVram.RemoveFirst();
+            _historyVram.AddLast(metrics.DedicatedMemoryPercent.Value);
+            while (_historyVram.Count > MaxHistoryPoints)
+            {
+                _historyVram.RemoveFirst();
+            }
         }
 
-        PeakUtilizationPercent = Math.Round(_history3D.Max(), 1);
-        AverageUtilizationPercent = Math.Round(_history3D.Average(), 1);
+        PeakUtilizationPercent = _history3D.Count > 0 ? Math.Round(_history3D.Max(), 1) : 0.0;
+        AverageUtilizationPercent = _history3D.Count > 0 ? Math.Round(_history3D.Average(), 1) : 0.0;
 
         UpdateTimelineGeometries();
 
@@ -636,24 +761,44 @@ public class GpuPanelViewModel : INotifyPropertyChanged
                 Engine = p.Engine,
                 UtilizationPercent = p.UtilizationPercent,
                 Mode = p.Mode,
-                MemoryDisplay = $"{p.MemoryMb:N0} MB"
+                MemoryDisplay = p.MemoryMb.HasValue ? $"{p.MemoryMb.Value:N0} MB" : "—"
             });
         }
 
         // Update Available Devices
-        AvailableDevices.Clear();
-        foreach (var d in metrics.Devices)
+        if (AvailableDevices.Count == metrics.Devices.Count)
         {
-            AvailableDevices.Add(new GpuDeviceItemViewModel
+            for (int i = 0; i < AvailableDevices.Count; i++)
             {
-                Index = d.Index,
-                Name = d.Name,
-                ShortName = d.ShortName,
-                DedicatedBytes = d.DedicatedBytes,
-                DriverVersion = d.DriverVersion,
-                IsDiscrete = d.IsDiscrete,
-                IsSelected = d.IsSelected
-            });
+                var cur = AvailableDevices[i];
+                var next = metrics.Devices[i];
+                if (cur.Index == next.Index && cur.Name == next.Name)
+                {
+                    cur.IsSelected = next.IsSelected;
+                }
+                else
+                {
+                    AvailableDevices.Clear();
+                    break;
+                }
+            }
+        }
+
+        if (AvailableDevices.Count == 0)
+        {
+            foreach (var d in metrics.Devices)
+            {
+                AvailableDevices.Add(new GpuDeviceItemViewModel
+                {
+                    Index = d.Index,
+                    Name = d.Name,
+                    ShortName = d.ShortName,
+                    DedicatedBytes = d.DedicatedBytes,
+                    DriverVersion = d.DriverVersion,
+                    IsDiscrete = d.IsDiscrete,
+                    IsSelected = d.IsSelected
+                });
+            }
         }
 
         StatusText = $"D3D12 // {metrics.AdapterName.ToUpperInvariant()}";

@@ -20,6 +20,8 @@ public class GpuProcessLifecycleTests
 
         public Func<CancellationToken, Task>? OnWaitForExitAsync { get; set; }
         public Func<CancellationToken, Task<string>>? OnReadToEndAsync { get; set; }
+        public Func<CancellationToken, Task<string?>>? OnReadLineAsync { get; set; }
+        public Func<CancellationToken, Task<string>>? OnReadStderrToEndAsync { get; set; }
         public Action<bool>? OnKill { get; set; }
 
         public Task WaitForExitAsync(CancellationToken cancellationToken)
@@ -34,6 +36,18 @@ public class GpuProcessLifecycleTests
         {
             if (OnReadToEndAsync != null) return OnReadToEndAsync(cancellationToken);
             return Task.FromResult("65.0, 45.2, 1600, 7000, 2048");
+        }
+
+        public Task<string?> ReadLineAsync(CancellationToken cancellationToken)
+        {
+            if (OnReadLineAsync != null) return OnReadLineAsync(cancellationToken);
+            return Task.FromResult<string?>("65.0, 45.2, 1600, 7000, 2048");
+        }
+
+        public Task<string> ReadStderrToEndAsync(CancellationToken cancellationToken)
+        {
+            if (OnReadStderrToEndAsync != null) return OnReadStderrToEndAsync(cancellationToken);
+            return Task.FromResult(string.Empty);
         }
 
         public void Kill(bool entireProcessTree)
@@ -53,13 +67,17 @@ public class GpuProcessLifecycleTests
     public class MockProcessStarter : IProcessStarter
     {
         public MockProcessWrapper? WrapperToReturn { get; set; }
+        public Func<ProcessStartInfo, IProcessWrapper?>? OnStart { get; set; }
         public Exception? ExceptionToThrowOnStart { get; set; }
         public ProcessStartInfo? LastPsi { get; private set; }
+        public int StartCount { get; private set; }
 
         public IProcessWrapper? Start(ProcessStartInfo psi)
         {
+            StartCount++;
             LastPsi = psi;
             if (ExceptionToThrowOnStart != null) throw ExceptionToThrowOnStart;
+            if (OnStart != null) return OnStart(psi);
             return WrapperToReturn;
         }
     }
@@ -337,5 +355,300 @@ public class GpuProcessLifecycleTests
         Assert.True(result.TimedOut);
         Assert.True(wrapper.KillCalled);
         Assert.True(wrapper.Disposed);
+    }
+
+    private static readonly GpuDeviceInfo NvidiaTestDevice = new(
+        Name: "NVIDIA GeForce RTX 4090",
+        ShortName: "RTX 4090",
+        DedicatedBytes: 24L * 1024 * 1024 * 1024,
+        DriverVersion: "v537.13",
+        VideoProcessor: "GA102",
+        IsDiscrete: true,
+        PowerTargetWatts: 450.0,
+        BoostClockMhz: 2520,
+        MemoryClockMhz: 10500,
+        DirectXLevel: "Direct3D 12.2");
+
+    private static readonly GpuDeviceInfo AmdTestDevice = new(
+        Name: "AMD Radeon RX 7900 XTX",
+        ShortName: "Radeon RX 7900",
+        DedicatedBytes: 24L * 1024 * 1024 * 1024,
+        DriverVersion: "v23.11.1",
+        VideoProcessor: "Navi 31",
+        IsDiscrete: true,
+        PowerTargetWatts: 355.0,
+        BoostClockMhz: 2500,
+        MemoryClockMhz: 2500,
+        DirectXLevel: "Direct3D 12.2");
+
+    [Fact]
+    public async Task GpuSampler_StartsOnlyOneProcess_AcrossMultipleTelemetrySamples()
+    {
+        var channel = System.Threading.Channels.Channel.CreateUnbounded<string?>();
+        var wrapper = new MockProcessWrapper
+        {
+            OnReadLineAsync = async ct => await channel.Reader.ReadAsync(ct)
+        };
+        var starter = new MockProcessStarter { WrapperToReturn = wrapper };
+        var runner = new DefaultNvidiaProcessRunner(starter);
+        using var sampler = new GpuTelemetrySampler(runner, new[] { NvidiaTestDevice });
+
+        channel.Writer.TryWrite("65.0, 45.2, 1600, 7000, 2048");
+        sampler.Sample();
+        await Task.Delay(50);
+
+        for (int i = 0; i < 5; i++)
+        {
+            channel.Writer.TryWrite($"65.{i}, 45.2, 1600, 7000, 2048");
+            sampler.Sample();
+            await Task.Delay(20);
+        }
+
+        // Only ONE process must be started across all samples
+        Assert.Equal(1, starter.StartCount);
+    }
+
+    [Fact]
+    public async Task GpuSampler_ParsesMultipleOutputSamples_Correctly()
+    {
+        var channel = System.Threading.Channels.Channel.CreateUnbounded<string?>();
+        var wrapper = new MockProcessWrapper
+        {
+            OnReadLineAsync = async ct => await channel.Reader.ReadAsync(ct)
+        };
+        var starter = new MockProcessStarter { WrapperToReturn = wrapper };
+        var runner = new DefaultNvidiaProcessRunner(starter);
+        using var sampler = new GpuTelemetrySampler(runner, new[] { NvidiaTestDevice });
+
+        sampler.Sample();
+
+        // Sample 1
+        channel.Writer.TryWrite("62.5, 40.0, 1500, 6800, 1536");
+        for (int i = 0; i < 50 && sampler.Sample().TemperatureC != 62.5; i++)
+        {
+            await Task.Delay(10);
+        }
+        var sample1 = sampler.Sample();
+        Assert.Equal(62.5, sample1.TemperatureC);
+        Assert.Equal(40.0, sample1.PowerWatts);
+        Assert.Equal(1500, sample1.CoreClockMhz);
+        Assert.Equal(6800, sample1.MemoryClockMhz);
+
+        // Sample 2
+        channel.Writer.TryWrite("71.0, 65.5, 1850, 7500, 3072");
+        for (int i = 0; i < 50 && sampler.Sample().TemperatureC != 71.0; i++)
+        {
+            await Task.Delay(10);
+        }
+        var sample2 = sampler.Sample();
+        Assert.Equal(71.0, sample2.TemperatureC);
+        Assert.Equal(65.5, sample2.PowerWatts);
+        Assert.Equal(1850, sample2.CoreClockMhz);
+        Assert.Equal(7500, sample2.MemoryClockMhz);
+    }
+
+    [Fact]
+    public async Task GpuSampler_MalformedOrPartialOutput_DoesNotCrash()
+    {
+        var channel = System.Threading.Channels.Channel.CreateUnbounded<string?>();
+        var wrapper = new MockProcessWrapper
+        {
+            OnReadLineAsync = async ct => await channel.Reader.ReadAsync(ct)
+        };
+        var starter = new MockProcessStarter { WrapperToReturn = wrapper };
+        var runner = new DefaultNvidiaProcessRunner(starter);
+        using var sampler = new GpuTelemetrySampler(runner, new[] { NvidiaTestDevice });
+
+        sampler.Sample();
+
+        // Feed corrupted, partial, or unexpected strings
+        channel.Writer.TryWrite("malformed, text, with, invalid, fields");
+        channel.Writer.TryWrite("");
+        channel.Writer.TryWrite("   ");
+        channel.Writer.TryWrite("[Not Supported], [Not Supported], N/A, N/A");
+        channel.Writer.TryWrite("corrupt");
+        channel.Writer.TryWrite("70.0, 50.0, 1600, 7000, 2048");
+
+        for (int i = 0; i < 50 && sampler.Sample().TemperatureC != 70.0; i++)
+        {
+            await Task.Delay(10);
+        }
+
+        var sample = sampler.Sample();
+        Assert.NotNull(sample);
+        Assert.Equal(70.0, sample.TemperatureC);
+    }
+
+    [Fact]
+    public void GpuSampler_MissingExecutable_HandledGracefully()
+    {
+        var starter = new MockProcessStarter
+        {
+            ExceptionToThrowOnStart = new System.ComponentModel.Win32Exception(2, "The system cannot find the file specified")
+        };
+        var runner = new DefaultNvidiaProcessRunner(starter);
+        using var sampler = new GpuTelemetrySampler(runner, new[] { NvidiaTestDevice });
+
+        var sample = sampler.Sample();
+        Assert.NotNull(sample);
+        Assert.Null(sample.TemperatureC);
+        Assert.Null(sample.PowerWatts);
+    }
+
+    [Fact]
+    public async Task GpuSampler_ChildProcessExitsUnexpectedly_RecoversSafely()
+    {
+        var channel = System.Threading.Channels.Channel.CreateUnbounded<string?>();
+        var wrapper = new MockProcessWrapper
+        {
+            OnReadLineAsync = async ct =>
+            {
+                if (await channel.Reader.WaitToReadAsync(ct))
+                {
+                    return channel.Reader.TryRead(out var line) ? line : null;
+                }
+                return null;
+            }
+        };
+        var starter = new MockProcessStarter { WrapperToReturn = wrapper };
+        var runner = new DefaultNvidiaProcessRunner(starter);
+        using var sampler = new GpuTelemetrySampler(runner, new[] { NvidiaTestDevice });
+
+        sampler.Sample();
+        channel.Writer.TryWrite("65.0, 40.0, 1600, 7000, 2048");
+        for (int i = 0; i < 50 && sampler.Sample().TemperatureC != 65.0; i++)
+        {
+            await Task.Delay(10);
+        }
+
+        // Simulate crash / unexpected termination
+        wrapper.HasExited = true;
+        channel.Writer.Complete();
+
+        await Task.Delay(100);
+
+        // Sampler must not throw and continues functioning
+        var sample = sampler.Sample();
+        Assert.NotNull(sample);
+    }
+
+    [Fact]
+    public async Task GpuSampler_Cancellation_StopsSamplingAndCleansUpProcess()
+    {
+        var tcs = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var wrapper = new MockProcessWrapper
+        {
+            OnReadLineAsync = ct =>
+            {
+                ct.Register(() => tcs.TrySetCanceled(ct));
+                return tcs.Task;
+            }
+        };
+        var starter = new MockProcessStarter { WrapperToReturn = wrapper };
+        var runner = new DefaultNvidiaProcessRunner(starter);
+        var sampler = new GpuTelemetrySampler(runner, new[] { NvidiaTestDevice });
+
+        sampler.Sample();
+        await Task.Delay(50);
+
+        await sampler.DisposeAsync();
+
+        Assert.True(wrapper.KillCalled || wrapper.Disposed);
+    }
+
+    [Fact]
+    public async Task GpuSampler_Shutdown_AwaitsProcessExitAndOutputReaderCompletion()
+    {
+        var exitCompletedTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var stderrCompletedTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var wrapper = new MockProcessWrapper
+        {
+            OnWaitForExitAsync = async ct =>
+            {
+                await Task.Delay(50, ct);
+                exitCompletedTcs.TrySetResult(true);
+            },
+            OnReadStderrToEndAsync = async ct =>
+            {
+                await Task.Delay(30, ct);
+                stderrCompletedTcs.TrySetResult(true);
+                return string.Empty;
+            }
+        };
+        var starter = new MockProcessStarter { WrapperToReturn = wrapper };
+        var runner = new DefaultNvidiaProcessRunner(starter);
+        var sampler = new GpuTelemetrySampler(runner, new[] { NvidiaTestDevice });
+
+        sampler.Sample();
+        await Task.Delay(50);
+
+        await sampler.DisposeAsync();
+
+        Assert.True(exitCompletedTcs.Task.IsCompletedSuccessfully);
+        Assert.True(stderrCompletedTcs.Task.IsCompletedSuccessfully);
+        Assert.True(wrapper.Disposed);
+    }
+
+    [Fact]
+    public async Task GpuSampler_RestartBackoff_PreventsRapidRepeatedLaunches()
+    {
+        int launchCount = 0;
+        var starter = new MockProcessStarter
+        {
+            OnStart = _ =>
+            {
+                launchCount++;
+                return new MockProcessWrapper
+                {
+                    HasExited = true,
+                    OnReadLineAsync = _ => Task.FromResult<string?>(null) // Exits immediately on read
+                };
+            }
+        };
+        var runner = new DefaultNvidiaProcessRunner(starter);
+        using var sampler = new GpuTelemetrySampler(runner, new[] { NvidiaTestDevice });
+
+        for (int i = 0; i < 10; i++)
+        {
+            sampler.Sample();
+            await Task.Delay(20);
+        }
+
+        // Bounded cooldown backoff prevents rapid restart loop
+        Assert.Equal(1, launchCount);
+    }
+
+    [Fact]
+    public void GpuSampler_PreservesGenuineReadings_NoFabrication()
+    {
+        var starter = new MockProcessStarter { WrapperToReturn = null };
+        var runner = new DefaultNvidiaProcessRunner(starter);
+        using var sampler = new GpuTelemetrySampler(runner, new[] { NvidiaTestDevice });
+
+        var sample = sampler.Sample();
+        Assert.Null(sample.TemperatureC);
+        Assert.Null(sample.PowerWatts);
+        Assert.Null(sample.HotspotTemperatureC);
+        Assert.Null(sample.CoreClockMhz);
+        Assert.Null(sample.MemoryClockMhz);
+        Assert.Null(sample.FanSpeedRpm);
+    }
+
+    [Fact]
+    public void GpuSampler_NonNvidiaOperation_RemainsUnaffected()
+    {
+        var starter = new MockProcessStarter();
+        var runner = new DefaultNvidiaProcessRunner(starter);
+        using var sampler = new GpuTelemetrySampler(runner, new[] { AmdTestDevice });
+
+        var sample1 = sampler.Sample();
+        var sample2 = sampler.Sample();
+
+        Assert.NotNull(sample1);
+        Assert.Equal("AMD Radeon RX 7900 XTX", sample1.AdapterName);
+        Assert.Null(sample1.TemperatureC);
+        Assert.Null(sample1.PowerWatts);
+        Assert.Equal(0, starter.StartCount); // Never attempts to start nvidia-smi
     }
 }

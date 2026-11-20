@@ -180,13 +180,15 @@
                 <RowDefinition Height="Auto" />
                 <!-- 1. System Overview (4 Primary Metric Cards) -->
                 <RowDefinition Height="Auto" />
-                <!-- 2. Advanced Telemetry Stream (Selectable Multi-Metric Charts) -->
+                <!-- 2. Sectioned Hardware Statistics (CPU & GPU Sections) -->
                 <RowDefinition Height="Auto" />
-                <!-- 3. Top Resource Consumers (CPU, RAM, GPU) -->
+                <!-- 3. Advanced Telemetry Stream (Selectable Multi-Metric Charts) -->
                 <RowDefinition Height="Auto" />
-                <!-- 4. Storage and Network Cards -->
+                <!-- 4. Top Resource Consumers (CPU, RAM, GPU) -->
                 <RowDefinition Height="Auto" />
-                <!-- 5. System Intelligence & Health Center -->
+                <!-- 5. Storage and Network Cards -->
+                <RowDefinition Height="Auto" />
+                <!-- 6. System Intelligence & Health Center -->
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
@@ -477,8 +479,379 @@
                 </Border>
             </Grid>
 
-            <!-- 2. Advanced Telemetry: Multi-Channel Timelines (Beside each other, smoothed gradient rendering, PRD §6) -->
-            <Grid Grid.Row="2" Margin="0,0,0,20">
+            <!-- 2. Sectioned Hardware Statistics Dashboard: CPU & GPU Sections (Premium Grouped Hierarchy) -->
+            <Grid Grid.Row="2" Margin="0,0,0,22">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="5*" />
+                    <ColumnDefinition Width="16" />
+                    <ColumnDefinition Width="7*" />
+                </Grid.ColumnDefinitions>
+
+                <!-- =================================================================== -->
+                <!-- 1. CPU SECTION (Grouped: Clock, Power, Temperature, Utilization)     -->
+                <!-- =================================================================== -->
+                <Border Grid.Column="0"
+                        Background="{DynamicResource BrushSurface}"
+                        BorderBrush="{DynamicResource BrushBorderSubtle}"
+                        BorderThickness="1"
+                        CornerRadius="14"
+                        Padding="18,16"
+                        Effect="{StaticResource ClarityCardShadow}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <!-- Header with Icon & Processor Badge -->
+                            <RowDefinition Height="Auto" />
+                            <!-- 2x2 Metric Tiles -->
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+
+                        <!-- Header -->
+                        <Grid Grid.Row="0" Margin="0,0,0,14">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Path Data="M 4,4 L 20,4 L 20,20 L 4,20 Z M 7,7 L 17,7 L 17,17 L 7,17 Z M 2,9 L 4,9 M 2,15 L 4,15 M 20,9 L 22,9 M 20,15 L 22,15 M 9,2 L 9,4 M 15,2 L 15,4 M 9,20 L 9,22 M 15,20 L 15,22"
+                                      Stroke="{DynamicResource BrushAccentSecondary}"
+                                      StrokeThickness="1.5"
+                                      Width="14" Height="14"
+                                      Stretch="Uniform"
+                                      Margin="0,0,8,0"
+                                      VerticalAlignment="Center" />
+                                <TextBlock Text="CPU Hardware Statistics"
+                                           FontSize="13"
+                                           FontWeight="SemiBold"
+                                           FontFamily="{DynamicResource FontFamilyUI}"
+                                           Foreground="{DynamicResource BrushTextPrimary}"
+                                           VerticalAlignment="Center" />
+                            </StackPanel>
+
+                            <Border Grid.Column="1" Background="{DynamicResource BrushSurfaceRaised}" BorderBrush="{DynamicResource BrushBorderSubtle}" BorderThickness="1" CornerRadius="6" Padding="7,2">
+                                <TextBlock Text="{Binding CpuCoresDisplay, FallbackValue='CPU'}"
+                                           FontSize="10"
+                                           FontWeight="Medium"
+                                           FontFamily="{DynamicResource FontFamilyUI}"
+                                           Foreground="{DynamicResource BrushTextSecondary}"
+                                           TextTrimming="CharacterEllipsis"
+                                           MaxWidth="180" />
+                            </Border>
+                        </Grid>
+
+                        <!-- 2x2 Metrics Grid -->
+                        <Grid Grid.Row="1">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="10" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="10" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <!-- Metric 1: CPU Clock -->
+                            <Border Grid.Row="0" Grid.Column="0"
+                                    Background="{DynamicResource BrushSurfaceRaised}"
+                                    CornerRadius="8"
+                                    Padding="14,10">
+                                <StackPanel>
+                                    <TextBlock Text="CPU CLOCK"
+                                               FontSize="9.5"
+                                               FontWeight="Bold"
+                                               FontFamily="{DynamicResource FontFamilyUI}"
+                                               Foreground="{DynamicResource BrushTextTertiary}" />
+                                    <TextBlock Text="{Binding CpuClockDisplay, FallbackValue='3,293 MHz'}"
+                                               FontSize="18"
+                                               FontWeight="Bold"
+                                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                                               Foreground="{DynamicResource BrushAccentSecondary}"
+                                               Margin="0,4,0,0" />
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Metric 2: CPU Power -->
+                            <Border Grid.Row="0" Grid.Column="2"
+                                    Background="{DynamicResource BrushSurfaceRaised}"
+                                    CornerRadius="8"
+                                    Padding="14,10">
+                                <StackPanel>
+                                    <TextBlock Text="CPU POWER"
+                                               FontSize="9.5"
+                                               FontWeight="Bold"
+                                               FontFamily="{DynamicResource FontFamilyUI}"
+                                               Foreground="{DynamicResource BrushTextTertiary}" />
+                                    <TextBlock Text="{Binding CpuPowerDisplay, FallbackValue='31.3 W'}"
+                                               FontSize="18"
+                                               FontWeight="Bold"
+                                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                                               Foreground="{DynamicResource BrushTextPrimary}"
+                                               Margin="0,4,0,0" />
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Metric 3: CPU Temperature -->
+                            <Border Grid.Row="2" Grid.Column="0"
+                                    Background="{DynamicResource BrushSurfaceRaised}"
+                                    CornerRadius="8"
+                                    Padding="14,10">
+                                <StackPanel>
+                                    <Grid>
+                                        <TextBlock Text="CPU TEMPERATURE"
+                                                   FontSize="9.5"
+                                                   FontWeight="Bold"
+                                                   FontFamily="{DynamicResource FontFamilyUI}"
+                                                   Foreground="{DynamicResource BrushTextTertiary}" />
+                                        <Ellipse Width="6" Height="6"
+                                                 HorizontalAlignment="Right"
+                                                 VerticalAlignment="Center"
+                                                 Fill="{Binding CpuTemperatureColor, FallbackValue='#4ADE80'}" />
+                                    </Grid>
+                                    <TextBlock Text="{Binding CpuTemperatureDisplay, FallbackValue='55.0 °C'}"
+                                               FontSize="18"
+                                               FontWeight="Bold"
+                                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                                               Foreground="{Binding CpuTemperatureColor, FallbackValue='#4ADE80'}"
+                                               Margin="0,4,0,0" />
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Metric 4: CPU Utilization -->
+                            <Border Grid.Row="2" Grid.Column="2"
+                                    Background="{DynamicResource BrushSurfaceRaised}"
+                                    CornerRadius="8"
+                                    Padding="14,10">
+                                <StackPanel>
+                                    <Grid>
+                                        <TextBlock Text="CPU UTILIZATION"
+                                                   FontSize="9.5"
+                                                   FontWeight="Bold"
+                                                   FontFamily="{DynamicResource FontFamilyUI}"
+                                                   Foreground="{DynamicResource BrushTextTertiary}" />
+                                        <Ellipse Width="6" Height="6"
+                                                 HorizontalAlignment="Right"
+                                                 VerticalAlignment="Center"
+                                                 Fill="{Binding CpuUtilizationColor, FallbackValue='#8389FF'}" />
+                                    </Grid>
+                                    <TextBlock Text="{Binding CpuUtilizationDisplay, FallbackValue='0.0%'}"
+                                               FontSize="18"
+                                               FontWeight="Bold"
+                                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                                               Foreground="{Binding CpuUtilizationColor, FallbackValue='#8389FF'}"
+                                               Margin="0,4,0,0" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </Grid>
+                </Border>
+
+                <!-- =================================================================== -->
+                <!-- 2. GPU SECTION (Grouped: Clock, Power, Temp, Voltage, VRAM, Util)   -->
+                <!-- =================================================================== -->
+                <Border Grid.Column="2"
+                        Background="{DynamicResource BrushSurface}"
+                        BorderBrush="{DynamicResource BrushBorderSubtle}"
+                        BorderThickness="1"
+                        CornerRadius="14"
+                        Padding="18,16"
+                        Effect="{StaticResource ClarityCardShadow}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <!-- Header with Icon & GPU Badge -->
+                            <RowDefinition Height="Auto" />
+                            <!-- 3x2 Metric Tiles -->
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+
+                        <!-- Header -->
+                        <Grid Grid.Row="0" Margin="0,0,0,14">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Path Data="M 3,6 L 21,6 L 21,18 L 3,18 Z M 6,9 L 10,9 L 10,15 L 6,15 Z M 14,9 L 18,9 L 18,15 L 14,15 Z"
+                                      Stroke="{DynamicResource BrushAccentPrimary}"
+                                      StrokeThickness="1.5"
+                                      Width="15" Height="15"
+                                      Stretch="Uniform"
+                                      Margin="0,0,8,0"
+                                      VerticalAlignment="Center" />
+                                <TextBlock Text="GPU Hardware Statistics"
+                                           FontSize="13"
+                                           FontWeight="SemiBold"
+                                           FontFamily="{DynamicResource FontFamilyUI}"
+                                           Foreground="{DynamicResource BrushTextPrimary}"
+                                           VerticalAlignment="Center" />
+                            </StackPanel>
+
+                            <Border Grid.Column="1" Background="{DynamicResource BrushAccentPrimarySoft}" BorderBrush="{DynamicResource BrushBorderSubtle}" BorderThickness="1" CornerRadius="6" Padding="7,2">
+                                <TextBlock Text="{Binding GpuAdapterTitle, FallbackValue='DirectX GPU'}"
+                                           FontSize="10"
+                                           FontWeight="SemiBold"
+                                           FontFamily="{DynamicResource FontFamilyUI}"
+                                           Foreground="{DynamicResource BrushAccentPrimary}"
+                                           TextTrimming="CharacterEllipsis"
+                                           MaxWidth="220" />
+                            </Border>
+                        </Grid>
+
+                        <!-- 3x2 Metrics Grid -->
+                        <Grid Grid.Row="1">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="10" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="10" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="10" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <!-- Metric 1: GPU Clock -->
+                            <Border Grid.Row="0" Grid.Column="0"
+                                    Background="{DynamicResource BrushSurfaceRaised}"
+                                    CornerRadius="8"
+                                    Padding="14,10">
+                                <StackPanel>
+                                    <TextBlock Text="GPU CLOCK"
+                                               FontSize="9.5"
+                                               FontWeight="Bold"
+                                               FontFamily="{DynamicResource FontFamilyUI}"
+                                               Foreground="{DynamicResource BrushTextTertiary}" />
+                                    <TextBlock Text="{Binding GpuClockDisplay, FallbackValue='1,425 MHz'}"
+                                               FontSize="18"
+                                               FontWeight="Bold"
+                                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                                               Foreground="{DynamicResource BrushAccentPrimary}"
+                                               Margin="0,4,0,0" />
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Metric 2: GPU Power -->
+                            <Border Grid.Row="0" Grid.Column="2"
+                                    Background="{DynamicResource BrushSurfaceRaised}"
+                                    CornerRadius="8"
+                                    Padding="14,10">
+                                <StackPanel>
+                                    <TextBlock Text="GPU POWER"
+                                               FontSize="9.5"
+                                               FontWeight="Bold"
+                                               FontFamily="{DynamicResource FontFamilyUI}"
+                                               Foreground="{DynamicResource BrushTextTertiary}" />
+                                    <TextBlock Text="{Binding GpuPowerDisplay, FallbackValue='27.7 W'}"
+                                               FontSize="18"
+                                               FontWeight="Bold"
+                                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                                               Foreground="{DynamicResource BrushTextPrimary}"
+                                               Margin="0,4,0,0" />
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Metric 3: GPU Temperature -->
+                            <Border Grid.Row="0" Grid.Column="4"
+                                    Background="{DynamicResource BrushSurfaceRaised}"
+                                    CornerRadius="8"
+                                    Padding="14,10">
+                                <StackPanel>
+                                    <Grid>
+                                        <TextBlock Text="GPU TEMPERATURE"
+                                                   FontSize="9.5"
+                                                   FontWeight="Bold"
+                                                   FontFamily="{DynamicResource FontFamilyUI}"
+                                                   Foreground="{DynamicResource BrushTextTertiary}" />
+                                        <Ellipse Width="6" Height="6"
+                                                 HorizontalAlignment="Right"
+                                                 VerticalAlignment="Center"
+                                                 Fill="{Binding GpuTemperatureColor, FallbackValue='#2DD4C6'}" />
+                                    </Grid>
+                                    <TextBlock Text="{Binding GpuTemperatureDisplay, FallbackValue='78.5 °C'}"
+                                               FontSize="18"
+                                               FontWeight="Bold"
+                                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                                               Foreground="{Binding GpuTemperatureColor, FallbackValue='#2DD4C6'}"
+                                               Margin="0,4,0,0" />
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Metric 4: GPU Voltage -->
+                            <Border Grid.Row="2" Grid.Column="0"
+                                    Background="{DynamicResource BrushSurfaceRaised}"
+                                    CornerRadius="8"
+                                    Padding="14,10">
+                                <StackPanel>
+                                    <TextBlock Text="GPU VOLTAGE"
+                                               FontSize="9.5"
+                                               FontWeight="Bold"
+                                               FontFamily="{DynamicResource FontFamilyUI}"
+                                               Foreground="{DynamicResource BrushTextTertiary}" />
+                                    <TextBlock Text="{Binding GpuVoltageDisplay, FallbackValue='0.825 V'}"
+                                               FontSize="18"
+                                               FontWeight="Bold"
+                                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                                               Foreground="{DynamicResource BrushTextPrimary}"
+                                               Margin="0,4,0,0" />
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Metric 5: VRAM Clock -->
+                            <Border Grid.Row="2" Grid.Column="2"
+                                    Background="{DynamicResource BrushSurfaceRaised}"
+                                    CornerRadius="8"
+                                    Padding="14,10">
+                                <StackPanel>
+                                    <TextBlock Text="VRAM CLOCK"
+                                               FontSize="9.5"
+                                               FontWeight="Bold"
+                                               FontFamily="{DynamicResource FontFamilyUI}"
+                                               Foreground="{DynamicResource BrushTextTertiary}" />
+                                    <TextBlock Text="{Binding VramClockDisplay, FallbackValue='6,001 MHz'}"
+                                               FontSize="18"
+                                               FontWeight="Bold"
+                                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                                               Foreground="{DynamicResource BrushAccentSecondary}"
+                                               Margin="0,4,0,0" />
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Metric 6: GPU Utilization -->
+                            <Border Grid.Row="2" Grid.Column="4"
+                                    Background="{DynamicResource BrushSurfaceRaised}"
+                                    CornerRadius="8"
+                                    Padding="14,10">
+                                <StackPanel>
+                                    <Grid>
+                                        <TextBlock Text="GPU UTILIZATION"
+                                                   FontSize="9.5"
+                                                   FontWeight="Bold"
+                                                   FontFamily="{DynamicResource FontFamilyUI}"
+                                                   Foreground="{DynamicResource BrushTextTertiary}" />
+                                        <Ellipse Width="6" Height="6"
+                                                 HorizontalAlignment="Right"
+                                                 VerticalAlignment="Center"
+                                                 Fill="{Binding GpuUtilizationColor, FallbackValue='#8389FF'}" />
+                                    </Grid>
+                                    <TextBlock Text="{Binding GpuUtilizationDisplay, FallbackValue='0.0%'}"
+                                               FontSize="18"
+                                               FontWeight="Bold"
+                                               FontFamily="{DynamicResource FontFamilyNumeric}"
+                                               Foreground="{Binding GpuUtilizationColor, FallbackValue='#8389FF'}"
+                                               Margin="0,4,0,0" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- 3. Advanced Telemetry: Multi-Channel Timelines (Beside each other, smoothed gradient rendering, PRD §6) -->
+            <Grid Grid.Row="3" Margin="0,0,0,20">
                 <Grid.RowDefinitions>
                     <!-- Header Row: Title, Channels Count & Legend -->
                     <RowDefinition Height="Auto" />
@@ -976,8 +1349,8 @@
                 </Grid>
             </Grid>
 
-            <!-- 3. Top Resource Consumers: CPU, Memory, GPU (Three Sections) -->
-            <Grid Grid.Row="3" Margin="0,0,0,20">
+            <!-- 4. Top Resource Consumers: CPU, Memory, GPU (Three Sections) -->
+            <Grid Grid.Row="4" Margin="0,0,0,20">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="14" />
@@ -1182,8 +1555,8 @@
                 </Border>
             </Grid>
 
-            <!-- 4. Storage & Network Telemetry (Two Compact Dedicated Cards) -->
-            <Grid Grid.Row="4" Margin="0,0,0,20">
+            <!-- 5. Storage & Network Telemetry (Two Compact Dedicated Cards) -->
+            <Grid Grid.Row="5" Margin="0,0,0,20">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="14" />
@@ -1361,8 +1734,8 @@
                 </Border>
             </Grid>
 
-            <!-- 5. System Intelligence & Health Center -->
-            <Border Grid.Row="5"
+            <!-- 6. System Intelligence & Health Center -->
+            <Border Grid.Row="6"
                     Background="{DynamicResource BrushSurface}"
                     BorderBrush="{DynamicResource BrushBorderSubtle}"
                     BorderThickness="1"

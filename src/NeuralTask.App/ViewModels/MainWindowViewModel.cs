@@ -10,8 +10,6 @@ namespace NeuralTask.App.ViewModels;
 public class MainWindowViewModel : ViewModelBase, IDisposable, IAsyncDisposable
 {
     private readonly ProcessMonitorCoordinator _coordinator;
-    private readonly ISettingsService _settingsService;
-    private readonly IProcessActionService _actionService;
     private readonly TrayIconService _trayIconService;
     private readonly IPluginManager _pluginManager;
     private readonly Action _onRestoreRequested;
@@ -21,6 +19,9 @@ public class MainWindowViewModel : ViewModelBase, IDisposable, IAsyncDisposable
     private readonly SemaphoreSlim _pluginTickLock = new(1, 1);
     private Task? _lastPluginTickTask;
     private bool _isDisposed;
+    public int DisposeAsyncCount { get; private set; }
+    public int DisposeCount { get; private set; }
+    public int TotalDisposalCount => DisposeCount + DisposeAsyncCount;
 
     public Task StartupLoadTask { get; }
 
@@ -48,28 +49,23 @@ public class MainWindowViewModel : ViewModelBase, IDisposable, IAsyncDisposable
 
     public MainWindowViewModel(
         ProcessMonitorCoordinator coordinator,
-        ISettingsService settingsService,
-        IProcessActionService actionService,
         TrayIconService trayIconService,
-        IStartupScoreEngine startupScoreEngine,
-        IProcessMonitorService monitorService,
-        IHeuristicFlagEngine heuristicFlagEngine,
-        IProcessInfoService processInfoService,
-        IHistoryStore historyStore,
-        IExportService exportService,
-        IPluginManager pluginManager)
+        IPluginManager pluginManager,
+        DashboardViewModel dashboard,
+        ProcessListViewModel processList,
+        PerformanceViewModel performance,
+        StartupViewModel startup,
+        SettingsViewModel settings)
     {
         _coordinator = coordinator ?? throw new ArgumentNullException(nameof(coordinator));
-        _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
-        _actionService = actionService ?? throw new ArgumentNullException(nameof(actionService));
         _trayIconService = trayIconService ?? throw new ArgumentNullException(nameof(trayIconService));
         _pluginManager = pluginManager ?? throw new ArgumentNullException(nameof(pluginManager));
 
-        Dashboard = new DashboardViewModel(historyStore, exportService, heuristicFlagEngine, startupEngine: startupScoreEngine);
-        ProcessList = new ProcessListViewModel(_actionService, heuristicFlagEngine, processInfoService);
-        Performance = new PerformanceViewModel();
-        Startup = new StartupViewModel(startupScoreEngine, monitorService);
-        Settings = new SettingsViewModel(_settingsService, _coordinator, heuristicFlagEngine, historyStore, _pluginManager);
+        Dashboard = dashboard ?? throw new ArgumentNullException(nameof(dashboard));
+        ProcessList = processList ?? throw new ArgumentNullException(nameof(processList));
+        Performance = performance ?? throw new ArgumentNullException(nameof(performance));
+        Startup = startup ?? throw new ArgumentNullException(nameof(startup));
+        Settings = settings ?? throw new ArgumentNullException(nameof(settings));
 
         _coordinator.UpdateReceived += OnMonitoringUpdateReceived;
 
@@ -166,6 +162,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable, IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        DisposeAsyncCount++;
         if (_isDisposed) return;
         _isDisposed = true;
 
@@ -206,6 +203,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable, IAsyncDisposable
 
     public void Dispose()
     {
+        DisposeCount++;
         if (_isDisposed) return;
         _isDisposed = true;
 

@@ -114,6 +114,11 @@ public class ProcessMonitorCoordinator : IDisposable, IAsyncDisposable
         }
     }
 
+    public void PublishUpdateForTesting(ProcessMonitoringUpdate update)
+    {
+        UpdateReceived?.Invoke(update);
+    }
+
     public async ValueTask DisposeAsync()
     {
         if (_isDisposed) return;

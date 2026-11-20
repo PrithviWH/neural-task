@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Runtime.InteropServices;
+using NeuralTask.Core.Common;
 
 namespace NeuralTask.Core.Services;
 
@@ -16,7 +17,18 @@ public class AuthenticodeSignatureVerifier : ISignatureVerifier
 {
     public static readonly AuthenticodeSignatureVerifier Instance = new();
 
-    private readonly ConcurrentDictionary<string, SignatureStatus> _cache = new(StringComparer.OrdinalIgnoreCase);
+    public const int DefaultCacheCapacity = 500;
+    private readonly BoundedLruCache<string, SignatureCacheEntry> _cache;
+
+    public int CacheCount => _cache.Count;
+    public int CacheCapacity => _cache.MaxCapacity;
+
+    public sealed record SignatureCacheEntry(SignatureStatus Status, DateTime LastWriteTimeUtc, long FileLength);
+
+    public AuthenticodeSignatureVerifier(int cacheCapacity = DefaultCacheCapacity)
+    {
+        _cache = new BoundedLruCache<string, SignatureCacheEntry>(cacheCapacity, StringComparer.OrdinalIgnoreCase);
+    }
 
     private static readonly Guid ActionGenericVerifyV2 = new("00AAC56B-CD44-11d0-8CC2-00C04FC295EE");
 
@@ -166,7 +178,33 @@ public class AuthenticodeSignatureVerifier : ISignatureVerifier
             return SignatureStatus.Unknown;
         }
 
-        return _cache.GetOrAdd(filePath, VerifySignatureDirect);
+        try
+        {
+            if (!File.Exists(filePath))
+            {
+                return SignatureStatus.Unknown;
+            }
+
+            var lastWrite = File.GetLastWriteTimeUtc(filePath);
+            var fileLength = new FileInfo(filePath).Length;
+
+            if (_cache.TryGetValue(filePath, out var cached) && cached != null)
+            {
+                // Invalidate cache if file timestamp or length changed on disk
+                if (cached.LastWriteTimeUtc == lastWrite && cached.FileLength == fileLength)
+                {
+                    return cached.Status;
+                }
+            }
+
+            var status = VerifySignatureDirect(filePath);
+            _cache.Set(filePath, new SignatureCacheEntry(status, lastWrite, fileLength));
+            return status;
+        }
+        catch
+        {
+            return SignatureStatus.Unknown;
+        }
     }
 
     private SignatureStatus VerifySignatureDirect(string filePath)

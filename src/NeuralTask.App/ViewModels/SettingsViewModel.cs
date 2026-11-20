@@ -340,8 +340,15 @@ public class SettingsViewModel : ViewModelBase, IDisposable
         ));
     }
 
+    private bool _isDisposed;
+    public int DisposeCount { get; private set; }
+
     public void Dispose()
     {
+        DisposeCount++;
+        if (_isDisposed) return;
+        _isDisposed = true;
+
         if (_pluginManager != null)
         {
             _pluginManager.PanelLoaded -= _onPluginPanelLoaded;

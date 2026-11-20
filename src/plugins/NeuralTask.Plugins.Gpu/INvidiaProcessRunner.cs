@@ -7,9 +7,17 @@ namespace NeuralTask.Plugins.Gpu;
 
 public record NvidiaProcessResult(int ExitCode, string Output, bool TimedOut);
 
+public interface INvidiaProcessSession : IAsyncDisposable, IDisposable
+{
+    bool HasExited { get; }
+    Task<string?> ReadLineAsync(CancellationToken cancellationToken);
+    Task StopAsync(TimeSpan timeout);
+}
+
 public interface INvidiaProcessRunner
 {
     Task<NvidiaProcessResult?> RunQueryAsync(string arguments, TimeSpan timeout, CancellationToken cancellationToken);
+    INvidiaProcessSession? StartSession(string arguments, CancellationToken cancellationToken) => null;
 }
 
 public interface IProcessWrapper : IDisposable
@@ -18,6 +26,8 @@ public interface IProcessWrapper : IDisposable
     bool HasExited { get; }
     Task WaitForExitAsync(CancellationToken cancellationToken);
     Task<string> ReadToEndAsync(CancellationToken cancellationToken);
+    Task<string?> ReadLineAsync(CancellationToken cancellationToken);
+    Task<string> ReadStderrToEndAsync(CancellationToken cancellationToken);
     void Kill(bool entireProcessTree);
 }
 
@@ -34,6 +44,8 @@ public class StandardProcessWrapper : IProcessWrapper
     public bool HasExited => _process.HasExited;
     public Task WaitForExitAsync(CancellationToken cancellationToken) => _process.WaitForExitAsync(cancellationToken);
     public Task<string> ReadToEndAsync(CancellationToken cancellationToken) => _process.StandardOutput.ReadToEndAsync(cancellationToken);
+    public Task<string?> ReadLineAsync(CancellationToken cancellationToken) => _process.StandardOutput.ReadLineAsync(cancellationToken).AsTask();
+    public Task<string> ReadStderrToEndAsync(CancellationToken cancellationToken) => _process.StandardError.ReadToEndAsync(cancellationToken);
     public void Kill(bool entireProcessTree) => _process.Kill(entireProcessTree);
     public void Dispose() => _process.Dispose();
 }
@@ -48,6 +60,131 @@ public class StandardProcessStarter : IProcessStarter
     }
 }
 
+public class DefaultNvidiaProcessSession : INvidiaProcessSession
+{
+    private readonly IProcessWrapper _process;
+    private readonly CancellationTokenSource _sessionCts = new();
+    private readonly Task<string> _stderrDrainTask;
+    private bool _isDisposed;
+    private readonly object _lock = new();
+
+    public DefaultNvidiaProcessSession(IProcessWrapper process)
+    {
+        _process = process ?? throw new ArgumentNullException(nameof(process));
+        // Drain stderr continuously in the background so the stderr pipe buffer never fills up
+        _stderrDrainTask = Task.Run(async () =>
+        {
+            try
+            {
+                return await _process.ReadStderrToEndAsync(_sessionCts.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                return string.Empty;
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceWarning($"Error draining nvidia-smi stderr: {ex.Message}");
+                return string.Empty;
+            }
+        });
+    }
+
+    public bool HasExited => _process.HasExited;
+
+    public async Task<string?> ReadLineAsync(CancellationToken cancellationToken)
+    {
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _sessionCts.Token);
+        try
+        {
+            return await _process.ReadLineAsync(linkedCts.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested || _sessionCts.IsCancellationRequested)
+        {
+            return null;
+        }
+    }
+
+    public async Task StopAsync(TimeSpan timeout)
+    {
+        lock (_lock)
+        {
+            if (_isDisposed) return;
+            _isDisposed = true;
+        }
+
+        try
+        {
+            _sessionCts.Cancel();
+        }
+        catch (ObjectDisposedException) { }
+
+        // 1. Terminate process tree if still running
+        try
+        {
+            if (!_process.HasExited)
+            {
+                _process.Kill(entireProcessTree: true);
+            }
+        }
+        catch (Exception ex)
+        {
+            Trace.TraceWarning($"Failed to kill nvidia-smi process tree: {ex.Message}");
+        }
+
+        // 2. Await process exit with bounded timeout
+        using var exitCts = new CancellationTokenSource(timeout);
+        try
+        {
+            await _process.WaitForExitAsync(exitCts.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            Trace.TraceWarning($"nvidia-smi process did not exit within {timeout.TotalMilliseconds}ms.");
+        }
+        catch (Exception ex)
+        {
+            Trace.TraceWarning($"Error waiting for nvidia-smi process exit: {ex.Message}");
+        }
+
+        // 3. Observe and complete stderr drain task
+        try
+        {
+            await _stderrDrainTask.ConfigureAwait(false);
+        }
+        catch { }
+
+        // 4. Dispose process and CTS
+        try
+        {
+            _process.Dispose();
+        }
+        catch { }
+
+        try
+        {
+            _sessionCts.Dispose();
+        }
+        catch { }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await StopAsync(TimeSpan.FromMilliseconds(1000)).ConfigureAwait(false);
+        GC.SuppressFinalize(this);
+    }
+
+    public void Dispose()
+    {
+        try
+        {
+            StopAsync(TimeSpan.FromMilliseconds(500)).GetAwaiter().GetResult();
+        }
+        catch { }
+        GC.SuppressFinalize(this);
+    }
+}
+
 public class DefaultNvidiaProcessRunner : INvidiaProcessRunner
 {
     public static readonly DefaultNvidiaProcessRunner Instance = new();
@@ -56,6 +193,36 @@ public class DefaultNvidiaProcessRunner : INvidiaProcessRunner
     public DefaultNvidiaProcessRunner(IProcessStarter? processStarter = null)
     {
         _processStarter = processStarter ?? StandardProcessStarter.Instance;
+    }
+
+    public INvidiaProcessSession? StartSession(string arguments, CancellationToken cancellationToken)
+    {
+        if (cancellationToken.IsCancellationRequested) return null;
+
+        var psi = new ProcessStartInfo
+        {
+            FileName = "nvidia-smi.exe",
+            Arguments = arguments,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+
+        IProcessWrapper? proc = null;
+        try
+        {
+            proc = _processStarter.Start(psi);
+        }
+        catch (Exception ex)
+        {
+            Trace.TraceWarning($"Failed to start nvidia-smi session: {ex.Message}");
+            return null;
+        }
+
+        if (proc == null) return null;
+
+        return new DefaultNvidiaProcessSession(proc);
     }
 
     public async Task<NvidiaProcessResult?> RunQueryAsync(string arguments, TimeSpan timeout, CancellationToken cancellationToken)
