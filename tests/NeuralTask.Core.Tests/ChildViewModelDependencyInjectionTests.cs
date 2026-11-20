@@ -27,14 +27,12 @@ public class ChildViewModelDependencyInjectionTests
 
         var dashboard = provider.GetService<DashboardViewModel>();
         var processList = provider.GetService<ProcessListViewModel>();
-        var performance = provider.GetService<PerformanceViewModel>();
         var startup = provider.GetService<StartupViewModel>();
         var settings = provider.GetService<SettingsViewModel>();
         var inspectorFactory = provider.GetService<IProcessInspectorViewModelFactory>();
 
         Assert.NotNull(dashboard);
         Assert.NotNull(processList);
-        Assert.NotNull(performance);
         Assert.NotNull(startup);
         Assert.NotNull(settings);
         Assert.NotNull(inspectorFactory);
@@ -49,7 +47,6 @@ public class ChildViewModelDependencyInjectionTests
 
         Assert.NotNull(mainWindowVm.Dashboard);
         Assert.NotNull(mainWindowVm.ProcessList);
-        Assert.NotNull(mainWindowVm.Performance);
         Assert.NotNull(mainWindowVm.Startup);
         Assert.NotNull(mainWindowVm.Settings);
         Assert.NotNull(mainWindowVm.PluginManager);
@@ -68,10 +65,6 @@ public class ChildViewModelDependencyInjectionTests
         var pl1 = provider.GetRequiredService<ProcessListViewModel>();
         var pl2 = provider.GetRequiredService<ProcessListViewModel>();
         Assert.NotSame(pl1, pl2);
-
-        var p1 = provider.GetRequiredService<PerformanceViewModel>();
-        var p2 = provider.GetRequiredService<PerformanceViewModel>();
-        Assert.NotSame(p1, p2);
 
         var s1 = provider.GetRequiredService<StartupViewModel>();
         var s2 = provider.GetRequiredService<StartupViewModel>();
@@ -362,6 +355,145 @@ public class ChildViewModelDependencyInjectionTests
         coordinator.PublishUpdateForTesting(update);
 
         Assert.Contains("Online • 2 processes", mainWindowVm.StatusBadgeText);
-        Assert.Equal("28.5%", mainWindowVm.Performance.CurrentCpuText);
+        Assert.Equal("28.5%", mainWindowVm.Dashboard.CpuDisplay);
+    }
+
+    [Fact]
+    public void MainWindowViewModel_NoLongerRequiresOrContainsPerformanceViewModel()
+    {
+        // 1. Verify property no longer exists on MainWindowViewModel
+        var perfProp = typeof(MainWindowViewModel).GetProperty("Performance");
+        Assert.Null(perfProp);
+
+        // 2. Verify constructor parameters do not include any PerformanceViewModel
+        var ctors = typeof(MainWindowViewModel).GetConstructors();
+        Assert.Single(ctors);
+        var parameters = ctors[0].GetParameters();
+        Assert.DoesNotContain(parameters, p => p.Name != null && p.Name.Contains("performance", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(parameters, p => p.ParameterType.Name.Contains("PerformanceViewModel", StringComparison.OrdinalIgnoreCase));
+
+        // 3. Verify DI resolves MainWindowViewModel cleanly without PerformanceViewModel
+        var provider = CreateTestServiceProvider();
+        using var mainWindowVm = provider.GetRequiredService<MainWindowViewModel>();
+        Assert.NotNull(mainWindowVm);
+        Assert.NotNull(mainWindowVm.Dashboard);
+        Assert.NotNull(mainWindowVm.ProcessList);
+        Assert.NotNull(mainWindowVm.Startup);
+        Assert.NotNull(mainWindowVm.Settings);
+    }
+
+    [Fact]
+    public void AppHost_NoLongerRegistersObsoletePerformanceViewModel()
+    {
+        var services = AppHost.ConfigureServices();
+
+        // Verify service descriptors have no registration for PerformanceViewModel
+        Assert.DoesNotContain(services, sd =>
+            sd.ServiceType.Name.Contains("PerformanceViewModel", StringComparison.OrdinalIgnoreCase) ||
+            (sd.ImplementationType != null && sd.ImplementationType.Name.Contains("PerformanceViewModel", StringComparison.OrdinalIgnoreCase)));
+
+        // Verify provider does not resolve any PerformanceViewModel
+        var provider = services.BuildServiceProvider();
+        var obsoleteType = Type.GetType("NeuralTask.App.ViewModels.PerformanceViewModel, NeuralTask.App");
+        Assert.Null(obsoleteType);
+    }
+
+    [Fact]
+    public void Dashboard_PerformanceGraphData_ContinuesUpdatingCorrectly()
+    {
+        var provider = CreateTestServiceProvider();
+        using var mainWindowVm = provider.GetRequiredService<MainWindowViewModel>();
+
+        var metrics = new SystemMetricsSnapshot(
+            CpuPercent: 62.4,
+            TotalMemoryBytes: 32L * 1024 * 1024 * 1024,
+            UsedMemoryBytes: 16L * 1024 * 1024 * 1024,
+            AvailableMemoryBytes: 16L * 1024 * 1024 * 1024,
+            MemoryPercent: 50.0,
+            ProcessIoBytesPerSec: 1024 * 500,
+            NetworkReceivedBytesPerSec: 1024 * 100,
+            NetworkSentBytesPerSec: 1024 * 50,
+            ProcessorName: "Ryzen 9",
+            LogicalCoreCount: 16,
+            OsVersion: "Windows 11",
+            ProcessCount: 120,
+            Uptime: TimeSpan.FromHours(5));
+
+        var update = new ProcessMonitoringUpdate(Array.Empty<ProcessSnapshot>(), metrics);
+
+        var coordinator = provider.GetRequiredService<ProcessMonitorCoordinator>();
+        coordinator.PublishUpdateForTesting(update);
+
+        // Verify Dashboard performance metrics updated correctly
+        Assert.Equal("62.4%", mainWindowVm.Dashboard.CpuDisplay);
+        Assert.NotNull(mainWindowVm.Dashboard.CpuCurveGeometry);
+        Assert.NotNull(mainWindowVm.Dashboard.RamCurveGeometry);
+        Assert.NotNull(mainWindowVm.Dashboard.DiskCurveGeometry);
+        Assert.NotNull(mainWindowVm.Dashboard.NetCurveGeometry);
+    }
+
+    [Fact]
+    public void MonitoringUpdates_FlowCleanlyWithoutRemovedViewModel()
+    {
+        var provider = CreateTestServiceProvider();
+        using var mainWindowVm = provider.GetRequiredService<MainWindowViewModel>();
+
+        var metrics = new SystemMetricsSnapshot(
+            CpuPercent: 15.0,
+            TotalMemoryBytes: 16L * 1024 * 1024 * 1024,
+            UsedMemoryBytes: 4L * 1024 * 1024 * 1024,
+            AvailableMemoryBytes: 12L * 1024 * 1024 * 1024,
+            MemoryPercent: 25.0,
+            ProcessIoBytesPerSec: 1024 * 20,
+            NetworkReceivedBytesPerSec: 1024 * 10,
+            NetworkSentBytesPerSec: 1024 * 5,
+            ProcessorName: "Intel i7",
+            LogicalCoreCount: 8,
+            OsVersion: "Windows 11",
+            ProcessCount: 1,
+            Uptime: TimeSpan.FromMinutes(30));
+
+        var procs = new List<ProcessSnapshot>
+        {
+            new ProcessSnapshot(1234, "Service.exe", 0, 5.0, 1024 * 1024 * 100, 1000, null, null, @"C:\Service.exe")
+        };
+
+        var update = new ProcessMonitoringUpdate(procs, metrics);
+        var coordinator = provider.GetRequiredService<ProcessMonitorCoordinator>();
+
+        // Must publish update without any exception and without invoking orphaned PerformanceViewModel
+        var ex = Record.Exception(() => coordinator.PublishUpdateForTesting(update));
+        Assert.Null(ex);
+
+        Assert.Equal(1, mainWindowVm.ProcessList.TotalCount);
+        Assert.Equal("15.0%", mainWindowVm.Dashboard.CpuDisplay);
+        Assert.Contains("Online • 1 processes", mainWindowVm.StatusBadgeText);
+    }
+
+    [Fact]
+    public void NoStaleViewModelPropertiesOrRegistrations_Remain()
+    {
+        // 1. Verify MainWindowViewModel properties
+        var properties = typeof(MainWindowViewModel).GetProperties();
+        var propNames = new HashSet<string>(properties.Select(p => p.Name), StringComparer.OrdinalIgnoreCase);
+
+        Assert.Contains("Dashboard", propNames);
+        Assert.Contains("ProcessList", propNames);
+        Assert.Contains("Startup", propNames);
+        Assert.Contains("Settings", propNames);
+        Assert.DoesNotContain("Performance", propNames);
+
+        // 2. Verify DI registration cleanliness
+        var services = AppHost.ConfigureServices();
+        var transientTypes = services
+            .Where(sd => sd.Lifetime == ServiceLifetime.Transient)
+            .Select(sd => sd.ServiceType.Name)
+            .ToList();
+
+        Assert.Contains("DashboardViewModel", transientTypes);
+        Assert.Contains("ProcessListViewModel", transientTypes);
+        Assert.Contains("StartupViewModel", transientTypes);
+        Assert.Contains("SettingsViewModel", transientTypes);
+        Assert.DoesNotContain("PerformanceViewModel", transientTypes);
     }
 }

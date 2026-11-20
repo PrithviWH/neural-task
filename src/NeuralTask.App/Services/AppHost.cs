@@ -40,7 +40,6 @@ public static class AppHost
         services.AddTransient<IProcessInspectorViewModelFactory, ProcessInspectorViewModelFactory>();
         services.AddTransient<DashboardViewModel>();
         services.AddTransient<ProcessListViewModel>();
-        services.AddTransient<PerformanceViewModel>();
         services.AddTransient<StartupViewModel>();
         services.AddTransient<SettingsViewModel>();
 
@@ -57,7 +56,6 @@ public static class AppHost
 
             var dashboard = ActivatorUtilities.CreateInstance<DashboardViewModel>(sp);
             var processList = ActivatorUtilities.CreateInstance<ProcessListViewModel>(sp);
-            var performance = ActivatorUtilities.CreateInstance<PerformanceViewModel>(sp);
             var startup = ActivatorUtilities.CreateInstance<StartupViewModel>(sp);
             var settings = ActivatorUtilities.CreateInstance<SettingsViewModel>(sp);
 
@@ -67,7 +65,6 @@ public static class AppHost
                 pluginManager,
                 dashboard,
                 processList,
-                performance,
                 startup,
                 settings);
         });

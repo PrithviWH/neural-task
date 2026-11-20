@@ -27,7 +27,6 @@ public class MainWindowViewModel : ViewModelBase, IDisposable, IAsyncDisposable
 
     public DashboardViewModel Dashboard { get; }
     public ProcessListViewModel ProcessList { get; }
-    public PerformanceViewModel Performance { get; }
     public StartupViewModel Startup { get; }
     public SettingsViewModel Settings { get; }
     public IPluginManager PluginManager => _pluginManager;
@@ -53,7 +52,6 @@ public class MainWindowViewModel : ViewModelBase, IDisposable, IAsyncDisposable
         IPluginManager pluginManager,
         DashboardViewModel dashboard,
         ProcessListViewModel processList,
-        PerformanceViewModel performance,
         StartupViewModel startup,
         SettingsViewModel settings)
     {
@@ -63,7 +61,6 @@ public class MainWindowViewModel : ViewModelBase, IDisposable, IAsyncDisposable
 
         Dashboard = dashboard ?? throw new ArgumentNullException(nameof(dashboard));
         ProcessList = processList ?? throw new ArgumentNullException(nameof(processList));
-        Performance = performance ?? throw new ArgumentNullException(nameof(performance));
         Startup = startup ?? throw new ArgumentNullException(nameof(startup));
         Settings = settings ?? throw new ArgumentNullException(nameof(settings));
 
@@ -115,10 +112,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable, IAsyncDisposable
         // 2. Update Process List
         ProcessList.ApplySnapshot(update.Processes);
 
-        // 3. Update Performance Charts
-        Performance.ApplyMetrics(update.SystemMetrics);
-
-        // 4. Update System Tray Icon live mini-graph & tooltip
+        // 3. Update System Tray Icon live mini-graph & tooltip
         _trayIconService.UpdateMetrics(update.Processes, update.SystemMetrics);
 
         // 5. Dispatch telemetry tick to loaded plugins on background thread safely with ownership tracking
