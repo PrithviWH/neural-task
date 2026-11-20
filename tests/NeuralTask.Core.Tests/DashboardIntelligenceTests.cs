@@ -270,4 +270,45 @@ public class DashboardIntelligenceTests
         Assert.Equal(8.0, vm.TopCpuProcesses[0].PercentValue);
         Assert.Equal("chrome.exe", vm.TopRamProcesses[0].Name);
     }
+
+    [Fact]
+    public void DashboardViewModel_SectionedStatistics_DisplaysCpuAndGpuMetricsWithThresholds()
+    {
+        var vm = new DashboardViewModel();
+
+        var system = new SystemMetricsSnapshot(
+            CpuPercent: 78.5,
+            TotalMemoryBytes: 32L * 1024 * 1024 * 1024,
+            UsedMemoryBytes: 8L * 1024 * 1024 * 1024,
+            AvailableMemoryBytes: 24L * 1024 * 1024 * 1024,
+            MemoryPercent: 25.0,
+            ProcessIoBytesPerSec: 1024 * 1024,
+            NetworkReceivedBytesPerSec: 50000,
+            NetworkSentBytesPerSec: 25000,
+            ProcessorName: "AMD Ryzen 7 5800H",
+            LogicalCoreCount: 16,
+            OsVersion: "Windows 11",
+            ProcessCount: 150,
+            Uptime: TimeSpan.FromHours(5),
+            CpuClockMhz: 3850.0,
+            CpuPowerWatts: 42.5,
+            CpuTemperatureC: 78.0);
+
+        vm.ApplyMetrics(Array.Empty<ProcessSnapshot>(), system);
+
+        // CPU Section Assertions
+        Assert.Equal("3,850 MHz", vm.CpuClockDisplay);
+        Assert.Equal("42.5 W", vm.CpuPowerDisplay);
+        Assert.Equal("78.0 °C", vm.CpuTemperatureDisplay);
+        Assert.Equal("#F59E0B", vm.CpuTemperatureColor); // Amber at 78C
+        Assert.Equal("78.5%", vm.CpuUtilizationDisplay);
+
+        // GPU Section Assertions
+        Assert.Contains("MHz", vm.GpuClockDisplay);
+        Assert.Contains("W", vm.GpuPowerDisplay);
+        Assert.Contains("°C", vm.GpuTemperatureDisplay);
+        Assert.Contains("V", vm.GpuVoltageDisplay);
+        Assert.Contains("MHz", vm.VramClockDisplay);
+        Assert.Contains("%", vm.GpuUtilizationDisplay);
+    }
 }

@@ -69,14 +69,14 @@ public class ProcessItemViewModel : ViewModelBase
         {
             if (_heuristicResult == null || !_heuristicResult.HasFlags)
             {
-                return new SolidColorBrush(Color.FromRgb(0x8F, 0xA3, 0xB8));
+                return new SolidColorBrush(Color.FromRgb(0x71, 0x75, 0x8A)); // Muted Tertiary
             }
 
             return _heuristicResult.MaxSeverity switch
             {
-                HeuristicSeverity.Warning => new SolidColorBrush(Color.FromRgb(0xFF, 0xB8, 0x00)), // Amber/Warning
-                HeuristicSeverity.Notice => new SolidColorBrush(Color.FromRgb(0x00, 0xE5, 0xFF)),  // Neon Cyan
-                _ => new SolidColorBrush(Color.FromRgb(0x79, 0x28, 0xCA))                        // Violet
+                HeuristicSeverity.Warning => new SolidColorBrush(Color.FromRgb(0xF0, 0xA9, 0x4E)), // Clarity Muted Amber
+                HeuristicSeverity.Notice => new SolidColorBrush(Color.FromRgb(0x2D, 0xD4, 0xC6)),  // Clarity Teal
+                _ => new SolidColorBrush(Color.FromRgb(0x83, 0x89, 0xFF))                        // Clarity Indigo
             };
         }
     }
@@ -208,6 +208,8 @@ public class ProcessItemViewModel : ViewModelBase
 
     public bool CanTerminate => !IsCriticalSystemProcess;
 
+    public bool IsSystemOnlyProcess => IsSystemProcess && !IsCriticalSystemProcess;
+
     public string SystemBadgeText => IsCriticalSystemProcess ? "Protected" : (IsSystemProcess ? "System" : "");
 
     // --- Resource Bars & Visual Highlights ---
@@ -219,10 +221,12 @@ public class ProcessItemViewModel : ViewModelBase
         {
             // Normalize up to 4 GB for visual bar scale
             double mb = _ramBytes / (1024.0 * 1024.0);
-            return Math.Min(100.0, Math.Max(2.0, (mb / 4096.0) * 100.0));
+            return Math.Min(100.0, Math.Max(0.0, (mb / 4096.0) * 100.0));
         }
     }
 
+    public bool HasCpuLoad => _cpuPercent >= 0.1;
+    public bool HasRamLoad => _ramBytes >= 10L * 1024L * 1024L; // >= 10 MB
     public bool IsHighCpu => _cpuPercent >= 15.0;
     public bool IsHighRam => _ramBytes >= 1024L * 1024L * 1024L; // >= 1 GB
 

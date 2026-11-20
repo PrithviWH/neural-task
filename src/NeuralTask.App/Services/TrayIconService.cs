@@ -24,6 +24,7 @@ public class TrayIconService : IDisposable
     private readonly float[] _history = new float[16];
     private int _historyCount = 0;
     private IntPtr _previousHIcon = IntPtr.Zero;
+    private readonly EventHandler<AppSettings> _settingsChangedHandler;
     private bool _isDisposed = false;
 
     public event Action? RestoreRequested;
@@ -49,7 +50,8 @@ public class TrayIconService : IDisposable
         };
 
         BuildContextMenu();
-        _settingsService.SettingsChanged += (_, _) => BuildContextMenu();
+        _settingsChangedHandler = (_, _) => BuildContextMenu();
+        _settingsService.SettingsChanged += _settingsChangedHandler;
 
         // Initial default icon
         UpdateMiniGraph(0f, "NeuralTask // Initializing...");
@@ -149,14 +151,14 @@ public class TrayIconService : IDisposable
 
             bool isLight = NeuralTask.Theming.ThemeManager.CurrentTheme == NeuralTask.Theming.ThemeMode.Light;
 
-            // Theme-adaptive background & border
+            // Theme-adaptive background & border (Clarity Design System: PRD §2)
             var bgColor = isLight
-                ? System.Drawing.Color.FromArgb(255, 241, 245, 249)
-                : System.Drawing.Color.FromArgb(255, 10, 14, 20);
+                ? System.Drawing.Color.FromArgb(255, 246, 247, 251)  // #F6F7FB
+                : System.Drawing.Color.FromArgb(255, 17, 19, 25);    // #111319
 
             var borderColor = isLight
-                ? System.Drawing.Color.FromArgb(200, 203, 213, 225)
-                : System.Drawing.Color.FromArgb(120, 0, 229, 255);
+                ? System.Drawing.Color.FromArgb(255, 230, 232, 240)  // #E6E8F0
+                : System.Drawing.Color.FromArgb(255, 42, 46, 58);    // #2A2E3A
 
             using var bgBrush = new SolidBrush(bgColor);
             g.FillRectangle(bgBrush, 0, 0, size, size);
@@ -164,12 +166,10 @@ public class TrayIconService : IDisposable
             using var borderPen = new System.Drawing.Pen(borderColor, 1);
             g.DrawRectangle(borderPen, 0, 0, size - 1, size - 1);
 
-            // Theme-adaptive metric colors:
-            // Light: Deep Teal (#00758A) for CPU, Royal Violet (#6D28D9) for RAM
-            // Dark: Electric Cyan (#00E5FF) for CPU, Neon Magenta (#B14EFF) for RAM
+            // Theme-adaptive metric colors (Clarity Design System: CPU = Indigo, RAM = Teal)
             var barColor = isCpu
-                ? (isLight ? System.Drawing.Color.FromArgb(255, 0, 117, 138) : System.Drawing.Color.FromArgb(255, 0, 229, 255))
-                : (isLight ? System.Drawing.Color.FromArgb(255, 109, 40, 217) : System.Drawing.Color.FromArgb(255, 177, 78, 255));
+                ? (isLight ? System.Drawing.Color.FromArgb(255, 91, 97, 241) : System.Drawing.Color.FromArgb(255, 131, 137, 255))
+                : (isLight ? System.Drawing.Color.FromArgb(255, 17, 166, 156) : System.Drawing.Color.FromArgb(255, 45, 212, 198));
 
             using var barPen = new System.Drawing.Pen(barColor, 1);
 
@@ -210,6 +210,10 @@ public class TrayIconService : IDisposable
     {
         if (_isDisposed) return;
         _isDisposed = true;
+
+        _settingsService.SettingsChanged -= _settingsChangedHandler;
+        RestoreRequested = null;
+        ExitRequested = null;
 
         _notifyIcon.Visible = false;
         _notifyIcon.Dispose();

@@ -85,7 +85,7 @@ public class ProcessInfoService : IProcessInfoService
             signerInfo: signer,
             cpuPercent: snapshot.CpuPercent,
             ramBytes: snapshot.RamBytes,
-            ioBytesPerSec: snapshot.DiskBytesPerSec + snapshot.NetworkBytesPerSec,
+            ioBytesPerSec: snapshot.DiskBytesPerSec,
             startTime: snapshot.StartTime
         );
 
@@ -99,7 +99,7 @@ public class ProcessInfoService : IProcessInfoService
             SignerInfo: signer,
             CpuPercent: snapshot.CpuPercent,
             RamBytes: snapshot.RamBytes,
-            IoBytesPerSec: snapshot.DiskBytesPerSec + snapshot.NetworkBytesPerSec,
+            IoBytesPerSec: snapshot.DiskBytesPerSec,
             StartTime: snapshot.StartTime,
             FormattedText: formatted
         );

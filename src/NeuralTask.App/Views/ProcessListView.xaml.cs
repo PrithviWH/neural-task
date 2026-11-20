@@ -47,6 +47,9 @@ public partial class ProcessListView : UserControl
         if (e.OldValue is ProcessListViewModel oldVm)
         {
             oldVm.FilteredProcesses.CollectionChanged -= OnFilteredProcessesChanged;
+            oldVm.RequestScannerSweep -= PlayScannerSweepAnimation;
+            oldVm.ConfirmKillTreeCallback = null;
+            oldVm.ConfirmKillProcessCallback = null;
         }
 
         if (ViewModel != null)
@@ -189,7 +192,14 @@ public partial class ProcessListView : UserControl
     {
         if (ViewModel != null)
         {
-            await ViewModel.TerminateSelectedAsync();
+            try
+            {
+                await ViewModel.TerminateSelectedAsync();
+            }
+            catch (Exception ex)
+            {
+                ViewModel.ShowStatus($"Termination failed: {ex.Message}", isError: true);
+            }
         }
     }
 
@@ -197,7 +207,14 @@ public partial class ProcessListView : UserControl
     {
         if (ViewModel != null)
         {
-            await ViewModel.TerminateTreeSelectedAsync();
+            try
+            {
+                await ViewModel.TerminateTreeSelectedAsync();
+            }
+            catch (Exception ex)
+            {
+                ViewModel.ShowStatus($"Tree termination failed: {ex.Message}", isError: true);
+            }
         }
     }
 
@@ -205,7 +222,14 @@ public partial class ProcessListView : UserControl
     {
         if (ViewModel != null)
         {
-            await ViewModel.TerminateSelectedAsync();
+            try
+            {
+                await ViewModel.TerminateSelectedAsync();
+            }
+            catch (Exception ex)
+            {
+                ViewModel.ShowStatus($"Termination failed: {ex.Message}", isError: true);
+            }
         }
     }
 
@@ -213,7 +237,14 @@ public partial class ProcessListView : UserControl
     {
         if (ViewModel != null)
         {
-            await ViewModel.CopyProcessInfoAsync();
+            try
+            {
+                await ViewModel.CopyProcessInfoAsync();
+            }
+            catch (Exception ex)
+            {
+                ViewModel.ShowStatus($"Copy info failed: {ex.Message}", isError: true);
+            }
         }
     }
 
@@ -221,7 +252,14 @@ public partial class ProcessListView : UserControl
     {
         if (ViewModel != null)
         {
-            await ViewModel.CopyProcessInfoAsync();
+            try
+            {
+                await ViewModel.CopyProcessInfoAsync();
+            }
+            catch (Exception ex)
+            {
+                ViewModel.ShowStatus($"Copy info failed: {ex.Message}", isError: true);
+            }
         }
     }
 
@@ -229,7 +267,14 @@ public partial class ProcessListView : UserControl
     {
         if (ViewModel != null)
         {
-            await ViewModel.TerminateTreeSelectedAsync();
+            try
+            {
+                await ViewModel.TerminateTreeSelectedAsync();
+            }
+            catch (Exception ex)
+            {
+                ViewModel.ShowStatus($"Tree termination failed: {ex.Message}", isError: true);
+            }
         }
     }
 

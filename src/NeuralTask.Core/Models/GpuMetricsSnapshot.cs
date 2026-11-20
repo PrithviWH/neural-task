@@ -11,7 +11,12 @@ public record GpuMetricsSnapshot(
     double UtilizationPercent,
     long DedicatedMemoryUsedBytes,
     long DedicatedMemoryTotalBytes,
-    IReadOnlyList<GpuProcessMetric> TopGpuProcesses
+    IReadOnlyList<GpuProcessMetric> TopGpuProcesses,
+    double? CoreClockMhz = null,
+    double? PowerWatts = null,
+    double? TemperatureC = null,
+    double? VoltageV = null,
+    double? MemoryClockMhz = null
 )
 {
     public double DedicatedMemoryUsedGb => Math.Round(DedicatedMemoryUsedBytes / (1024.0 * 1024.0 * 1024.0), 1);

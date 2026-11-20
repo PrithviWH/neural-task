@@ -18,5 +18,8 @@ public record SystemMetricsSnapshot(
     int LogicalCoreCount,
     string OsVersion,
     int ProcessCount,
-    TimeSpan Uptime
+    TimeSpan Uptime,
+    double? CpuClockMhz = null,
+    double? CpuPowerWatts = null,
+    double? CpuTemperatureC = null
 );

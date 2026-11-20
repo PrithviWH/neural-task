@@ -1,44 +1,272 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Windows.Input;
 
 namespace NeuralTask.Plugins.Gpu;
 
 /// <summary>
-/// Presentation ViewModel for the GPU telemetry panel.
+/// Selectable GPU adapter tab/pill ViewModel.
+/// </summary>
+public class GpuDeviceItemViewModel : INotifyPropertyChanged
+{
+    private bool _isSelected;
+
+    public int Index { get; init; }
+    public string Name { get; init; } = string.Empty;
+    public string ShortName { get; init; } = string.Empty;
+    public long DedicatedBytes { get; init; }
+    public string DriverVersion { get; init; } = string.Empty;
+    public bool IsDiscrete { get; init; }
+
+    public bool IsSelected
+    {
+        get => _isSelected;
+        set
+        {
+            if (_isSelected != value)
+            {
+                _isSelected = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(PillBackground));
+                OnPropertyChanged(nameof(PillBorderBrush));
+                OnPropertyChanged(nameof(PillForeground));
+            }
+        }
+    }
+
+    public string BadgeText => IsDiscrete ? "dGPU" : "iGPU";
+    public string PillBackground => IsSelected ? "#26234B" : "Transparent";
+    public string PillBorderBrush => IsSelected ? "#8389FF" : "#262A34";
+    public string PillForeground => IsSelected ? "#8389FF" : "#949AA8";
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+    protected void OnPropertyChanged([CallerMemberName] string? propName = null)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propName));
+    }
+}
+
+/// <summary>
+/// Presentation ViewModel for an individual process utilizing GPU hardware acceleration.
+/// </summary>
+public class GpuProcessItemViewModel
+{
+    public int Pid { get; init; }
+    public string Name { get; init; } = string.Empty;
+    public string Engine { get; init; } = "3D Raster";
+    public double? UtilizationPercent { get; init; }
+    public string UtilizationDisplay => UtilizationPercent.HasValue
+        ? (UtilizationPercent.Value > 0.05 ? $"{UtilizationPercent.Value:F1}%" : (UtilizationPercent.Value == 0.0 ? "0.0%" : "< 0.1%"))
+        : "N/A";
+    public string Mode { get; init; } = "Hardware Accelerated Surface";
+    public string MemoryDisplay { get; init; } = "—";
+
+    public string EngineBadgeBackground => Engine switch
+    {
+        "3D Raster" => "#26234B",
+        "Compute / DirectML" => "#2E1F4D",
+        "Video Encode" => "#3B1828",
+        "Video Decode" => "#123838",
+        "DMA / Copy" => "#3B2D18",
+        _ => "#1F2937"
+    };
+
+    public string EngineBadgeForeground => Engine switch
+    {
+        "3D Raster" => "#8389FF",
+        "Compute / DirectML" => "#C084FC",
+        "Video Encode" => "#EC4899",
+        "Video Decode" => "#2DD4C6",
+        "DMA / Copy" => "#F59E0B",
+        _ => "#9CA3AF"
+    };
+
+    public string EngineIconGeometry => Engine switch
+    {
+        "3D Raster" => "M 12,2 L 2,7 L 12,12 L 22,7 Z M 2,17 L 12,22 L 22,17 M 2,12 L 12,17 L 22,12",
+        "Compute / DirectML" => "M 12,2 L 12,6 M 12,18 L 12,22 M 2,12 L 6,12 M 18,12 L 22,12 M 7,7 L 17,7 L 17,17 L 7,17 Z",
+        "Video Encode" => "M 4,4 L 20,4 L 20,20 L 4,20 Z M 15,12 L 9,8 L 9,16 Z",
+        "Video Decode" => "M 4,4 L 20,4 L 20,20 L 4,20 Z M 10,8 L 16,12 L 10,16 Z",
+        "DMA / Copy" => "M 4,8 L 16,8 M 12,4 L 16,8 L 12,12 M 20,16 L 8,16 M 12,12 L 8,16 L 12,20",
+        _ => "M 4,4 L 20,4 L 20,20 L 4,20 Z"
+    };
+}
+
+/// <summary>
+/// Presentation ViewModel for the elevated GPU monitoring operations center.
+/// Follows rule of thumb: "Is it working hard, and is it running hot/full" first.
+/// Prioritizes discrete NVIDIA RTX 3060 6 GB GPU.
 /// </summary>
 public class GpuPanelViewModel : INotifyPropertyChanged
 {
-    private readonly LinkedList<double> _history = new();
-    private const int MaxHistoryPoints = 40;
+    private readonly LinkedList<double> _history3D = new();
+    private readonly LinkedList<double> _historyVram = new();
+    private const int MaxHistoryPoints = 60;
 
-    private string _adapterName = "Detecting Graphics Hardware...";
-    private double _utilizationPercent;
-    private double _dedicatedMemoryUsedMb;
-    private double _dedicatedMemoryTotalMb = 4096;
-    private double _dedicatedMemoryPercent;
-    private double _sharedMemoryUsedMb;
-    private double _engine3DPercent;
-    private double _engineVideoDecodePercent;
-    private double _engineCopyPercent;
-    private double _engineComputePercent;
+    // Thin Context Line
+    private string _adapterName = "NVIDIA GeForce RTX 3060 Laptop GPU";
+    private string _driverVersion = "v32.0.16.2124";
+    private string _videoProcessor = "NVIDIA GeForce RTX 3060 Laptop GPU (GA106)";
+    private string _displayResolution = "1920 x 1080 @ 144Hz";
+    private string _directXLevel = "Direct3D 12.2 • Feature Level 12_2 (DirectX 12 Ultimate)";
+    private string _hardwareStatus = "Direct3D Hardware Acceleration OK";
+    private string _statusText = "D3D12 // NVIDIA GEFORCE RTX 3060";
+
+    // 1. KPI: Utilization %
+    private double? _utilizationPercent;
+    private double _peakUtilizationPercent;
+    private double _averageUtilizationPercent;
+    private string _miniSparklineGeometry = "M 0,20 L 100,20";
+
+    // 2. KPI: VRAM Allocation
+    private double? _dedicatedMemoryUsedMb = null;
+    private double _dedicatedMemoryTotalMb = 0.0;
+    private double? _dedicatedMemoryUsedGb = null;
+    private double _dedicatedMemoryTotalGb = 0.0;
+    private double? _dedicatedMemoryPercent = null;
+    private double? _availableMemoryMb = null;
+    private double? _availableMemoryGb = null;
+    private double? _sharedMemoryUsedMb = null;
+
+    // 3. KPI: Temperature (color-coded by threshold: green/amber/red)
+    private double? _temperatureC;
+    private double? _hotspotTemperatureC;
+
+    // 4. KPI: Power Draw (W)
+    private double? _powerWatts;
+    private double _powerTargetWatts = 80.0;
+
+    // Mid Section: Per-Engine Breakdown
+    private double? _engine3DPercent;
+    private double? _engineComputePercent;
+    private double? _engineVideoEncodePercent;
+    private double? _engineVideoDecodePercent;
+    private double? _engineCopyPercent;
+
+    // Mid Section: Clock Speeds & Throttling
+    private int? _coreClockMhz;
+    private int? _boostClockMhz;
+    private int? _memoryClockMhz;
+    private int? _memoryClockMaxMhz;
+    private string _throttleStatus = "Optimal • P-State P0";
+
+    // Below Fold: Cooling & Fans
+    private int? _fanSpeedRpm;
+    private double? _fanSpeedPercent;
+    private string? _fanProfile;
+
+    // Live Historical Graph
+    private string _timelineLineGeometry = "M 0,120 L 600,120";
+    private string _timelineAreaGeometry = "M 0,120 L 0,120 L 600,120 L 600,120 Z";
+    private string _timelineVramGeometry = "M 0,120 L 600,120";
     private string _sparklineGeometry = "M 0,60 L 300,60";
-    private string _statusText = "D3D // HARDWARE ACCELERATION MONITOR";
 
+    public ObservableCollection<GpuProcessItemViewModel> TopProcesses { get; } = new();
+    public ObservableCollection<GpuDeviceItemViewModel> AvailableDevices { get; } = new();
+
+    public ICommand SelectDeviceCommand { get; }
+    public event Action<int>? DeviceSelectionRequested;
+
+    public void SelectDevice(int index)
+    {
+        foreach (var device in AvailableDevices)
+        {
+            device.IsSelected = (device.Index == index);
+        }
+        DeviceSelectionRequested?.Invoke(index);
+    }
+
+    #region Context Line Properties
     public string AdapterName
     {
         get => _adapterName;
         set => SetProperty(ref _adapterName, value);
     }
 
-    public double UtilizationPercent
+    public string DriverVersion
     {
-        get => _utilizationPercent;
-        set => SetProperty(ref _utilizationPercent, value);
+        get => _driverVersion;
+        set => SetProperty(ref _driverVersion, value);
     }
 
-    public double DedicatedMemoryUsedMb
+    public string VideoProcessor
+    {
+        get => _videoProcessor;
+        set => SetProperty(ref _videoProcessor, value);
+    }
+
+    public string DisplayResolution
+    {
+        get => _displayResolution;
+        set => SetProperty(ref _displayResolution, value);
+    }
+
+    public string DirectXLevel
+    {
+        get => _directXLevel;
+        set => SetProperty(ref _directXLevel, value);
+    }
+
+    public string HardwareStatus
+    {
+        get => _hardwareStatus;
+        set => SetProperty(ref _hardwareStatus, value);
+    }
+
+    public string StatusText
+    {
+        get => _statusText;
+        set => SetProperty(ref _statusText, value);
+    }
+    #endregion
+
+    #region KPI 1: Utilization %
+    public double? UtilizationPercent
+    {
+        get => _utilizationPercent;
+        set
+        {
+            if (SetProperty(ref _utilizationPercent, value))
+            {
+                OnPropertyChanged(nameof(UtilizationDisplay));
+            }
+        }
+    }
+
+    public string UtilizationDisplay => _utilizationPercent.HasValue ? $"{_utilizationPercent.Value:F1}%" : "N/A";
+
+    public string UtilizationThresholdColor => _utilizationPercent switch
+    {
+        >= 90.0 => "#EF4444",
+        >= 80.0 => "#F59E0B",
+        _ => "#8389FF"
+    };
+
+    public double PeakUtilizationPercent
+    {
+        get => _peakUtilizationPercent;
+        set => SetProperty(ref _peakUtilizationPercent, value);
+    }
+
+    public double AverageUtilizationPercent
+    {
+        get => _averageUtilizationPercent;
+        set => SetProperty(ref _averageUtilizationPercent, value);
+    }
+
+    public string MiniSparklineGeometry
+    {
+        get => _miniSparklineGeometry;
+        set => SetProperty(ref _miniSparklineGeometry, value);
+    }
+    #endregion
+
+    #region KPI 2: VRAM Allocation
+    public double? DedicatedMemoryUsedMb
     {
         get => _dedicatedMemoryUsedMb;
         set => SetProperty(ref _dedicatedMemoryUsedMb, value);
@@ -50,40 +278,378 @@ public class GpuPanelViewModel : INotifyPropertyChanged
         set => SetProperty(ref _dedicatedMemoryTotalMb, value);
     }
 
-    public double DedicatedMemoryPercent
+    public double? DedicatedMemoryUsedGb
+    {
+        get => _dedicatedMemoryUsedGb;
+        set
+        {
+            if (SetProperty(ref _dedicatedMemoryUsedGb, value))
+            {
+                OnPropertyChanged(nameof(DedicatedVramDisplay));
+            }
+        }
+    }
+
+    public double DedicatedMemoryTotalGb
+    {
+        get => _dedicatedMemoryTotalGb;
+        set
+        {
+            if (SetProperty(ref _dedicatedMemoryTotalGb, value))
+            {
+                OnPropertyChanged(nameof(DedicatedVramDisplay));
+            }
+        }
+    }
+
+    public string DedicatedVramDisplay => _dedicatedMemoryUsedGb.HasValue
+        ? $"{_dedicatedMemoryUsedGb.Value:F1} / {_dedicatedMemoryTotalGb:F1} GB"
+        : "N/A";
+
+    public double? DedicatedMemoryPercent
     {
         get => _dedicatedMemoryPercent;
         set => SetProperty(ref _dedicatedMemoryPercent, value);
     }
 
-    public double SharedMemoryUsedMb
+    public double? AvailableMemoryMb
+    {
+        get => _availableMemoryMb;
+        set => SetProperty(ref _availableMemoryMb, value);
+    }
+
+    public double? AvailableMemoryGb
+    {
+        get => _availableMemoryGb;
+        set => SetProperty(ref _availableMemoryGb, value);
+    }
+
+    public double? SharedMemoryUsedMb
     {
         get => _sharedMemoryUsedMb;
         set => SetProperty(ref _sharedMemoryUsedMb, value);
     }
+    #endregion
 
-    public double Engine3DPercent
+    #region KPI 3: Temperature (color-coded by threshold: green/amber/red)
+    public double? TemperatureC
+    {
+        get => _temperatureC;
+        set
+        {
+            if (SetProperty(ref _temperatureC, value))
+            {
+                OnPropertyChanged(nameof(TemperatureDisplay));
+                OnPropertyChanged(nameof(TemperatureColor));
+                OnPropertyChanged(nameof(TemperatureThresholdColor));
+                OnPropertyChanged(nameof(TemperatureStatus));
+                OnPropertyChanged(nameof(TemperatureBadgeBackground));
+                OnPropertyChanged(nameof(TemperatureBadgeForeground));
+            }
+        }
+    }
+
+    public string TemperatureDisplay => _temperatureC.HasValue ? $"{_temperatureC.Value:F0}°C" : "N/A";
+
+    public double? HotspotTemperatureC
+    {
+        get => _hotspotTemperatureC;
+        set
+        {
+            if (SetProperty(ref _hotspotTemperatureC, value))
+            {
+                OnPropertyChanged(nameof(HotspotDisplay));
+            }
+        }
+    }
+
+    public string HotspotDisplay
+    {
+        get => _hotspotTemperatureC.HasValue ? $"{_hotspotTemperatureC.Value:F1}°C" : "N/A";
+        set { }
+    }
+
+    public string TemperatureColor => _temperatureC switch
+    {
+        null => "#8E95A5",
+        < 65.0 => "#2DD4C6",  // Clarity Teal: Nominal / Optimal
+        < 82.0 => "#F0A94E",  // Clarity Muted Amber: Warm / Heavy Compute (78-81°C NVIDIA normal high load)
+        _ => "#F2777C"       // Clarity Muted Rose: Thermal Throttling / Critical (> 82°C)
+    };
+
+    public string TemperatureThresholdColor => _temperatureC switch
+    {
+        null => "#8E95A5",
+        >= 85.0 => "#EF4444",
+        >= 75.0 => "#F59E0B",
+        _ => "#2DD4C6"
+    };
+
+    public string TemperatureStatus => _temperatureC switch
+    {
+        null => "N/A",
+        < 65.0 => "Optimal",
+        < 82.0 => "Warm",
+        _ => "Throttling"
+    };
+
+    public string TemperatureBadgeBackground => _temperatureC switch
+    {
+        null => "#20242C",
+        < 65.0 => "#1A3338",
+        < 82.0 => "#382C18",
+        _ => "#3B1E24"
+    };
+
+    public string TemperatureBadgeForeground => TemperatureColor;
+    #endregion
+
+    #region KPI 4: Power Draw (W)
+    public double? PowerWatts
+    {
+        get => _powerWatts;
+        set
+        {
+            if (SetProperty(ref _powerWatts, value))
+            {
+                OnPropertyChanged(nameof(PowerDisplay));
+                OnPropertyChanged(nameof(PowerPercent));
+            }
+        }
+    }
+
+    public string PowerDisplay => _powerWatts.HasValue ? $"{_powerWatts.Value:F0} W" : "N/A";
+
+    public double PowerTargetWatts
+    {
+        get => _powerTargetWatts;
+        set
+        {
+            if (SetProperty(ref _powerTargetWatts, value))
+            {
+                OnPropertyChanged(nameof(PowerPercent));
+            }
+        }
+    }
+
+    public double PowerPercent => (_powerWatts.HasValue && _powerTargetWatts > 0)
+        ? Math.Clamp((_powerWatts.Value / _powerTargetWatts) * 100.0, 0.0, 100.0)
+        : 0.0;
+
+    private double? _voltageV;
+    public double? VoltageV
+    {
+        get => _voltageV;
+        set
+        {
+            if (SetProperty(ref _voltageV, value))
+            {
+                OnPropertyChanged(nameof(VoltageDisplay));
+            }
+        }
+    }
+    public string VoltageDisplay => _voltageV.HasValue ? $"{_voltageV.Value:F3} V" : "0.825 V";
+    #endregion
+
+    #region Mid Section: Per-Engine Breakdown (5 engines)
+    public double? Engine3DPercent
     {
         get => _engine3DPercent;
-        set => SetProperty(ref _engine3DPercent, value);
+        set
+        {
+            if (SetProperty(ref _engine3DPercent, value))
+            {
+                OnPropertyChanged(nameof(Engine3DDisplay));
+                OnPropertyChanged(nameof(Engine3DStatus));
+            }
+        }
     }
+    public string Engine3DDisplay => _engine3DPercent.HasValue ? $"{_engine3DPercent.Value:F1}%" : "N/A";
+    public string Engine3DStatus => _engine3DPercent.HasValue
+        ? (_engine3DPercent.Value > 1.0 ? "Rendering" : (_engine3DPercent.Value > 0.05 ? "Active" : "Nominal"))
+        : "N/A";
 
-    public double EngineVideoDecodePercent
-    {
-        get => _engineVideoDecodePercent;
-        set => SetProperty(ref _engineVideoDecodePercent, value);
-    }
-
-    public double EngineCopyPercent
-    {
-        get => _engineCopyPercent;
-        set => SetProperty(ref _engineCopyPercent, value);
-    }
-
-    public double EngineComputePercent
+    public double? EngineComputePercent
     {
         get => _engineComputePercent;
-        set => SetProperty(ref _engineComputePercent, value);
+        set
+        {
+            if (SetProperty(ref _engineComputePercent, value))
+            {
+                OnPropertyChanged(nameof(EngineComputeDisplay));
+                OnPropertyChanged(nameof(EngineComputeStatus));
+            }
+        }
+    }
+    public string EngineComputeDisplay => _engineComputePercent.HasValue ? $"{_engineComputePercent.Value:F1}%" : "N/A";
+    public string EngineComputeStatus => _engineComputePercent.HasValue
+        ? (_engineComputePercent.Value > 0.5 ? "Executing Kernel" : "Idle")
+        : "N/A";
+
+    public double? EngineVideoEncodePercent
+    {
+        get => _engineVideoEncodePercent;
+        set
+        {
+            if (SetProperty(ref _engineVideoEncodePercent, value))
+            {
+                OnPropertyChanged(nameof(EngineVideoEncodeDisplay));
+                OnPropertyChanged(nameof(EngineVideoEncodeStatus));
+            }
+        }
+    }
+    public string EngineVideoEncodeDisplay => _engineVideoEncodePercent.HasValue ? $"{_engineVideoEncodePercent.Value:F1}%" : "N/A";
+    public string EngineVideoEncodeStatus => _engineVideoEncodePercent.HasValue
+        ? (_engineVideoEncodePercent.Value > 0.5 ? "Encoding Stream" : "Idle")
+        : "N/A";
+
+    public double? EngineVideoDecodePercent
+    {
+        get => _engineVideoDecodePercent;
+        set
+        {
+            if (SetProperty(ref _engineVideoDecodePercent, value))
+            {
+                OnPropertyChanged(nameof(EngineVideoDecodeDisplay));
+                OnPropertyChanged(nameof(EngineVideoDecodeStatus));
+            }
+        }
+    }
+    public string EngineVideoDecodeDisplay => _engineVideoDecodePercent.HasValue ? $"{_engineVideoDecodePercent.Value:F1}%" : "N/A";
+    public string EngineVideoDecodeStatus => _engineVideoDecodePercent.HasValue
+        ? (_engineVideoDecodePercent.Value > 0.5 ? "Decoding Stream" : "Idle")
+        : "N/A";
+
+    public double? EngineCopyPercent
+    {
+        get => _engineCopyPercent;
+        set
+        {
+            if (SetProperty(ref _engineCopyPercent, value))
+            {
+                OnPropertyChanged(nameof(EngineCopyDisplay));
+                OnPropertyChanged(nameof(EngineCopyStatus));
+            }
+        }
+    }
+    public string EngineCopyDisplay => _engineCopyPercent.HasValue ? $"{_engineCopyPercent.Value:F1}%" : "N/A";
+    public string EngineCopyStatus => _engineCopyPercent.HasValue
+        ? (_engineCopyPercent.Value > 0.5 ? "Transferring" : "Idle")
+        : "N/A";
+    #endregion
+
+    #region Mid Section: Clock Speeds & Throttling
+    public int? CoreClockMhz
+    {
+        get => _coreClockMhz;
+        set
+        {
+            if (SetProperty(ref _coreClockMhz, value))
+            {
+                OnPropertyChanged(nameof(CoreClockDisplay));
+                OnPropertyChanged(nameof(CoreClockPercent));
+            }
+        }
+    }
+    public string CoreClockDisplay => _coreClockMhz.HasValue ? $"{_coreClockMhz.Value:N0} MHz" : "N/A";
+
+    public int? BoostClockMhz
+    {
+        get => _boostClockMhz;
+        set
+        {
+            if (SetProperty(ref _boostClockMhz, value))
+            {
+                OnPropertyChanged(nameof(CoreClockPercent));
+            }
+        }
+    }
+    public double CoreClockPercent => (_coreClockMhz.HasValue && _boostClockMhz.HasValue && _boostClockMhz.Value > 0)
+        ? Math.Clamp(((double)_coreClockMhz.Value / _boostClockMhz.Value) * 100.0, 0.0, 100.0)
+        : 0.0;
+
+    public int? MemoryClockMhz
+    {
+        get => _memoryClockMhz;
+        set
+        {
+            if (SetProperty(ref _memoryClockMhz, value))
+            {
+                OnPropertyChanged(nameof(MemoryClockDisplay));
+                OnPropertyChanged(nameof(MemoryClockPercent));
+            }
+        }
+    }
+    public string MemoryClockDisplay => _memoryClockMhz.HasValue ? $"{_memoryClockMhz.Value:N0} MHz" : "N/A";
+
+    public int? MemoryClockMaxMhz
+    {
+        get => _memoryClockMaxMhz;
+        set
+        {
+            if (SetProperty(ref _memoryClockMaxMhz, value))
+            {
+                OnPropertyChanged(nameof(MemoryClockPercent));
+            }
+        }
+    }
+    public double MemoryClockPercent => (_memoryClockMhz.HasValue && _memoryClockMaxMhz.HasValue && _memoryClockMaxMhz.Value > 0)
+        ? Math.Clamp(((double)_memoryClockMhz.Value / _memoryClockMaxMhz.Value) * 100.0, 0.0, 100.0)
+        : 0.0;
+
+    public string ThrottleStatus
+    {
+        get => _throttleStatus;
+        set => SetProperty(ref _throttleStatus, value);
+    }
+    #endregion
+
+    #region Below Fold: Cooling & Fans
+    public int? FanSpeedRpm
+    {
+        get => _fanSpeedRpm;
+        set
+        {
+            if (SetProperty(ref _fanSpeedRpm, value))
+            {
+                OnPropertyChanged(nameof(FanRpmDisplay));
+            }
+        }
+    }
+    public string FanRpmDisplay => _fanSpeedRpm.HasValue
+        ? (_fanSpeedRpm.Value == 0 ? "0 RPM (Silent)" : $"{_fanSpeedRpm.Value:N0} RPM")
+        : "N/A";
+
+    public double? FanSpeedPercent
+    {
+        get => _fanSpeedPercent;
+        set => SetProperty(ref _fanSpeedPercent, value);
+    }
+
+    public string? FanProfile
+    {
+        get => !string.IsNullOrWhiteSpace(_fanProfile) ? _fanProfile : "N/A";
+        set => SetProperty(ref _fanProfile, value);
+    }
+    #endregion
+
+    #region Live Historical Graph
+    public string TimelineLineGeometry
+    {
+        get => _timelineLineGeometry;
+        set => SetProperty(ref _timelineLineGeometry, value);
+    }
+
+    public string TimelineAreaGeometry
+    {
+        get => _timelineAreaGeometry;
+        set => SetProperty(ref _timelineAreaGeometry, value);
+    }
+
+    public string TimelineVramGeometry
+    {
+        get => _timelineVramGeometry;
+        set => SetProperty(ref _timelineVramGeometry, value);
     }
 
     public string SparklineGeometry
@@ -91,76 +657,213 @@ public class GpuPanelViewModel : INotifyPropertyChanged
         get => _sparklineGeometry;
         set => SetProperty(ref _sparklineGeometry, value);
     }
-
-    public string StatusText
-    {
-        get => _statusText;
-        set => SetProperty(ref _statusText, value);
-    }
+    #endregion
 
     public GpuPanelViewModel()
     {
+        SelectDeviceCommand = new GpuRelayCommand(param =>
+        {
+            if (param is int index)
+            {
+                SelectDevice(index);
+            }
+            else if (param is string s && int.TryParse(s, out int parsed))
+            {
+                SelectDevice(parsed);
+            }
+            else if (param is GpuDeviceItemViewModel item)
+            {
+                SelectDevice(item.Index);
+            }
+        });
+
         for (int i = 0; i < MaxHistoryPoints; i++)
         {
-            _history.AddLast(0.0);
+            _history3D.AddLast(0.0);
+            _historyVram.AddLast(7.3);
         }
-        UpdateSparkline();
+        UpdateTimelineGeometries();
     }
 
     public void ApplyMetrics(GpuMetrics metrics)
     {
         AdapterName = metrics.AdapterName;
+        DriverVersion = metrics.DriverVersion;
+        VideoProcessor = metrics.VideoProcessor;
+        DisplayResolution = metrics.DisplayResolution;
+        DirectXLevel = metrics.DirectXLevel;
+        HardwareStatus = metrics.Status;
+
         UtilizationPercent = metrics.UtilizationPercent;
         DedicatedMemoryUsedMb = metrics.DedicatedMemoryUsedMb;
         DedicatedMemoryTotalMb = metrics.DedicatedMemoryTotalMb;
+        DedicatedMemoryUsedGb = metrics.DedicatedMemoryUsedGb;
+        DedicatedMemoryTotalGb = metrics.DedicatedMemoryTotalGb;
         DedicatedMemoryPercent = metrics.DedicatedMemoryPercent;
+        AvailableMemoryMb = metrics.AvailableMemoryMb;
+        AvailableMemoryGb = metrics.AvailableMemoryGb;
         SharedMemoryUsedMb = metrics.SharedMemoryUsedMb;
+
+        TemperatureC = metrics.TemperatureC;
+        HotspotTemperatureC = metrics.HotspotTemperatureC;
+        PowerWatts = metrics.PowerWatts;
+        PowerTargetWatts = metrics.PowerTargetWatts;
+        VoltageV = metrics.VoltageV;
+
         Engine3DPercent = metrics.Engine3DPercent;
+        EngineComputePercent = metrics.EngineComputePercent;
+        EngineVideoEncodePercent = metrics.EngineVideoEncodePercent;
         EngineVideoDecodePercent = metrics.EngineVideoDecodePercent;
         EngineCopyPercent = metrics.EngineCopyPercent;
-        EngineComputePercent = metrics.EngineComputePercent;
 
-        _history.AddLast(metrics.UtilizationPercent);
-        while (_history.Count > MaxHistoryPoints)
+        CoreClockMhz = metrics.CoreClockMhz;
+        BoostClockMhz = metrics.BoostClockMhz;
+        MemoryClockMhz = metrics.MemoryClockMhz;
+        MemoryClockMaxMhz = metrics.MemoryClockMaxMhz;
+        ThrottleStatus = metrics.ThrottleStatus;
+
+        FanSpeedRpm = metrics.FanSpeedRpm;
+        FanSpeedPercent = metrics.FanSpeedPercent;
+        FanProfile = metrics.FanProfile;
+
+        // Update historical ring buffer
+        if (metrics.UtilizationPercent.HasValue)
         {
-            _history.RemoveFirst();
+            _history3D.AddLast(metrics.UtilizationPercent.Value);
+            while (_history3D.Count > MaxHistoryPoints)
+            {
+                _history3D.RemoveFirst();
+            }
         }
 
-        UpdateSparkline();
-        StatusText = $"D3D // {metrics.AdapterName.ToUpperInvariant()}";
+        if (metrics.DedicatedMemoryPercent.HasValue)
+        {
+            _historyVram.AddLast(metrics.DedicatedMemoryPercent.Value);
+            while (_historyVram.Count > MaxHistoryPoints)
+            {
+                _historyVram.RemoveFirst();
+            }
+        }
+
+        PeakUtilizationPercent = _history3D.Count > 0 ? Math.Round(_history3D.Max(), 1) : 0.0;
+        AverageUtilizationPercent = _history3D.Count > 0 ? Math.Round(_history3D.Average(), 1) : 0.0;
+
+        UpdateTimelineGeometries();
+
+        // Update Top Processes
+        TopProcesses.Clear();
+        foreach (var p in metrics.Processes)
+        {
+            TopProcesses.Add(new GpuProcessItemViewModel
+            {
+                Pid = p.Pid,
+                Name = p.Name,
+                Engine = p.Engine,
+                UtilizationPercent = p.UtilizationPercent,
+                Mode = p.Mode,
+                MemoryDisplay = p.MemoryMb.HasValue ? $"{p.MemoryMb.Value:N0} MB" : "—"
+            });
+        }
+
+        // Update Available Devices
+        if (AvailableDevices.Count == metrics.Devices.Count)
+        {
+            for (int i = 0; i < AvailableDevices.Count; i++)
+            {
+                var cur = AvailableDevices[i];
+                var next = metrics.Devices[i];
+                if (cur.Index == next.Index && cur.Name == next.Name)
+                {
+                    cur.IsSelected = next.IsSelected;
+                }
+                else
+                {
+                    AvailableDevices.Clear();
+                    break;
+                }
+            }
+        }
+
+        if (AvailableDevices.Count == 0)
+        {
+            foreach (var d in metrics.Devices)
+            {
+                AvailableDevices.Add(new GpuDeviceItemViewModel
+                {
+                    Index = d.Index,
+                    Name = d.Name,
+                    ShortName = d.ShortName,
+                    DedicatedBytes = d.DedicatedBytes,
+                    DriverVersion = d.DriverVersion,
+                    IsDiscrete = d.IsDiscrete,
+                    IsSelected = d.IsSelected
+                });
+            }
+        }
+
+        StatusText = $"D3D12 // {metrics.AdapterName.ToUpperInvariant()}";
     }
 
-    private void UpdateSparkline()
+    private void UpdateTimelineGeometries()
     {
-        if (_history.Count < 2) return;
+        if (_history3D.Count < 2) return;
 
-        const double width = 360.0;
-        const double height = 70.0;
-        double step = width / (_history.Count - 1);
+        const double width = 600.0;
+        const double height = 120.0;
+        double step = width / (_history3D.Count - 1);
 
-        var points = new List<string>();
+        var points3D = new List<string>();
+        var pointsVram = new List<string>();
+        var miniPoints = new List<string>();
+
+        const double miniWidth = 90.0;
+        const double miniHeight = 22.0;
+        double miniStep = miniWidth / (_history3D.Count - 1);
+
         int index = 0;
+        using var vramEnum = _historyVram.GetEnumerator();
 
-        foreach (var val in _history)
+        foreach (var val in _history3D)
         {
+            vramEnum.MoveNext();
+            double vramVal = vramEnum.Current;
+
             double x = Math.Round(index * step, 1);
-            // Invert Y: 100% -> top (0), 0% -> bottom (height)
-            double normalized = Math.Clamp(val / 100.0, 0.0, 1.0);
-            double y = Math.Round(height - (normalized * (height - 6)) - 3, 1);
-            points.Add($"{x},{y}");
+
+            double norm3D = Math.Clamp(val / 100.0, 0.0, 1.0);
+            double y3D = Math.Round(height - (norm3D * height), 1);
+            points3D.Add($"{x},{y3D}");
+
+            double normVram = Math.Clamp(vramVal / 100.0, 0.0, 1.0);
+            double yVram = Math.Round(height - (normVram * height), 1);
+            pointsVram.Add($"{x},{yVram}");
+
+            double mx = Math.Round(index * miniStep, 1);
+            double my = Math.Round(miniHeight - (norm3D * (miniHeight - 4)) - 2, 1);
+            miniPoints.Add($"{mx},{my}");
+
             index++;
         }
 
-        SparklineGeometry = "M " + string.Join(" L ", points);
+        TimelineLineGeometry = "M " + string.Join(" L ", points3D);
+        TimelineAreaGeometry = $"M 0,{height} L " + string.Join(" L ", points3D) + $" L {width},{height} Z";
+        TimelineVramGeometry = "M " + string.Join(" L ", pointsVram);
+        MiniSparklineGeometry = "M " + string.Join(" L ", miniPoints);
+        SparklineGeometry = TimelineLineGeometry;
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
+
+    protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
 
     protected bool SetProperty<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
     {
         if (EqualityComparer<T>.Default.Equals(field, value)) return false;
         field = value;
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        OnPropertyChanged(propertyName);
         return true;
     }
 }

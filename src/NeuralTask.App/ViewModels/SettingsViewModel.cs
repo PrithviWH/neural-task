@@ -4,7 +4,7 @@ using NeuralTask.Theming;
 
 namespace NeuralTask.App.ViewModels;
 
-public class SettingsViewModel : ViewModelBase
+public class SettingsViewModel : ViewModelBase, IDisposable
 {
     private readonly ISettingsService _settingsService;
     private readonly ProcessMonitorCoordinator _coordinator;
@@ -19,6 +19,9 @@ public class SettingsViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(LoadedPlugins));
     }
+
+    private readonly Action<SafePluginPanel> _onPluginPanelLoaded;
+    private readonly Action<SafePluginPanel> _onPluginPanelFaulted;
 
     private ThemeMode _selectedTheme;
     private int _selectedIntervalMs;
@@ -288,10 +291,13 @@ public class SettingsViewModel : ViewModelBase
         _historyStore = historyStore;
         _pluginManager = pluginManager;
 
+        _onPluginPanelLoaded = _ => RefreshPluginsList();
+        _onPluginPanelFaulted = _ => RefreshPluginsList();
+
         if (_pluginManager != null)
         {
-            _pluginManager.PanelLoaded += _ => RefreshPluginsList();
-            _pluginManager.PanelFaulted += _ => RefreshPluginsList();
+            _pluginManager.PanelLoaded += _onPluginPanelLoaded;
+            _pluginManager.PanelFaulted += _onPluginPanelFaulted;
         }
 
         var initial = _settingsService.CurrentSettings;
@@ -320,7 +326,7 @@ public class SettingsViewModel : ViewModelBase
         _coordinator.SetInterval(TimeSpan.FromMilliseconds(_selectedIntervalMs));
     }
 
-    private void Persist()
+    public void Persist()
     {
         _settingsService.SaveSettings(new AppSettings(
             Theme: _selectedTheme,
@@ -332,5 +338,21 @@ public class SettingsViewModel : ViewModelBase
             HistoryRetentionMinutes: _historyRetentionMinutes,
             IsHistoryPersistenceEnabled: _isHistoryPersistenceEnabled
         ));
+    }
+
+    private bool _isDisposed;
+    public int DisposeCount { get; private set; }
+
+    public void Dispose()
+    {
+        DisposeCount++;
+        if (_isDisposed) return;
+        _isDisposed = true;
+
+        if (_pluginManager != null)
+        {
+            _pluginManager.PanelLoaded -= _onPluginPanelLoaded;
+            _pluginManager.PanelFaulted -= _onPluginPanelFaulted;
+        }
     }
 }

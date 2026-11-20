@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using NeuralTask.Core.Models;
 
@@ -9,7 +11,10 @@ public enum ProcessTerminationStatus
     Success,
     AccessDenied,
     AlreadyExited,
-    Failed
+    Failed,
+    Cancelled,
+    IdentityMismatch,
+    RefusedAmbiguousIdentity
 }
 
 public record ProcessTerminationResult(
@@ -27,7 +32,17 @@ public record TreeTerminationResult(
 
 public interface IProcessActionService
 {
-    Task<ProcessTerminationResult> TerminateProcessAsync(int pid);
-    Task<TreeTerminationResult> TerminateTreeAsync(int rootPid, IReadOnlyList<ProcessSnapshot> currentSnapshots);
+    Task<ProcessTerminationResult> TerminateProcessAsync(
+        int pid,
+        string? expectedProcessName = null,
+        DateTimeOffset? expectedStartTime = null,
+        TimeSpan? timeout = null,
+        CancellationToken cancellationToken = default);
+
+    Task<TreeTerminationResult> TerminateTreeAsync(
+        int rootPid,
+        IReadOnlyList<ProcessSnapshot> currentSnapshots,
+        CancellationToken cancellationToken = default);
+
     ProcessTree BuildTree(IReadOnlyList<ProcessSnapshot> snapshots);
 }

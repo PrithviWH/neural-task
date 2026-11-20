@@ -23,8 +23,11 @@
     <Color x:Key="ColorAccentPrimaryHover">#FF4C52E0</Color>
     <Color x:Key="ColorAccentPrimarySoft">#FFECEDFD</Color>
     <Color x:Key="ColorAccentSecondary">#FF0D827A</Color>
+    <Color x:Key="ColorAccentSecondarySoft">#FFE6F7F5</Color>
     <Color x:Key="ColorAccentWarning">#FFB45309</Color>
+    <Color x:Key="ColorAccentWarningSoft">#FFFEF3C7</Color>
     <Color x:Key="ColorAccentDanger">#FFC93B41</Color>
+    <Color x:Key="ColorAccentDangerSoft">#FFFEECEC</Color>
     <Color x:Key="ColorButtonTextOnAccent">#FFFFFFFF</Color>
 
     <!-- Aliases for Legacy Compatibility -->
@@ -53,8 +56,11 @@
     <SolidColorBrush x:Key="BrushAccentPrimaryHover" Color="{StaticResource ColorAccentPrimaryHover}" />
     <SolidColorBrush x:Key="BrushAccentPrimarySoft" Color="{StaticResource ColorAccentPrimarySoft}" />
     <SolidColorBrush x:Key="BrushAccentSecondary" Color="{StaticResource ColorAccentSecondary}" />
+    <SolidColorBrush x:Key="BrushAccentSecondarySoft" Color="{StaticResource ColorAccentSecondarySoft}" />
     <SolidColorBrush x:Key="BrushAccentWarning" Color="{StaticResource ColorAccentWarning}" />
+    <SolidColorBrush x:Key="BrushAccentWarningSoft" Color="{StaticResource ColorAccentWarningSoft}" />
     <SolidColorBrush x:Key="BrushAccentDanger" Color="{StaticResource ColorAccentDanger}" />
+    <SolidColorBrush x:Key="BrushAccentDangerSoft" Color="{StaticResource ColorAccentDangerSoft}" />
     <SolidColorBrush x:Key="BrushAccentCyan" Color="{StaticResource ColorAccentSecondary}" />
     <SolidColorBrush x:Key="BrushBorderNormal" Color="{StaticResource ColorBorderSubtle}" />
     <SolidColorBrush x:Key="BrushBorderDefault" Color="{StaticResource ColorBorderSubtle}" />

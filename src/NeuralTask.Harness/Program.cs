@@ -63,7 +63,7 @@ public class Program
             {
                 var ramMb = (p.RamBytes / (1024.0 * 1024.0)).ToString("F1");
                 var diskKb = (p.DiskBytesPerSec / 1024.0).ToString("F1");
-                var netKb = (p.NetworkBytesPerSec / 1024.0).ToString("F1");
+                var netKb = p.NetworkBytesPerSec.HasValue ? (p.NetworkBytesPerSec.Value / 1024.0).ToString("F1") : "—";
                 var name = p.Name.Length > 25 ? p.Name.Substring(0, 22) + "..." : p.Name;
 
                 Console.WriteLine(string.Format("{0,-7} {1,-26} {2,8:F2} {3,12} {4,14} {5,14}",

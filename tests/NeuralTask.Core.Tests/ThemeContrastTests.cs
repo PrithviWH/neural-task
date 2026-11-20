@@ -83,6 +83,83 @@ public class ThemeContrastTests
         Assert.True(lightAccent.b > lightAccent.r, "Light accent preserves cool indigo identity");
     }
 
+    [Fact]
+    public void Themes_DeclareAllReferencedDynamicResources()
+    {
+        // Walks through all XAML files in the solution and verifies that any
+        // {DynamicResource SomeKey} is declared in both DarkTheme.xaml and LightTheme.xaml (PRD §10).
+        var solutionDir = System.IO.Path.GetFullPath(System.IO.Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var srcDir = System.IO.Path.Combine(solutionDir, "src");
+        if (!System.IO.Directory.Exists(srcDir)) return;
+
+        var xamlFiles = System.IO.Directory.GetFiles(srcDir, "*.xaml", System.IO.SearchOption.AllDirectories);
+        var darkPath = System.IO.Path.Combine(srcDir, "NeuralTask.Theming", "Themes", "DarkTheme.xaml");
+        var lightPath = System.IO.Path.Combine(srcDir, "NeuralTask.Theming", "Themes", "LightTheme.xaml");
+
+        if (!System.IO.File.Exists(darkPath) || !System.IO.File.Exists(lightPath)) return;
+
+        var darkContent = System.IO.File.ReadAllText(darkPath);
+        var lightContent = System.IO.File.ReadAllText(lightPath);
+
+        var regex = new System.Text.RegularExpressions.Regex(@"DynamicResource\s+([A-Za-z0-9_]+)");
+        var missingInDark = new System.Collections.Generic.List<string>();
+        var missingInLight = new System.Collections.Generic.List<string>();
+
+        foreach (var file in xamlFiles)
+        {
+            var text = System.IO.File.ReadAllText(file);
+            var matches = regex.Matches(text);
+            foreach (System.Text.RegularExpressions.Match match in matches)
+            {
+                var key = match.Groups[1].Value;
+                if (!darkContent.Contains($"x:Key=\"{key}\"") && !missingInDark.Contains(key))
+                {
+                    missingInDark.Add(key);
+                }
+                if (!lightContent.Contains($"x:Key=\"{key}\"") && !missingInLight.Contains(key))
+                {
+                    missingInLight.Add(key);
+                }
+            }
+        }
+
+        Assert.True(missingInDark.Count == 0, $"Missing keys in DarkTheme.xaml: {string.Join(", ", missingInDark)}");
+        Assert.True(missingInLight.Count == 0, $"Missing keys in LightTheme.xaml: {string.Join(", ", missingInLight)}");
+    }
+
+    [Fact]
+    public void XamlFiles_RunTextBindings_ExplicitlySpecifyModeOneWay()
+    {
+        var solutionDir = System.IO.Path.GetFullPath(System.IO.Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var srcDir = System.IO.Path.Combine(solutionDir, "src");
+        if (!System.IO.Directory.Exists(srcDir)) return;
+
+        var xamlFiles = System.IO.Directory.GetFiles(srcDir, "*.xaml", System.IO.SearchOption.AllDirectories);
+        var runBindingRegex = new System.Text.RegularExpressions.Regex(@"<Run\s+[^>]*Text\s*=\s*""\{Binding\s+([^}]+)\}""");
+
+        var invalidBindings = new System.Collections.Generic.List<string>();
+
+        foreach (var file in xamlFiles)
+        {
+            var lines = System.IO.File.ReadAllLines(file);
+            for (int i = 0; i < lines.Length; i++)
+            {
+                var match = runBindingRegex.Match(lines[i]);
+                if (match.Success)
+                {
+                    var bindingExpression = match.Groups[1].Value;
+                    if (!bindingExpression.Contains("Mode=OneWay"))
+                    {
+                        invalidBindings.Add($"{System.IO.Path.GetFileName(file)}:L{i + 1}: {lines[i].Trim()}");
+                    }
+                }
+            }
+        }
+
+        Assert.True(invalidBindings.Count == 0,
+            $"Found Run.Text bindings missing explicit Mode=OneWay (which causes WPF TwoWay binding crashes on read-only properties): {string.Join("; ", invalidBindings)}");
+    }
+
     /// <summary>
     /// Computes the relative luminance and contrast ratio per W3C WCAG 2.1 specs.
     /// Formula: (L1 + 0.05) / (L2 + 0.05) where L1 is lighter luminance.

@@ -169,4 +169,118 @@ public class ExportServiceTests
         Assert.Equal(snapshots.Count + 1, lines.Length);
         Assert.StartsWith("PID,Name,ParentPID", lines[0]);
     }
+
+    [Fact]
+    public void Export_WhenNetworkBytesPerSecIsNull_RendersAsNullInJsonAndEmptyInCsv()
+    {
+        var service = new ExportService();
+        var processes = new List<ProcessSnapshot>
+        {
+            new ProcessSnapshot(101, "proc.exe", 1, 2.5, 100_000, 500, null, DateTime.Now, @"C:\proc.exe", false)
+        };
+
+        var json = service.ExportToJson(CreateDummySystem(), processes);
+        using var doc = JsonDocument.Parse(json);
+        var procJson = doc.RootElement.GetProperty("processes")[0];
+        Assert.Equal(JsonValueKind.Null, procJson.GetProperty("networkBytesPerSec").ValueKind);
+
+        var csv = service.ExportToCsv(CreateDummySystem(), processes);
+        var lines = csv.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries);
+        // Format: ...,Disk_Bytes_Per_Sec,Network_Bytes_Per_Sec,Executable_Path,...
+        // When Network is null, an empty string is rendered between the commas: "500.00,,\"C:\proc.exe\""
+        Assert.Contains("500.00,,\"C:\\proc.exe\"", lines[1]);
+    }
+
+    [Theory]
+    [InlineData("=1+1", "\"'=1+1\"")]
+    [InlineData("+SUM(A1:A2)", "\"'+SUM(A1:A2)\"")]
+    [InlineData("-1+2", "\"'-1+2\"")]
+    [InlineData("@SUM(A1:A2)", "\"'@SUM(A1:A2)\"")]
+    [InlineData("\t=1+1", "\"'\t=1+1\"")]
+    [InlineData("\r=1+1", "\"'\r=1+1\"")]
+    [InlineData("\r\n=1+1", "\"'\r\n=1+1\"")]
+    [InlineData("   =1+1", "\"'   =1+1\"")]
+    [InlineData(" \t @SUM(A1:A2)", "\"' \t @SUM(A1:A2)\"")]
+    [InlineData("normal_process.exe", "\"normal_process.exe\"")]
+    [InlineData(@"C:\Program Files\App\app.exe", "\"C:\\Program Files\\App\\app.exe\"")]
+    [InlineData("process,with,commas.exe", "\"process,with,commas.exe\"")]
+    [InlineData("quoted \"proc\" name.exe", "\"quoted \"\"proc\"\" name.exe\"")]
+    [InlineData("multiline\nprocess.exe", "\"multiline\nprocess.exe\"")]
+    public void EscapeCsvField_NeutralizesFormulasAndPreservesValidText(string input, string expected)
+    {
+        var result = ExportService.EscapeCsvField(input);
+        Assert.Equal(expected, result);
+    }
+
+    [Fact]
+    public void ExportToCsv_WhenProcessAttributesContainFormulas_NeutralizesAllFields()
+    {
+        var service = new ExportService();
+        var maliciousProcesses = new List<ProcessSnapshot>
+        {
+            new ProcessSnapshot(
+                Pid: 5001,
+                Name: "=cmd|'/c calc'!A0",
+                ParentPid: 1000,
+                CpuPercent: 1.0,
+                RamBytes: 10_000_000,
+                DiskBytesPerSec: 0,
+                NetworkBytesPerSec: null,
+                StartTime: DateTimeOffset.UtcNow,
+                ExecutablePath: @"   +SUM(A1:A10)",
+                IsAccessDenied: false
+            ),
+            new ProcessSnapshot(
+                Pid: 5002,
+                Name: "-1+2",
+                ParentPid: 1000,
+                CpuPercent: 2.0,
+                RamBytes: 20_000_000,
+                DiskBytesPerSec: 0,
+                NetworkBytesPerSec: null,
+                StartTime: DateTimeOffset.UtcNow,
+                ExecutablePath: "\t@cmd|'/c powershell'!",
+                IsAccessDenied: false
+            ),
+            new ProcessSnapshot(
+                Pid: 5003,
+                Name: "cmd.exe",
+                ParentPid: 1000,
+                CpuPercent: 0.5,
+                RamBytes: 5_000_000,
+                DiskBytesPerSec: 0,
+                NetworkBytesPerSec: null,
+                StartTime: DateTimeOffset.UtcNow,
+                ExecutablePath: @"C:\Windows\System32\cmd.exe /c =1+1",
+                IsAccessDenied: false
+            )
+        };
+
+        var heuristics = new Dictionary<int, ProcessHeuristicResult>
+        {
+            [5001] = new ProcessHeuristicResult(5001, "=cmd|'/c calc'!A0", new[]
+            {
+                new ProcessHeuristicFlag("SUSPICIOUS_NAME", "Suspicious Formula", "@FLAG_FORMULA", HeuristicSeverity.Warning)
+            })
+        };
+
+        var csv = service.ExportToCsv(CreateDummySystem(), maliciousProcesses, heuristics);
+        Assert.NotNull(csv);
+
+        var lines = csv.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries);
+        Assert.Equal(4, lines.Length); // 1 header + 3 processes
+
+        // Process 5001: Name and ExecutablePath and Flag Reason neutralized
+        Assert.Contains("\"'=cmd|'/c calc'!A0\"", lines[1]);
+        Assert.Contains("\"'   +SUM(A1:A10)\"", lines[1]);
+        Assert.Contains("\"'@FLAG_FORMULA\"", lines[1]);
+
+        // Process 5002: Name and ExecutablePath neutralized
+        Assert.Contains("\"'-1+2\"", lines[2]);
+        Assert.Contains("\"'\t@cmd|'/c powershell'!\"", lines[2]);
+
+        // Process 5003: Ordinary path containing = inside argument is not falsely escaped at the front
+        Assert.Contains("\"cmd.exe\"", lines[3]);
+        Assert.Contains("\"C:\\Windows\\System32\\cmd.exe /c =1+1\"", lines[3]);
+    }
 }

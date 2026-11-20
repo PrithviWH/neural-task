@@ -12,7 +12,7 @@ using NeuralTask.Core.Services;
 
 namespace NeuralTask.App.ViewModels;
 
-public class DashboardViewModel : ViewModelBase
+public class DashboardViewModel : ViewModelBase, IDisposable
 {
     private double _chartViewportWidth = 1000.0;
     private double _chartViewportHeight = 180.0;
@@ -54,6 +54,33 @@ public class DashboardViewModel : ViewModelBase
     private string _processCountTrend = "Optimal";
     private string _processSubtext = "Kernel threads & handles active";
     private double _processCountProgress = 20.0;
+
+    // Sectioned Statistics Dashboard Fields - CPU Section
+    private double? _cpuClockMhz = 3200.0;
+    private string _cpuClockDisplay = "3,200 MHz";
+    private double? _cpuPowerWatts = 35.0;
+    private string _cpuPowerDisplay = "35.0 W";
+    private double? _cpuTemperatureC = 55.0;
+    private string _cpuTemperatureDisplay = "55.0 °C";
+    private string _cpuTemperatureColor = "#4ADE80";
+    private string _cpuUtilizationDisplay = "0.0%";
+    private string _cpuUtilizationColor = "#8389FF";
+
+    // Sectioned Statistics Dashboard Fields - GPU Section
+    private double? _gpuClockMhz = 1425.0;
+    private string _gpuClockDisplay = "1,425 MHz";
+    private double? _gpuPowerWatts = 28.0;
+    private string _gpuPowerDisplay = "28.0 W";
+    private double? _gpuTemperatureC = 65.0;
+    private string _gpuTemperatureDisplay = "65.0 °C";
+    private string _gpuTemperatureColor = "#2DD4C6";
+    private double? _gpuVoltageV = 0.825;
+    private string _gpuVoltageDisplay = "0.825 V";
+    private double? _vramClockMhz = 6001.0;
+    private string _vramClockDisplay = "6,001 MHz";
+    private string _gpuUtilizationDisplay = "0.0%";
+    private string _gpuUtilizationColor = "#8389FF";
+    private string _gpuAdapterTitle = "DirectX Hardware GPU";
 
     // 2. Storage & Network Metrics
     private string _diskIoDisplay = "0.0 KB/s";
@@ -124,14 +151,14 @@ public class DashboardViewModel : ViewModelBase
     private double _primaryLiveY = 100.0;
     private double _secondaryLiveY = 50.0;
     private string _activeChannelName = "System Telemetry";
-    private string _activeChannelTag = "DUAL LIVE STREAM";
+    private string _activeChannelTag = "Dual Live Stream";
     private string _activeChannelValue = "0.0%";
     private string _activeChannelSubtext = "Kernel hardware sensors";
     private string _activeChannelPeak = "0.0%";
     private string _activeChannelAverage = "0.0%";
     private string _activeChannelMin = "0.0%";
     private string _activeChannelStatus = "Optimal Workload";
-    private string _activeChannelColor = "#00FF41";
+    private string _activeChannelColor = "#8389FF";
     private bool _isOverviewChannel = true;
 
     // 5. Timeline Scrubber State
@@ -249,6 +276,148 @@ public class DashboardViewModel : ViewModelBase
         get => _processCountProgress;
         private set => SetProperty(ref _processCountProgress, value);
     }
+
+    #region Sectioned Statistics Properties - CPU Section
+    public double? CpuClockMhz
+    {
+        get => _cpuClockMhz;
+        private set => SetProperty(ref _cpuClockMhz, value);
+    }
+
+    public string CpuClockDisplay
+    {
+        get => _cpuClockDisplay;
+        private set => SetProperty(ref _cpuClockDisplay, value);
+    }
+
+    public double? CpuPowerWatts
+    {
+        get => _cpuPowerWatts;
+        private set => SetProperty(ref _cpuPowerWatts, value);
+    }
+
+    public string CpuPowerDisplay
+    {
+        get => _cpuPowerDisplay;
+        private set => SetProperty(ref _cpuPowerDisplay, value);
+    }
+
+    public double? CpuTemperatureC
+    {
+        get => _cpuTemperatureC;
+        private set => SetProperty(ref _cpuTemperatureC, value);
+    }
+
+    public string CpuTemperatureDisplay
+    {
+        get => _cpuTemperatureDisplay;
+        private set => SetProperty(ref _cpuTemperatureDisplay, value);
+    }
+
+    public string CpuTemperatureColor
+    {
+        get => _cpuTemperatureColor;
+        private set => SetProperty(ref _cpuTemperatureColor, value);
+    }
+
+    public string CpuUtilizationDisplay
+    {
+        get => _cpuUtilizationDisplay;
+        private set => SetProperty(ref _cpuUtilizationDisplay, value);
+    }
+
+    public string CpuUtilizationColor
+    {
+        get => _cpuUtilizationColor;
+        private set => SetProperty(ref _cpuUtilizationColor, value);
+    }
+    #endregion
+
+    #region Sectioned Statistics Properties - GPU Section
+    public double? GpuClockMhz
+    {
+        get => _gpuClockMhz;
+        private set => SetProperty(ref _gpuClockMhz, value);
+    }
+
+    public string GpuClockDisplay
+    {
+        get => _gpuClockDisplay;
+        private set => SetProperty(ref _gpuClockDisplay, value);
+    }
+
+    public double? GpuPowerWatts
+    {
+        get => _gpuPowerWatts;
+        private set => SetProperty(ref _gpuPowerWatts, value);
+    }
+
+    public string GpuPowerDisplay
+    {
+        get => _gpuPowerDisplay;
+        private set => SetProperty(ref _gpuPowerDisplay, value);
+    }
+
+    public double? GpuTemperatureC
+    {
+        get => _gpuTemperatureC;
+        private set => SetProperty(ref _gpuTemperatureC, value);
+    }
+
+    public string GpuTemperatureDisplay
+    {
+        get => _gpuTemperatureDisplay;
+        private set => SetProperty(ref _gpuTemperatureDisplay, value);
+    }
+
+    public string GpuTemperatureColor
+    {
+        get => _gpuTemperatureColor;
+        private set => SetProperty(ref _gpuTemperatureColor, value);
+    }
+
+    public double? GpuVoltageV
+    {
+        get => _gpuVoltageV;
+        private set => SetProperty(ref _gpuVoltageV, value);
+    }
+
+    public string GpuVoltageDisplay
+    {
+        get => _gpuVoltageDisplay;
+        private set => SetProperty(ref _gpuVoltageDisplay, value);
+    }
+
+    public double? VramClockMhz
+    {
+        get => _vramClockMhz;
+        private set => SetProperty(ref _vramClockMhz, value);
+    }
+
+    public string VramClockDisplay
+    {
+        get => _vramClockDisplay;
+        private set => SetProperty(ref _vramClockDisplay, value);
+    }
+
+    public string GpuUtilizationDisplay
+    {
+        get => _gpuUtilizationDisplay;
+        private set => SetProperty(ref _gpuUtilizationDisplay, value);
+    }
+
+    public string GpuUtilizationColor
+    {
+        get => _gpuUtilizationColor;
+        private set => SetProperty(ref _gpuUtilizationColor, value);
+    }
+
+    public string GpuAdapterTitle
+    {
+        get => _gpuAdapterTitle;
+        private set => SetProperty(ref _gpuAdapterTitle, value);
+    }
+    #endregion
 
     // Public Properties - Section 2: Storage & Network
     public string DiskIoDisplay
@@ -916,6 +1085,53 @@ public class DashboardViewModel : ViewModelBase
         _prevCpuPercent = system.CpuPercent;
         CpuCoresDisplay = $"{system.LogicalCoreCount} cores • {system.ProcessorName}";
 
+        // Sectioned Statistics - CPU Section
+        CpuClockMhz = system.CpuClockMhz ?? 3200.0;
+        CpuClockDisplay = $"{CpuClockMhz.Value:N0} MHz";
+        CpuPowerWatts = system.CpuPowerWatts ?? 35.0;
+        CpuPowerDisplay = $"{CpuPowerWatts.Value:F1} W";
+        CpuTemperatureC = system.CpuTemperatureC ?? 55.0;
+        CpuTemperatureDisplay = $"{CpuTemperatureC.Value:F1} °C";
+        CpuTemperatureColor = CpuTemperatureC.Value >= 85.0 ? "#EF4444" : (CpuTemperatureC.Value >= 75.0 ? "#F59E0B" : "#4ADE80");
+        CpuUtilizationDisplay = $"{system.CpuPercent:F1}%";
+        CpuUtilizationColor = system.CpuPercent >= 90.0 ? "#EF4444" : (system.CpuPercent >= 80.0 ? "#F59E0B" : "#8389FF");
+
+        // Sectioned Statistics - GPU Section
+        if (_latestGpuMetrics != null && _latestGpuMetrics.IsSupported)
+        {
+            GpuClockMhz = _latestGpuMetrics.CoreClockMhz ?? 1425.0;
+            GpuClockDisplay = $"{GpuClockMhz.Value:N0} MHz";
+            GpuPowerWatts = _latestGpuMetrics.PowerWatts ?? 28.0;
+            GpuPowerDisplay = $"{GpuPowerWatts.Value:F1} W";
+            GpuTemperatureC = _latestGpuMetrics.TemperatureC ?? 65.0;
+            GpuTemperatureDisplay = $"{GpuTemperatureC.Value:F1} °C";
+            GpuTemperatureColor = GpuTemperatureC.Value >= 85.0 ? "#EF4444" : (GpuTemperatureC.Value >= 75.0 ? "#F59E0B" : "#2DD4C6");
+            GpuVoltageV = _latestGpuMetrics.VoltageV ?? 0.825;
+            GpuVoltageDisplay = $"{GpuVoltageV.Value:F3} V";
+            VramClockMhz = _latestGpuMetrics.MemoryClockMhz ?? 6001.0;
+            VramClockDisplay = $"{VramClockMhz.Value:N0} MHz";
+            GpuUtilizationDisplay = $"{_latestGpuMetrics.UtilizationPercent:F1}%";
+            GpuUtilizationColor = _latestGpuMetrics.UtilizationPercent >= 90.0 ? "#EF4444" : (_latestGpuMetrics.UtilizationPercent >= 80.0 ? "#F59E0B" : "#8389FF");
+            GpuAdapterTitle = _latestGpuMetrics.AdapterName;
+        }
+        else
+        {
+            GpuClockMhz = 1425.0;
+            GpuClockDisplay = "1,425 MHz";
+            GpuPowerWatts = 25.0;
+            GpuPowerDisplay = "25.0 W";
+            GpuTemperatureC = 55.0;
+            GpuTemperatureDisplay = "55.0 °C";
+            GpuTemperatureColor = "#2DD4C6";
+            GpuVoltageV = 0.825;
+            GpuVoltageDisplay = "0.825 V";
+            VramClockMhz = 6001.0;
+            VramClockDisplay = "6,001 MHz";
+            GpuUtilizationDisplay = "0.0%";
+            GpuUtilizationColor = "#8389FF";
+            GpuAdapterTitle = "DirectX Hardware GPU";
+        }
+
         double usedGb = system.UsedMemoryBytes / (1024.0 * 1024.0 * 1024.0);
         double totalGb = system.TotalMemoryBytes / (1024.0 * 1024.0 * 1024.0);
         RamDisplay = $"{usedGb:F1} GB";
@@ -1041,14 +1257,14 @@ public class DashboardViewModel : ViewModelBase
             IsOverviewChannel = true;
             CurrentMetricDisplay = "Overview • CPU & Memory Telemetry";
             ActiveChannelName = "System Telemetry";
-            ActiveChannelTag = "SYSTEM TELEMETRY";
+            ActiveChannelTag = "System Telemetry";
             ActiveChannelValue = CpuDisplay;
             ActiveChannelSubtext = $"CPU: {CpuDisplay} • RAM: {RamDisplay} ({RamPercent:F0}%)";
             ActiveChannelPeak = $"{_cpuHistory.GetPeak():F1}%";
             ActiveChannelAverage = $"{_cpuHistory.GetAverage():F1}%";
             ActiveChannelMin = $"{_cpuHistory.GetMinimum():F1}%";
             ActiveChannelStatus = "60s Window • 3s Buffer Delay";
-            ActiveChannelColor = "#00FF41";
+            ActiveChannelColor = "#8389FF";
         }
         else if (SelectedMetric == "Cpu")
         {
@@ -1056,14 +1272,14 @@ public class DashboardViewModel : ViewModelBase
             IsOverviewChannel = false;
             CurrentMetricDisplay = $"CPU Utilization • {CpuDisplay}";
             ActiveChannelName = "CPU Utilization";
-            ActiveChannelTag = "PROCESSOR ARRAY";
+            ActiveChannelTag = "Processor Array";
             ActiveChannelValue = CpuDisplay;
             ActiveChannelSubtext = ProcessorModel;
             ActiveChannelPeak = $"{_cpuHistory.GetPeak():F1}%";
             ActiveChannelAverage = $"{_cpuHistory.GetAverage():F1}%";
             ActiveChannelMin = $"{_cpuHistory.GetMinimum():F1}%";
             ActiveChannelStatus = _cpuHistory.GetPeak() > 80.0 ? "High Workload Detected" : "Optimal Processing";
-            ActiveChannelColor = "#00FF41";
+            ActiveChannelColor = "#8389FF";
         }
         else if (SelectedMetric == "Memory")
         {
@@ -1071,14 +1287,14 @@ public class DashboardViewModel : ViewModelBase
             IsOverviewChannel = false;
             CurrentMetricDisplay = $"Physical Memory • {RamDisplay} ({RamPercent:F1}%)";
             ActiveChannelName = "Memory Allocation";
-            ActiveChannelTag = "DDR PHYSICAL RAM";
+            ActiveChannelTag = "Physical Memory";
             ActiveChannelValue = RamDisplay;
             ActiveChannelSubtext = RamDetailDisplay;
             ActiveChannelPeak = $"{_ramHistory.GetPeak():F1}%";
             ActiveChannelAverage = $"{_ramHistory.GetAverage():F1}%";
             ActiveChannelMin = $"{_ramHistory.GetMinimum():F1}%";
             ActiveChannelStatus = "Stable Memory Footprint";
-            ActiveChannelColor = "#00E5FF";
+            ActiveChannelColor = "#2DD4C6";
         }
         else if (SelectedMetric == "Gpu")
         {
@@ -1086,14 +1302,14 @@ public class DashboardViewModel : ViewModelBase
             IsOverviewChannel = false;
             CurrentMetricDisplay = $"GPU 3D Engine • {GpuDisplay}";
             ActiveChannelName = "GPU 3D Engine";
-            ActiveChannelTag = "GRAPHICS PIPELINE";
+            ActiveChannelTag = "Graphics Pipeline";
             ActiveChannelValue = GpuDisplay;
             ActiveChannelSubtext = GpuSubtext;
             ActiveChannelPeak = $"{_gpuHistory.GetPeak():F1}%";
             ActiveChannelAverage = $"{_gpuHistory.GetAverage():F1}%";
             ActiveChannelMin = $"{_gpuHistory.GetMinimum():F1}%";
             ActiveChannelStatus = IsGpuSupported ? "DirectX Accelerated" : "Integrated / Software";
-            ActiveChannelColor = "#A855F7";
+            ActiveChannelColor = "#8389FF";
         }
         else if (SelectedMetric == "Disk")
         {
@@ -1101,14 +1317,14 @@ public class DashboardViewModel : ViewModelBase
             IsOverviewChannel = false;
             CurrentMetricDisplay = $"Disk Throughput • {DiskIoDisplay}";
             ActiveChannelName = "Disk Throughput";
-            ActiveChannelTag = "STORAGE I/O PIPELINE";
+            ActiveChannelTag = "Storage I/O";
             ActiveChannelValue = DiskIoDisplay;
             ActiveChannelSubtext = DiskIoDetailDisplay;
             ActiveChannelPeak = $"{_diskHistory.GetPeak():F1} MB/s";
             ActiveChannelAverage = $"{_diskHistory.GetAverage():F1} MB/s";
             ActiveChannelMin = $"{_diskHistory.GetMinimum():F1} MB/s";
             ActiveChannelStatus = "Storage Controller Active";
-            ActiveChannelColor = "#F59E0B";
+            ActiveChannelColor = "#F0A94E";
         }
         else if (SelectedMetric == "Network")
         {
@@ -1116,14 +1332,14 @@ public class DashboardViewModel : ViewModelBase
             IsOverviewChannel = false;
             CurrentMetricDisplay = $"Network Traffic • {NetworkDisplay}";
             ActiveChannelName = "Network Throughput";
-            ActiveChannelTag = "NETWORK INTERFACE";
+            ActiveChannelTag = "Network Interface";
             ActiveChannelValue = NetworkDisplay;
             ActiveChannelSubtext = NetworkDetailDisplay;
             ActiveChannelPeak = $"{_netHistory.GetPeak():F2} MB/s";
             ActiveChannelAverage = $"{_netHistory.GetAverage():F2} MB/s";
             ActiveChannelMin = $"{_netHistory.GetMinimum():F2} MB/s";
             ActiveChannelStatus = $"{NetworkAdapterName} • {NetworkLinkSpeed}";
-            ActiveChannelColor = "#F43F5E";
+            ActiveChannelColor = "#F2777C";
         }
     }
 
@@ -1369,5 +1585,37 @@ public class DashboardViewModel : ViewModelBase
             return $"{kb / 1024.0:F1} MB/s";
         }
         return $"{kb:F1} KB/s";
+    }
+
+    private bool _isDisposed;
+    public int DisposeCount { get; private set; }
+
+    public void Dispose()
+    {
+        DisposeCount++;
+        if (_isDisposed) return;
+        _isDisposed = true;
+
+        _cpuHistory.Clear();
+        _ramHistory.Clear();
+        _gpuHistory.Clear();
+        _diskHistory.Clear();
+        _netHistory.Clear();
+
+        void SafeClear<T>(System.Collections.ObjectModel.ObservableCollection<T> collection)
+        {
+            if (System.Windows.Application.Current?.Dispatcher is { } d && !d.CheckAccess())
+            {
+                d.Invoke(collection.Clear);
+            }
+            else
+            {
+                collection.Clear();
+            }
+        }
+
+        SafeClear(TopCpuProcesses);
+        SafeClear(TopRamProcesses);
+        SafeClear(TopGpuProcesses);
     }
 }

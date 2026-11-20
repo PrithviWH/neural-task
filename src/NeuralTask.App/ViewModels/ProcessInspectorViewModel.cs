@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
@@ -15,7 +16,7 @@ namespace NeuralTask.App.ViewModels;
 /// Detailed inspection viewmodel for a selected process (PRD §6.2 - Feature 2.3).
 /// Displays live resource metrics, publisher verification, sanitized arguments, and SHA-256 hashes.
 /// </summary>
-public class ProcessInspectorViewModel : ViewModelBase
+public class ProcessInspectorViewModel : ViewModelBase, IDisposable
 {
     private readonly IProcessInfoService _processInfoService;
     private readonly ProcessItemViewModel _item;
@@ -25,6 +26,10 @@ public class ProcessInspectorViewModel : ViewModelBase
     private bool _isSigned;
     private string _sha256 = "Computing SHA-256...";
     private bool _isDetailsLoaded;
+    private CancellationTokenSource? _inspectCts;
+    private bool _isDisposed;
+
+    public Task? CurrentInspectionTask { get; private set; }
 
     public ProcessItemViewModel Item => _item;
 
@@ -281,7 +286,7 @@ public class ProcessInspectorViewModel : ViewModelBase
 
     private void LoadAsync()
     {
-        if (_isDetailsLoaded) return;
+        if (_isDetailsLoaded || _isDisposed) return;
         _isDetailsLoaded = true;
 
         if (_item.Pid <= 4 || _item.IsAccessDenied || string.IsNullOrWhiteSpace(_item.ExecutablePath))
@@ -293,10 +298,17 @@ public class ProcessInspectorViewModel : ViewModelBase
             return;
         }
 
-        _ = Task.Run(async () =>
+        _inspectCts?.Cancel();
+        _inspectCts?.Dispose();
+        var cts = new CancellationTokenSource();
+        _inspectCts = cts;
+
+        CurrentInspectionTask = Task.Run(async () =>
         {
             try
             {
+                if (cts.IsCancellationRequested || _isDisposed) return;
+
                 var snap = new ProcessSnapshot(
                     _item.Pid,
                     _item.Name,
@@ -310,25 +322,58 @@ public class ProcessInspectorViewModel : ViewModelBase
 
                 var report = await _processInfoService.GenerateReportAsync(snap);
 
-                Application.Current?.Dispatcher.BeginInvoke(() =>
+                if (cts.IsCancellationRequested || _isDisposed) return;
+
+                if (Application.Current?.Dispatcher is { } d && !d.HasShutdownStarted && !d.HasShutdownFinished)
                 {
-                    CommandLine = SanitizeCommandLine(report.CommandLine);
-                    Publisher = string.IsNullOrWhiteSpace(report.SignerInfo) ? "Unsigned / Unverified" : report.SignerInfo;
-                    IsSigned = report.SignerInfo.Contains("Verified", StringComparison.OrdinalIgnoreCase) ||
-                               report.SignerInfo.Contains("Microsoft", StringComparison.OrdinalIgnoreCase);
-                    Sha256Hash = string.IsNullOrWhiteSpace(report.Sha256Hash) ? "[Unavailable]" : report.Sha256Hash;
-                });
+                    try
+                    {
+                        _ = d.BeginInvoke(() =>
+                        {
+                            if (cts.IsCancellationRequested || _isDisposed || d.HasShutdownStarted || d.HasShutdownFinished) return;
+                            CommandLine = SanitizeCommandLine(report.CommandLine);
+                            Publisher = string.IsNullOrWhiteSpace(report.SignerInfo) ? "Unsigned / Unverified" : report.SignerInfo;
+                            IsSigned = report.SignerInfo.Contains("Verified", StringComparison.OrdinalIgnoreCase) ||
+                                       report.SignerInfo.Contains("Microsoft", StringComparison.OrdinalIgnoreCase);
+                            Sha256Hash = string.IsNullOrWhiteSpace(report.Sha256Hash) ? "[Unavailable]" : report.Sha256Hash;
+                        });
+                    }
+                    catch { }
+                }
             }
             catch (Exception ex)
             {
-                Application.Current?.Dispatcher.BeginInvoke(() =>
+                if (cts.IsCancellationRequested || _isDisposed) return;
+
+                if (Application.Current?.Dispatcher is { } d && !d.HasShutdownStarted && !d.HasShutdownFinished)
                 {
-                    CommandLine = $"[Query Error: {ex.Message}]";
-                    Publisher = "[Inspection Error]";
-                    Sha256Hash = "[Unavailable]";
-                });
+                    try
+                    {
+                        _ = d.BeginInvoke(() =>
+                        {
+                            if (cts.IsCancellationRequested || _isDisposed || d.HasShutdownStarted || d.HasShutdownFinished) return;
+                            CommandLine = $"[Query Error: {ex.Message}]";
+                            Publisher = "[Inspection Error]";
+                            Sha256Hash = "[Unavailable]";
+                        });
+                    }
+                    catch { }
+                }
             }
         });
+    }
+
+    public void Dispose()
+    {
+        if (_isDisposed) return;
+        _isDisposed = true;
+
+        try
+        {
+            _inspectCts?.Cancel();
+            _inspectCts?.Dispose();
+        }
+        catch { }
     }
 
     /// <summary>

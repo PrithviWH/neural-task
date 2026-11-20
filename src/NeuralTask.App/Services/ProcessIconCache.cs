@@ -1,29 +1,38 @@
 using System;
-using System.Collections.Concurrent;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using NeuralTask.Core.Common;
 
 namespace NeuralTask.App.Services;
 
 /// <summary>
-/// High-performance thread-safe icon cache and extractor for Windows executables.
+/// High-performance thread-safe bounded icon cache and extractor for Windows executables.
 /// Extracts native 32x32 / 16x16 application icons and converts them to frozen WPF BitmapSources
 /// to prevent UI thread blocking and GDI handle exhaustion.
+/// Bounded to 500 entries with thread-safe LRU eviction to prevent unbounded memory growth.
 /// </summary>
 public static class ProcessIconCache
 {
-    private static readonly ConcurrentDictionary<string, ImageSource?> Cache = new(StringComparer.OrdinalIgnoreCase);
+    public const int DefaultCacheCapacity = 500;
 
-    [DllImport("user32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool DestroyIcon(IntPtr hIcon);
+    public sealed record IconCacheEntry(ImageSource? Icon, DateTime LastWriteTimeUtc);
+
+    private static readonly BoundedLruCache<string, IconCacheEntry> Cache =
+        new(DefaultCacheCapacity, StringComparer.OrdinalIgnoreCase);
+
+    public static int CacheCount => Cache.Count;
+    public static int MaxCapacity => Cache.MaxCapacity;
+
+    public static void Clear() => Cache.Clear();
+    public static void TrimTo(int targetCapacity) => Cache.TrimTo(targetCapacity);
 
     /// <summary>
     /// Synchronously retrieves the cached icon, or queues background extraction if not yet cached.
+    /// Invalidates and re-extracts if the file timestamp has changed on disk.
     /// </summary>
     public static ImageSource? GetIcon(string? executablePath, Action<ImageSource?>? onLoaded = null)
     {
@@ -32,22 +41,50 @@ public static class ProcessIconCache
             return null;
         }
 
-        if (Cache.TryGetValue(executablePath, out var cached))
+        DateTime currentLastWrite = DateTime.MinValue;
+        try
         {
-            return cached;
+            if (File.Exists(executablePath))
+            {
+                currentLastWrite = File.GetLastWriteTimeUtc(executablePath);
+            }
+        }
+        catch
+        {
+        }
+
+        if (Cache.TryGetValue(executablePath, out var cached) && cached != null)
+        {
+            // If the file modification time matches (or is inaccessible), return cached icon
+            if (currentLastWrite == DateTime.MinValue || cached.LastWriteTimeUtc == currentLastWrite)
+            {
+                return cached.Icon;
+            }
         }
 
         // Fire asynchronous background extraction to prevent UI hitching
         _ = Task.Run(() =>
         {
-            var extracted = ExtractFromFile(executablePath);
-            Cache[executablePath] = extracted;
-            if (extracted != null && onLoaded != null)
+            try
             {
-                Application.Current?.Dispatcher.BeginInvoke(() =>
+                var extracted = ExtractFromFile(executablePath);
+                Cache.Set(executablePath, new IconCacheEntry(extracted, currentLastWrite));
+                if (extracted != null && onLoaded != null)
                 {
-                    onLoaded(extracted);
-                });
+                    Application.Current?.Dispatcher.BeginInvoke(() =>
+                    {
+                        try
+                        {
+                            onLoaded(extracted);
+                        }
+                        catch
+                        {
+                        }
+                    });
+                }
+            }
+            catch
+            {
             }
         });
 
@@ -79,7 +116,6 @@ public static class ProcessIconCache
             // Freezing enables cross-thread WPF rendering and high performance
             bitmapSource.Freeze();
 
-            DestroyIcon(hIcon);
             return bitmapSource;
         }
         catch
