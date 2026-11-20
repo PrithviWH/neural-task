@@ -153,16 +153,57 @@ public class ExportService : IExportService
         await File.WriteAllTextAsync(filePath, content, Encoding.UTF8, cancellationToken).ConfigureAwait(false);
     }
 
-    private static string EscapeCsvField(string? field)
+    /// <summary>
+    /// Escapes and sanitizes a CSV field according to RFC 4180 and OWASP CSV formula injection guidelines (CWE-1236).
+    /// If an untrusted field starts with formula trigger characters (=, +, -, @, |, %, or control characters such as tab or carriage return),
+    /// or begins with whitespace/control characters followed by a formula trigger character,
+    /// it is neutralized by prepending a single quote (') so spreadsheet applications (Excel, Calc, Google Sheets)
+    /// treat the content as literal text instead of executing formulas or DDE commands.
+    /// </summary>
+    public static string EscapeCsvField(string? field)
     {
         if (string.IsNullOrEmpty(field)) return "\"\"";
 
-        bool mustQuote = field.Contains(',') || field.Contains('"') || field.Contains('\n') || field.Contains('\r');
-        if (mustQuote)
+        // 1. Formula Injection Neutralization (OWASP / CWE-1236)
+        bool requiresSanitization = IsFormulaTrigger(field);
+        string sanitized = requiresSanitization ? $"'{field}" : field;
+
+        // 2. RFC 4180 Escaping: double all internal quotes and wrap in quotes.
+        return $"\"{sanitized.Replace("\"", "\"\"")}\"";
+    }
+
+    private static bool IsFormulaTrigger(string field)
+    {
+        if (string.IsNullOrEmpty(field)) return false;
+
+        // Check if the raw string starts with a dangerous trigger character or control character
+        if (IsDangerousChar(field[0]))
         {
-            return $"\"{field.Replace("\"", "\"\"")}\"";
+            return true;
         }
 
-        return $"\"{field}\"";
+        // Check if leading whitespace or control characters are followed by a dangerous trigger character
+        int index = 0;
+        while (index < field.Length && (char.IsWhiteSpace(field[index]) || char.IsControl(field[index])))
+        {
+            index++;
+        }
+
+        if (index > 0 && index < field.Length && IsDangerousChar(field[index]))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool IsDangerousChar(char c)
+    {
+        return c switch
+        {
+            '=' or '+' or '-' or '@' or '|' or '%' => true,
+            '\t' or '\r' or '\n' => true,
+            _ => false
+        };
     }
 }
