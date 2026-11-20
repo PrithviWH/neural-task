@@ -53,10 +53,10 @@ public class ProcessMonitorServiceTests
 
         var firstSnapshot = service.SampleOnce();
         Assert.Single(firstSnapshot);
-        // First sample has no baseline, so rates must be 0
+        // First sample has no baseline, so rates must be 0; NetworkBytesPerSec must be null (unavailable)
         Assert.Equal(0.0, firstSnapshot[0].CpuPercent);
         Assert.Equal(0.0, firstSnapshot[0].DiskBytesPerSec);
-        Assert.Equal(0.0, firstSnapshot[0].NetworkBytesPerSec);
+        Assert.Null(firstSnapshot[0].NetworkBytesPerSec);
 
         // Sample 2 at t = 2000 ticks (exactly 1.0 second elapsed)
         timeSource.TimestampTicks = 2000;
@@ -85,10 +85,34 @@ public class ProcessMonitorServiceTests
         Assert.Equal(50.0, proc.CpuPercent);
         // Disk calculation: 10,000 bytes / 1.0s = 10,000 bytes/sec
         Assert.Equal(10000.0, proc.DiskBytesPerSec);
-        // Network calculation: 2,000 bytes / 1.0s = 2,000 bytes/sec
-        Assert.Equal(2000.0, proc.NetworkBytesPerSec);
+        // Network calculation: OtherTransferBytes must NOT be exposed as Network I/O (must remain null/unavailable)
+        Assert.Null(proc.NetworkBytesPerSec);
         Assert.Equal(55_000_000, proc.RamBytes);
         Assert.False(proc.IsAccessDenied);
+    }
+
+    [Fact]
+    public void OtherTransferBytes_IsNotExposedAsNetworkMetric()
+    {
+        var timeSource = new FakeTimeSource();
+        var sampler = new FakeSampler();
+        using var service = new ProcessMonitorService(sampler, timeSource);
+
+        timeSource.TimestampTicks = 1000;
+        sampler.SamplesToReturn = new List<RawProcessSample>
+        {
+            new(101, "proc.exe", 1, 0, 0, 1000, 0, 0, 50000, null, null, false)
+        };
+        service.SampleOnce();
+
+        timeSource.TimestampTicks = 2000;
+        sampler.SamplesToReturn = new List<RawProcessSample>
+        {
+            new(101, "proc.exe", 1, 0, 0, 1000, 0, 0, 500000, null, null, false)
+        };
+        var snapshot = service.SampleOnce();
+
+        Assert.Null(snapshot[0].NetworkBytesPerSec);
     }
 
     [Fact]

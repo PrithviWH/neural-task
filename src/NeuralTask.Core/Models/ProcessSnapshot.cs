@@ -12,9 +12,9 @@ public record ProcessSnapshot(
     double CpuPercent,
     long RamBytes,
     double DiskBytesPerSec,
-    double NetworkBytesPerSec,
-    DateTimeOffset? StartTime,
-    string? ExecutablePath,
-    bool IsAccessDenied,
+    double? NetworkBytesPerSec = null,
+    DateTimeOffset? StartTime = null,
+    string? ExecutablePath = null,
+    bool IsAccessDenied = false,
     int HandleCount = 0
 );

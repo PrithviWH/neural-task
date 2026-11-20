@@ -10,6 +10,8 @@ namespace NeuralTask.App;
 
 public partial class App : Application
 {
+    public static Task HistoryLoadTask { get; private set; } = Task.CompletedTask;
+
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
@@ -32,7 +34,16 @@ public partial class App : Application
         var historyStore = AppHost.Services.GetRequiredService<NeuralTask.Core.Services.IHistoryStore>();
         if (settingsService.CurrentSettings.IsHistoryPersistenceEnabled)
         {
-            _ = historyStore.LoadPersistedAsync();
+            HistoryLoadTask = Task.Run(async () =>
+            {
+                try
+                {
+                    await historyStore.LoadPersistedAsync();
+                }
+                catch
+                {
+                }
+            });
         }
 
         var mainWindow = AppHost.Services.GetRequiredService<MainWindow>();
@@ -63,26 +74,15 @@ public partial class App : Application
             File.WriteAllText(Path.Combine(outputDir, "screenshot_error.txt"), ex.ToString());
         }
 
-        Shutdown(0);
+        await mainWindow.ExecuteAsyncShutdownAsync();
     }
 
-    protected override async void OnExit(ExitEventArgs e)
+    protected override void OnExit(ExitEventArgs e)
     {
-        // Ensure clean shutdown of coordinator and background monitoring loop
         try
         {
-            var historyStore = AppHost.Services.GetService<NeuralTask.Core.Services.IHistoryStore>();
-            if (historyStore != null && historyStore.IsPersistenceEnabled)
-            {
-                await historyStore.PersistAsync();
-            }
-
             var coordinator = AppHost.Services.GetService<ProcessMonitorCoordinator>();
-            if (coordinator != null)
-            {
-                await coordinator.StopAsync();
-                coordinator.Dispose();
-            }
+            coordinator?.Dispose();
         }
         catch
         {

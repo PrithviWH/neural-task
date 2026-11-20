@@ -13,7 +13,7 @@ public record ProcessMonitoringUpdate(
     SystemMetricsSnapshot SystemMetrics
 );
 
-public class ProcessMonitorCoordinator : IDisposable
+public class ProcessMonitorCoordinator : IDisposable, IAsyncDisposable
 {
     private readonly IProcessMonitorService _monitorService;
     private readonly ISystemMetricsService _systemMetricsService;
@@ -55,12 +55,12 @@ public class ProcessMonitorCoordinator : IDisposable
         await _monitorService.StartAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task StopAsync()
+    public async Task StopAsync(CancellationToken cancellationToken = default)
     {
         _subscription?.Dispose();
         _subscription = null;
 
-        await _monitorService.StopAsync().ConfigureAwait(false);
+        await _monitorService.StopAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public void SetInterval(TimeSpan interval)
@@ -114,17 +114,36 @@ public class ProcessMonitorCoordinator : IDisposable
         }
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         if (_isDisposed) return;
         _isDisposed = true;
 
+        UpdateReceived = null;
         _subscription?.Dispose();
         _subscription = null;
 
         try
         {
-            _monitorService.StopAsync().GetAwaiter().GetResult();
+            await _monitorService.StopAsync().ConfigureAwait(false);
+        }
+        catch
+        {
+        }
+    }
+
+    public void Dispose()
+    {
+        if (_isDisposed) return;
+        _isDisposed = true;
+
+        UpdateReceived = null;
+        _subscription?.Dispose();
+        _subscription = null;
+
+        try
+        {
+            _monitorService.Dispose();
         }
         catch
         {

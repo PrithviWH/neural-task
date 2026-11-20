@@ -15,9 +15,10 @@ public class StartupEntry
 {
     public string Id { get; }
     public string Name { get; }
-    public string Command { get; }
-    public string? ExecutablePath { get; }
+    public string Command { get; set; }
+    public string? ExecutablePath { get; set; }
     public string Location { get; }
+    public string? FilePath { get; set; }
     public StartupSourceType SourceType { get; }
     public bool IsEnabled { get; set; }
     public int? AssociatedPid { get; set; }
@@ -32,7 +33,8 @@ public class StartupEntry
         StartupSourceType sourceType,
         bool isEnabled,
         int? associatedPid = null,
-        StartupScoreBreakdown? score = null)
+        StartupScoreBreakdown? score = null,
+        string? filePath = null)
     {
         Id = id;
         Name = name;
@@ -43,5 +45,6 @@ public class StartupEntry
         IsEnabled = isEnabled;
         AssociatedPid = associatedPid;
         Score = score;
+        FilePath = filePath ?? (sourceType == StartupSourceType.StartupFolderUser || sourceType == StartupSourceType.StartupFolderCommon ? command : null);
     }
 }

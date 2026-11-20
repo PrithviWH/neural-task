@@ -10,13 +10,14 @@ using NeuralTask.Core.Services;
 
 namespace NeuralTask.App.ViewModels;
 
-public class StartupViewModel : ViewModelBase
+public class StartupViewModel : ViewModelBase, IDisposable
 {
     private readonly IStartupScoreEngine _engine;
     private readonly IProcessMonitorService _monitorService;
     private readonly List<StartupEntryItemViewModel> _allEntries = new();
 
     private string _searchText = string.Empty;
+    private string _selectedFilterCategory = "All";
     private bool _isLoading;
     private int _totalStartupApps;
     private int _averageImpactScore;
@@ -36,10 +37,43 @@ public class StartupViewModel : ViewModelBase
         {
             if (SetProperty(ref _searchText, value))
             {
+                OnPropertyChanged(nameof(HasSearchText));
                 ApplyFilter();
             }
         }
     }
+
+    public bool HasSearchText => !string.IsNullOrEmpty(_searchText);
+
+    public string SelectedFilterCategory
+    {
+        get => _selectedFilterCategory;
+        set
+        {
+            if (SetProperty(ref _selectedFilterCategory, value))
+            {
+                OnPropertyChanged(nameof(IsFilterAll));
+                OnPropertyChanged(nameof(IsFilterEnabled));
+                OnPropertyChanged(nameof(IsFilterDisabled));
+                OnPropertyChanged(nameof(IsFilterHighImpact));
+                OnPropertyChanged(nameof(IsFilterRegistry));
+                OnPropertyChanged(nameof(IsFilterFolders));
+                ApplyFilter();
+            }
+        }
+    }
+
+    public bool IsFilterAll => _selectedFilterCategory == "All";
+    public bool IsFilterEnabled => _selectedFilterCategory == "Enabled";
+    public bool IsFilterDisabled => _selectedFilterCategory == "Disabled";
+    public bool IsFilterHighImpact => _selectedFilterCategory == "HighImpact";
+    public bool IsFilterRegistry => _selectedFilterCategory == "Registry";
+    public bool IsFilterFolders => _selectedFilterCategory == "Folders";
+
+    public int EnabledCount => _allEntries.Count(e => e.IsEnabled);
+    public int DisabledCount => _allEntries.Count(e => !e.IsEnabled);
+    public int RegistryCount => _allEntries.Count(e => e.SourceType == StartupSourceType.RegistryRunCurrentUser || e.SourceType == StartupSourceType.RegistryRunLocalMachine);
+    public int FoldersCount => _allEntries.Count(e => e.SourceType == StartupSourceType.StartupFolderUser || e.SourceType == StartupSourceType.StartupFolderCommon);
 
     public bool IsLoading
     {
@@ -104,6 +138,7 @@ public class StartupViewModel : ViewModelBase
     public ICommand DismissBannerCommand { get; }
     public ICommand DismissStatusNotificationCommand { get; }
     public ICommand ClearSearchCommand { get; }
+    public ICommand SetFilterCategoryCommand { get; }
 
     public StartupViewModel(IStartupScoreEngine engine, IProcessMonitorService monitorService)
     {
@@ -117,6 +152,13 @@ public class StartupViewModel : ViewModelBase
         DismissBannerCommand = new RelayCommand(() => AdminBannerVisible = false);
         DismissStatusNotificationCommand = new RelayCommand(() => IsStatusVisible = false);
         ClearSearchCommand = new RelayCommand(() => SearchText = string.Empty);
+        SetFilterCategoryCommand = new RelayCommand(param =>
+        {
+            if (param is string cat)
+            {
+                SelectedFilterCategory = cat;
+            }
+        });
     }
 
     public async Task LoadEntriesAsync()
@@ -141,6 +183,11 @@ public class StartupViewModel : ViewModelBase
                 : 0;
             HighImpactCount = _allEntries.Count(e => e.Score >= 60);
 
+            OnPropertyChanged(nameof(EnabledCount));
+            OnPropertyChanged(nameof(DisabledCount));
+            OnPropertyChanged(nameof(RegistryCount));
+            OnPropertyChanged(nameof(FoldersCount));
+
             ApplyFilter();
         }
         catch (Exception ex)
@@ -158,13 +205,27 @@ public class StartupViewModel : ViewModelBase
         FilteredEntries.Clear();
         var query = SearchText?.Trim() ?? string.Empty;
 
-        var items = string.IsNullOrWhiteSpace(query)
-            ? _allEntries
-            : _allEntries.Where(e =>
+        IEnumerable<StartupEntryItemViewModel> items = _allEntries;
+
+        // Apply Category Filter
+        items = _selectedFilterCategory switch
+        {
+            "Enabled" => items.Where(e => e.IsEnabled),
+            "Disabled" => items.Where(e => !e.IsEnabled),
+            "HighImpact" => items.Where(e => e.Score >= 40),
+            "Registry" => items.Where(e => e.SourceType == StartupSourceType.RegistryRunCurrentUser || e.SourceType == StartupSourceType.RegistryRunLocalMachine),
+            "Folders" => items.Where(e => e.SourceType == StartupSourceType.StartupFolderUser || e.SourceType == StartupSourceType.StartupFolderCommon),
+            _ => items
+        };
+
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            items = items.Where(e =>
                 e.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
                 e.Command.Contains(query, StringComparison.OrdinalIgnoreCase) ||
                 e.Location.Contains(query, StringComparison.OrdinalIgnoreCase) ||
                 e.ImpactRating.Contains(query, StringComparison.OrdinalIgnoreCase));
+        }
 
         foreach (var item in items)
         {
@@ -198,6 +259,19 @@ public class StartupViewModel : ViewModelBase
         catch (Exception ex)
         {
             ShowNotification($"Failed to elevate: {ex.Message}", true);
+        }
+    }
+
+    public void Dispose()
+    {
+        _allEntries.Clear();
+        if (System.Windows.Application.Current?.Dispatcher is { } d && !d.CheckAccess())
+        {
+            d.Invoke(FilteredEntries.Clear);
+        }
+        else
+        {
+            FilteredEntries.Clear();
         }
     }
 }

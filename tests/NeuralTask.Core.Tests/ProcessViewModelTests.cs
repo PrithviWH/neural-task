@@ -484,4 +484,66 @@ public class ProcessViewModelTests
         await vm.TerminateSelectedAsync();
         Assert.True(promptInvoked);
     }
+
+    private class SuspendedProcessActionService : IProcessActionService
+    {
+        public TaskCompletionSource<bool> TerminationStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource<bool> SuspensionBlocker { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public bool TerminateCalled { get; private set; }
+
+        public ProcessTree BuildTree(IReadOnlyList<ProcessSnapshot> snapshots) => ProcessTreeBuilder.BuildTree(snapshots);
+
+        public async Task<ProcessTerminationResult> TerminateProcessAsync(
+            int pid,
+            string? expectedProcessName = null,
+            DateTimeOffset? expectedStartTime = null,
+            TimeSpan? timeout = null,
+            CancellationToken cancellationToken = default)
+        {
+            TerminateCalled = true;
+            TerminationStarted.TrySetResult(true);
+
+            // 2. Underlying termination service is suspended
+            await SuspensionBlocker.Task;
+
+            return new ProcessTerminationResult(pid, expectedProcessName ?? "test.exe", ProcessTerminationStatus.Success, "Done");
+        }
+
+        public Task<TreeTerminationResult> TerminateTreeAsync(int rootPid, IReadOnlyList<ProcessSnapshot> currentSnapshots, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(new TreeTerminationResult(rootPid, Array.Empty<ProcessTerminationResult>(), true));
+        }
+    }
+
+    [Fact]
+    public async Task ProcessListViewModel_SuspendedTermination_DisposeCoordinatesAndReleasesWithoutException()
+    {
+        // 1. Termination begins
+        var actionService = new SuspendedProcessActionService();
+        var vm = new ProcessListViewModel(actionService: actionService);
+
+        var snap = new ProcessSnapshot(7000, "suspended.exe", 1, 1.0, 1024, 0, 0, DateTimeOffset.UtcNow, null, false);
+        vm.ApplySnapshot(new[] { snap });
+        vm.SelectedProcess = vm.FilteredProcesses.First();
+
+        var terminationTask = vm.TerminateSelectedAsync();
+
+        // Wait until underlying termination service has started and is suspended
+        await actionService.TerminationStarted.Task;
+        Assert.True(actionService.TerminateCalled);
+
+        // 3. Dispose is called
+        var disposeEx = Record.Exception(() => vm.Dispose());
+        Assert.Null(disposeEx);
+
+        // 4. The operation is released
+        actionService.SuspensionBlocker.TrySetResult(true);
+
+        // 5. No exception occurs
+        var taskEx = await Record.ExceptionAsync(async () => await terminationTask);
+        Assert.Null(taskEx);
+
+        // 6. All owned resources reach a valid final state
+        Assert.Empty(vm.FilteredProcesses);
+    }
 }

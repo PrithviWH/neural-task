@@ -169,4 +169,25 @@ public class ExportServiceTests
         Assert.Equal(snapshots.Count + 1, lines.Length);
         Assert.StartsWith("PID,Name,ParentPID", lines[0]);
     }
+
+    [Fact]
+    public void Export_WhenNetworkBytesPerSecIsNull_RendersAsNullInJsonAndEmptyInCsv()
+    {
+        var service = new ExportService();
+        var processes = new List<ProcessSnapshot>
+        {
+            new ProcessSnapshot(101, "proc.exe", 1, 2.5, 100_000, 500, null, DateTime.Now, @"C:\proc.exe", false)
+        };
+
+        var json = service.ExportToJson(CreateDummySystem(), processes);
+        using var doc = JsonDocument.Parse(json);
+        var procJson = doc.RootElement.GetProperty("processes")[0];
+        Assert.Equal(JsonValueKind.Null, procJson.GetProperty("networkBytesPerSec").ValueKind);
+
+        var csv = service.ExportToCsv(CreateDummySystem(), processes);
+        var lines = csv.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries);
+        // Format: ...,Disk_Bytes_Per_Sec,Network_Bytes_Per_Sec,Executable_Path,...
+        // When Network is null, an empty string is rendered between the commas: "500.00,,\"C:\proc.exe\""
+        Assert.Contains("500.00,,\"C:\\proc.exe\"", lines[1]);
+    }
 }

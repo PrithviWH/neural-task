@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using NeuralTask.Core.Models;
@@ -10,14 +13,21 @@ using NeuralTask.Core.Services;
 
 namespace NeuralTask.App.ViewModels;
 
-public class ProcessListViewModel : ViewModelBase
+public class ProcessListViewModel : ViewModelBase, IDisposable, IAsyncDisposable
 {
     private readonly IProcessActionService _actionService;
     private readonly IHeuristicFlagEngine _heuristicEngine;
     private readonly IProcessInfoService _processInfoService;
     private readonly Dictionary<int, ProcessItemViewModel> _allProcessesMap = new();
     private readonly List<ProcessItemViewModel> _allProcessesList = new();
-    private readonly Dictionary<int, ProcessHeuristicResult> _heuristicCache = new();
+    private readonly ConcurrentDictionary<int, ProcessHeuristicResult> _heuristicCache = new();
+    private readonly ConcurrentDictionary<Task, byte> _activeBackgroundTasks = new();
+    private readonly SemaphoreSlim _terminationLock = new(1, 1);
+    private readonly CancellationTokenSource _disposeCts = new();
+    private readonly object _terminationStateLock = new();
+    private Task? _activeTerminationTask;
+    private bool _terminationLockDisposed;
+    private bool _isDisposed;
     private IReadOnlyList<ProcessSnapshot> _lastSnapshots = Array.Empty<ProcessSnapshot>();
 
     private string _searchText = string.Empty;
@@ -290,8 +300,8 @@ public class ProcessListViewModel : ViewModelBase
 
     public string ProcessCountDisplay =>
         string.IsNullOrWhiteSpace(_searchText) && _selectedFilterCategory == "All"
-            ? $"ACTIVE: {_totalCount} PROCESSES"
-            : $"FILTERED: {_filteredCount} OF {_totalCount} PROCESSES";
+            ? $"{_totalCount} active processes"
+            : $"{_filteredCount} of {_totalCount} processes";
 
     public bool IsStatusBannerVisible
     {
@@ -313,7 +323,7 @@ public class ProcessListViewModel : ViewModelBase
 
     public int FlaggedCount => _allProcessesList.Count(p => p.HasFlags);
 
-    public string FlaggedCountDisplay => $"TRIAGE: {FlaggedCount} ANOMALIES";
+    public string FlaggedCountDisplay => $"Triage: {FlaggedCount} anomalies";
 
     public ProcessListViewModel(
         IProcessActionService? actionService = null,
@@ -344,8 +354,29 @@ public class ProcessListViewModel : ViewModelBase
             }
         });
         ToggleColumnsPopupCommand = new RelayCommand(() => IsColumnsPopupOpen = !IsColumnsPopupOpen);
-        EndTaskCommand = new RelayCommand(async _ => await TerminateSelectedAsync(), _ => CanTerminateSelected);
-        EndTreeCommand = new RelayCommand(async _ => await TerminateTreeSelectedAsync(), _ => CanTerminateTreeSelected);
+        EndTaskCommand = new RelayCommand(async _ =>
+        {
+            try
+            {
+                await TerminateSelectedAsync();
+            }
+            catch (Exception ex)
+            {
+                ShowStatus($"Termination failed: {ex.Message}", isError: true);
+            }
+        }, _ => CanTerminateSelected);
+
+        EndTreeCommand = new RelayCommand(async _ =>
+        {
+            try
+            {
+                await TerminateTreeSelectedAsync();
+            }
+            catch (Exception ex)
+            {
+                ShowStatus($"Tree termination failed: {ex.Message}", isError: true);
+            }
+        }, _ => CanTerminateTreeSelected);
         OpenContainingFolderCommand = new RelayCommand(OpenContainingFolder);
     }
 
@@ -378,14 +409,14 @@ public class ProcessListViewModel : ViewModelBase
         var item = target ?? SelectedProcess;
         if (item == null)
         {
-            ShowStatus("NO PROCESS SELECTED // SELECT A ROW TO COPY TELEMETRY", true);
+            ShowStatus("No process selected • Select a row to copy telemetry", true);
             return;
         }
 
         var snapshot = _lastSnapshots.FirstOrDefault(s => s.Pid == item.Pid)
                        ?? new ProcessSnapshot(item.Pid, item.Name, item.ParentPid, item.CpuPercent, item.RamBytes, 0, 0, item.StartTime, item.ExecutablePath, false);
 
-        ShowStatus($"COMPUTING SHA-256 AND TELEMETRY REPORT FOR {item.Name} (PID {item.Pid})...", false);
+        ShowStatus($"Computing SHA-256 and telemetry report for {item.Name} (PID {item.Pid})...", false);
 
         try
         {
@@ -394,11 +425,11 @@ public class ProcessListViewModel : ViewModelBase
             System.Windows.Clipboard.SetText(report.FormattedText);
 
             string shortHash = report.Sha256Hash.Length >= 8 ? report.Sha256Hash[..8] : report.Sha256Hash;
-            ShowStatus($"COPIED REPORT TO CLIPBOARD // {item.Name} [PID {item.Pid}] // SHA-256: {shortHash}...", false);
+            ShowStatus($"Copied telemetry report to clipboard • {item.Name} (PID {item.Pid}) • SHA-256: {shortHash}...", false);
         }
         catch (Exception ex)
         {
-            ShowStatus($"FAILED TO COPY TELEMETRY: {ex.Message}", true);
+            ShowStatus($"Failed to copy telemetry: {ex.Message}", true);
         }
     }
 
@@ -423,12 +454,18 @@ public class ProcessListViewModel : ViewModelBase
         OnPropertyChanged(nameof(FlaggedCount));
         OnPropertyChanged(nameof(FlaggedCountDisplay));
 
-        ShowStatus($"HEURISTIC AUDIT COMPLETE // {flagged} ANOMALIES IDENTIFIED (NOT AN ANTIVIRUS)", false);
+        ShowStatus($"Heuristic audit complete • {flagged} anomalies identified (not an antivirus)", false);
         RequestScannerSweep?.Invoke();
     }
 
     public void ShowStatus(string message, bool isError = false)
     {
+        if (System.Windows.Application.Current?.Dispatcher is { } dispatcher && !dispatcher.CheckAccess())
+        {
+            dispatcher.BeginInvoke(() => ShowStatus(message, isError));
+            return;
+        }
+
         StatusBannerMessage = message;
         StatusBannerIsError = isError;
         IsStatusBannerVisible = true;
@@ -498,14 +535,41 @@ public class ProcessListViewModel : ViewModelBase
                 {
                     newItem.UpdateHeuristics(cached);
                 }
-                else
+                else if (!_isDisposed && !_disposeCts.IsCancellationRequested)
                 {
-                    _ = Task.Run(() =>
+                    var task = Task.Run(() =>
                     {
-                        var eval = _heuristicEngine.EvaluateSingle(snap);
-                        _heuristicCache[snap.Pid] = eval;
-                        newItem.UpdateHeuristics(eval);
+                        try
+                        {
+                            if (_isDisposed || _disposeCts.IsCancellationRequested) return;
+                            var eval = _heuristicEngine.EvaluateSingle(snap);
+                            _heuristicCache[snap.Pid] = eval;
+                            if (System.Windows.Application.Current?.Dispatcher is { } d && !d.HasShutdownStarted && !d.HasShutdownFinished)
+                            {
+                                if (!d.CheckAccess())
+                                {
+                                    d.BeginInvoke(() =>
+                                    {
+                                        if (!_isDisposed && !d.HasShutdownStarted && !d.HasShutdownFinished)
+                                        {
+                                            newItem.UpdateHeuristics(eval);
+                                        }
+                                    });
+                                }
+                                else
+                                {
+                                    newItem.UpdateHeuristics(eval);
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Trace.TraceWarning($"Process heuristic evaluation failed for PID {snap.Pid}: {ex.Message}");
+                        }
                     });
+
+                    _activeBackgroundTasks.TryAdd(task, 0);
+                    task.ContinueWith(t => _activeBackgroundTasks.TryRemove(t, out _), TaskContinuationOptions.ExecuteSynchronously);
                 }
 
                 _allProcessesMap[snap.Pid] = newItem;
@@ -521,7 +585,7 @@ public class ProcessListViewModel : ViewModelBase
             {
                 listStructureChanged = true;
                 _allProcessesMap.Remove(item.Pid);
-                _heuristicCache.Remove(item.Pid);
+                _heuristicCache.TryRemove(item.Pid, out _);
                 _allProcessesList.RemoveAt(i);
                 _previousRowOrder.Remove(item.Pid);
             }
@@ -578,42 +642,207 @@ public class ProcessListViewModel : ViewModelBase
         }
     }
 
-    public async Task TerminateSelectedAsync()
+    private async Task ExecuteTerminationWithLockAsync(Func<CancellationToken, Task> operation)
     {
-        if (_selectedProcess == null)
+        lock (_terminationStateLock)
         {
-            ShowStatus("Please select a target process from the matrix first.", isError: true);
+            if (_isDisposed) return;
+        }
+
+        if (!await _terminationLock.WaitAsync(0).ConfigureAwait(true))
+        {
+            ShowStatus("A process termination operation is already in progress.", isError: false);
             return;
         }
 
-        int targetPid = _selectedProcess.Pid;
-        string targetName = _selectedProcess.Name;
-
-        if (_selectedProcess.IsCriticalSystemProcess)
+        var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        lock (_terminationStateLock)
         {
-            ShowStatus($"Access Denied: Protected System process '{targetName}' (PID: {targetPid}) is critical to Windows operation and cannot be terminated.", isError: true);
-            return;
-        }
-
-        // Check if process has descendants
-        var tree = _actionService.BuildTree(_lastSnapshots);
-        var descendantPids = tree.GetDescendantPids(targetPid);
-
-        if (descendantPids.Count > 0 && ConfirmKillTreeCallback != null)
-        {
-            var rootSnap = _lastSnapshots.FirstOrDefault(s => s.Pid == targetPid)
-                           ?? new ProcessSnapshot(targetPid, targetName, 0, 0, 0, 0, 0, null, null, false);
-            var childSnaps = _lastSnapshots.Where(s => descendantPids.Contains(s.Pid)).ToList();
-
-            var (confirmed, entireTree) = await ConfirmKillTreeCallback(rootSnap, childSnaps);
-            if (!confirmed)
+            if (_isDisposed)
             {
+                _terminationLock.Release();
+                return;
+            }
+            _activeTerminationTask = tcs.Task;
+        }
+
+        try
+        {
+            await operation(_disposeCts.Token).ConfigureAwait(true);
+        }
+        finally
+        {
+            bool disposeNow = false;
+            try
+            {
+                _terminationLock.Release();
+            }
+            finally
+            {
+                lock (_terminationStateLock)
+                {
+                    tcs.TrySetResult(true);
+                    _activeTerminationTask = null;
+                    if (_isDisposed && !_terminationLockDisposed)
+                    {
+                        _terminationLockDisposed = true;
+                        disposeNow = true;
+                    }
+                }
+
+                if (disposeNow)
+                {
+                    _terminationLock.Dispose();
+                    _disposeCts.Dispose();
+                }
+            }
+        }
+    }
+
+    public Task TerminateSelectedAsync()
+    {
+        return ExecuteTerminationWithLockAsync(async ct =>
+        {
+            if (_selectedProcess == null)
+            {
+                ShowStatus("Please select a target process from the matrix first.", isError: true);
                 return;
             }
 
-            if (entireTree)
+            int targetPid = _selectedProcess.Pid;
+            string targetName = _selectedProcess.Name;
+
+            if (_selectedProcess.IsCriticalSystemProcess)
             {
-                var treeResult = await _actionService.TerminateTreeAsync(targetPid, _lastSnapshots);
+                ShowStatus($"Access Denied: Protected System process '{targetName}' (PID: {targetPid}) is critical to Windows operation and cannot be terminated.", isError: true);
+                return;
+            }
+
+            // Check if process has descendants on a background thread to prevent UI hitching
+            var snapshots = _lastSnapshots;
+            var descendantPids = await Task.Run(() =>
+            {
+                var tree = _actionService.BuildTree(snapshots);
+                return tree.GetDescendantPids(targetPid);
+            }, ct).ConfigureAwait(true);
+
+            if (ct.IsCancellationRequested) return;
+
+            if (descendantPids.Count > 0 && ConfirmKillTreeCallback != null)
+            {
+                var rootSnap = snapshots.FirstOrDefault(s => s.Pid == targetPid)
+                               ?? new ProcessSnapshot(targetPid, targetName, 0, 0, 0, 0, 0, _selectedProcess.StartTime, null, false);
+                var childSnaps = snapshots.Where(s => descendantPids.Contains(s.Pid)).ToList();
+
+                var (confirmed, entireTree) = await ConfirmKillTreeCallback(rootSnap, childSnaps);
+                if (!confirmed || ct.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                if (entireTree)
+                {
+                    var treeResult = await _actionService.TerminateTreeAsync(targetPid, snapshots, cancellationToken: ct).ConfigureAwait(true);
+                    if (ct.IsCancellationRequested) return;
+                    if (treeResult.OverallSuccess)
+                    {
+                        ShowStatus($"[KILL-TREE COMPLETED] Successfully terminated {treeResult.ProcessResults.Count} processes in '{targetName}' topology.", isError: false);
+                    }
+                    else
+                    {
+                        var failed = treeResult.ProcessResults.Where(r => r.Status != ProcessTerminationStatus.Success && r.Status != ProcessTerminationStatus.AlreadyExited).ToList();
+                        ShowStatus($"[PARTIAL TERMINATION] Terminated {treeResult.ProcessResults.Count - failed.Count} processes. {failed.Count} protected processes could not be terminated.", isError: true);
+                    }
+                    return;
+                }
+            }
+
+            // Single process termination confirmation
+            var targetSnap = snapshots.FirstOrDefault(s => s.Pid == targetPid);
+            var expectedStartTime = targetSnap?.StartTime ?? _selectedProcess.StartTime;
+
+            if (ConfirmKillProcessCallback != null)
+            {
+                var snapForConfirm = targetSnap ?? new ProcessSnapshot(targetPid, targetName, 0, 0, 0, 0, 0, expectedStartTime, null, false);
+                bool confirmed = await ConfirmKillProcessCallback(snapForConfirm);
+                if (!confirmed || ct.IsCancellationRequested) return;
+            }
+
+            // Single process termination with verifiable identity (process name + start time)
+            var result = await _actionService.TerminateProcessAsync(
+                targetPid,
+                expectedProcessName: targetName,
+                expectedStartTime: expectedStartTime,
+                cancellationToken: ct).ConfigureAwait(true);
+
+            if (ct.IsCancellationRequested) return;
+
+            if (result.Status == ProcessTerminationStatus.Success)
+            {
+                ShowStatus($"[SUCCESS] {result.Message}", isError: false);
+            }
+            else if (result.Status == ProcessTerminationStatus.AlreadyExited)
+            {
+                ShowStatus($"[INFO] {result.Message}", isError: false);
+            }
+            else if (result.Status == ProcessTerminationStatus.Cancelled)
+            {
+                ShowStatus($"[CANCELLED] {result.Message}", isError: false);
+            }
+            else if (result.Status == ProcessTerminationStatus.IdentityMismatch)
+            {
+                ShowStatus($"[ABORTED - PID RECYCLED] {result.Message}", isError: true);
+            }
+            else if (result.Status == ProcessTerminationStatus.RefusedAmbiguousIdentity)
+            {
+                ShowStatus($"[REFUSED - AMBIGUOUS IDENTITY] {result.Message}", isError: true);
+            }
+            else
+            {
+                ShowStatus($"[TERMINATION FAILED] {result.Message}", isError: true);
+            }
+        });
+    }
+
+    public Task TerminateTreeSelectedAsync()
+    {
+        return ExecuteTerminationWithLockAsync(async ct =>
+        {
+            if (_selectedProcess == null)
+            {
+                ShowStatus("Please select a target process from the matrix first.", isError: true);
+                return;
+            }
+
+            int targetPid = _selectedProcess.Pid;
+            string targetName = _selectedProcess.Name;
+
+            if (_selectedProcess.IsCriticalSystemProcess)
+            {
+                ShowStatus($"Access Denied: Protected System process '{targetName}' (PID: {targetPid}) cannot be terminated.", isError: true);
+                return;
+            }
+
+            var snapshots = _lastSnapshots;
+            var descendantPids = await Task.Run(() =>
+            {
+                var tree = _actionService.BuildTree(snapshots);
+                return tree.GetDescendantPids(targetPid);
+            }, ct).ConfigureAwait(true);
+
+            if (ct.IsCancellationRequested) return;
+
+            if (ConfirmKillTreeCallback != null)
+            {
+                var rootSnap = snapshots.FirstOrDefault(s => s.Pid == targetPid)
+                               ?? new ProcessSnapshot(targetPid, targetName, 0, 0, 0, 0, 0, _selectedProcess.StartTime, null, false);
+                var childSnaps = snapshots.Where(s => descendantPids.Contains(s.Pid)).ToList();
+
+                var (confirmed, entireTree) = await ConfirmKillTreeCallback(rootSnap, childSnaps);
+                if (!confirmed || ct.IsCancellationRequested) return;
+
+                var treeResult = await _actionService.TerminateTreeAsync(targetPid, snapshots, cancellationToken: ct).ConfigureAwait(true);
+                if (ct.IsCancellationRequested) return;
                 if (treeResult.OverallSuccess)
                 {
                     ShowStatus($"[KILL-TREE COMPLETED] Successfully terminated {treeResult.ProcessResults.Count} processes in '{targetName}' topology.", isError: false);
@@ -623,79 +852,120 @@ public class ProcessListViewModel : ViewModelBase
                     var failed = treeResult.ProcessResults.Where(r => r.Status != ProcessTerminationStatus.Success && r.Status != ProcessTerminationStatus.AlreadyExited).ToList();
                     ShowStatus($"[PARTIAL TERMINATION] Terminated {treeResult.ProcessResults.Count - failed.Count} processes. {failed.Count} protected processes could not be terminated.", isError: true);
                 }
-                return;
-            }
-        }
-
-        // Single process termination confirmation
-        if (ConfirmKillProcessCallback != null)
-        {
-            var targetSnap = _lastSnapshots.FirstOrDefault(s => s.Pid == targetPid)
-                             ?? new ProcessSnapshot(targetPid, targetName, 0, 0, 0, 0, 0, null, null, false);
-            bool confirmed = await ConfirmKillProcessCallback(targetSnap);
-            if (!confirmed) return;
-        }
-
-        // Single process termination
-        var result = await _actionService.TerminateProcessAsync(targetPid);
-        if (result.Status == ProcessTerminationStatus.Success)
-        {
-            ShowStatus($"[SUCCESS] {result.Message}", isError: false);
-        }
-        else if (result.Status == ProcessTerminationStatus.AlreadyExited)
-        {
-            ShowStatus($"[INFO] {result.Message}", isError: false);
-        }
-        else
-        {
-            ShowStatus($"[TERMINATION FAILED] {result.Message}", isError: true);
-        }
-    }
-
-    public async Task TerminateTreeSelectedAsync()
-    {
-        if (_selectedProcess == null)
-        {
-            ShowStatus("Please select a target process from the matrix first.", isError: true);
-            return;
-        }
-
-        int targetPid = _selectedProcess.Pid;
-        string targetName = _selectedProcess.Name;
-
-        if (_selectedProcess.IsCriticalSystemProcess)
-        {
-            ShowStatus($"Access Denied: Protected System process '{targetName}' (PID: {targetPid}) cannot be terminated.", isError: true);
-            return;
-        }
-
-        var tree = _actionService.BuildTree(_lastSnapshots);
-        var descendantPids = tree.GetDescendantPids(targetPid);
-
-        if (ConfirmKillTreeCallback != null)
-        {
-            var rootSnap = _lastSnapshots.FirstOrDefault(s => s.Pid == targetPid)
-                           ?? new ProcessSnapshot(targetPid, targetName, 0, 0, 0, 0, 0, null, null, false);
-            var childSnaps = _lastSnapshots.Where(s => descendantPids.Contains(s.Pid)).ToList();
-
-            var (confirmed, entireTree) = await ConfirmKillTreeCallback(rootSnap, childSnaps);
-            if (!confirmed) return;
-
-            var treeResult = await _actionService.TerminateTreeAsync(targetPid, _lastSnapshots);
-            if (treeResult.OverallSuccess)
-            {
-                ShowStatus($"[KILL-TREE COMPLETED] Successfully terminated {treeResult.ProcessResults.Count} processes in '{targetName}' topology.", isError: false);
             }
             else
             {
-                var failed = treeResult.ProcessResults.Where(r => r.Status != ProcessTerminationStatus.Success && r.Status != ProcessTerminationStatus.AlreadyExited).ToList();
-                ShowStatus($"[PARTIAL TERMINATION] Terminated {treeResult.ProcessResults.Count - failed.Count} processes. {failed.Count} protected processes could not be terminated.", isError: true);
+                var treeResult = await _actionService.TerminateTreeAsync(targetPid, snapshots, cancellationToken: ct).ConfigureAwait(true);
+                if (ct.IsCancellationRequested) return;
+                ShowStatus($"Terminated {treeResult.ProcessResults.Count} processes in tree.", !treeResult.OverallSuccess);
+            }
+        });
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        Task? taskToWait = null;
+        lock (_terminationStateLock)
+        {
+            if (_isDisposed) return;
+            _isDisposed = true;
+            try { _disposeCts.Cancel(); } catch (ObjectDisposedException) { }
+            taskToWait = _activeTerminationTask;
+        }
+
+        CleanupState();
+
+        var pendingBgTasks = _activeBackgroundTasks.Keys.ToArray();
+        if (pendingBgTasks.Length > 0)
+        {
+            try
+            {
+                await Task.WhenAll(pendingBgTasks).ConfigureAwait(false);
+            }
+            catch { }
+        }
+
+        if (taskToWait != null)
+        {
+            try
+            {
+                await taskToWait.ConfigureAwait(false);
+            }
+            catch
+            {
             }
         }
         else
         {
-            var treeResult = await _actionService.TerminateTreeAsync(targetPid, _lastSnapshots);
-            ShowStatus($"Terminated {treeResult.ProcessResults.Count} processes in tree.", !treeResult.OverallSuccess);
+            lock (_terminationStateLock)
+            {
+                if (!_terminationLockDisposed)
+                {
+                    _terminationLockDisposed = true;
+                    _terminationLock.Dispose();
+                    _disposeCts.Dispose();
+                }
+            }
+        }
+    }
+
+    public void Dispose()
+    {
+        lock (_terminationStateLock)
+        {
+            if (_isDisposed) return;
+            _isDisposed = true;
+            try { _disposeCts.Cancel(); } catch (ObjectDisposedException) { }
+
+            CleanupState();
+
+            var pendingBgTasks = _activeBackgroundTasks.Keys.ToArray();
+            if (pendingBgTasks.Length > 0)
+            {
+                try
+                {
+                    Task.WaitAll(pendingBgTasks, TimeSpan.FromMilliseconds(500));
+                }
+                catch { }
+            }
+
+            if (_activeTerminationTask == null && !_terminationLockDisposed)
+            {
+                _terminationLockDisposed = true;
+                _terminationLock.Dispose();
+                _disposeCts.Dispose();
+            }
+        }
+    }
+
+    private void CleanupState()
+    {
+        ConfirmKillTreeCallback = null;
+        ConfirmKillProcessCallback = null;
+        RequestScannerSweep = null;
+
+        _allProcessesList.Clear();
+        _allProcessesMap.Clear();
+        _heuristicCache.Clear();
+        _previousRowOrder.Clear();
+
+        if (System.Windows.Application.Current?.Dispatcher is { } d)
+        {
+            if (!d.HasShutdownStarted && !d.HasShutdownFinished)
+            {
+                if (!d.CheckAccess())
+                {
+                    try { d.Invoke(FilteredProcesses.Clear); } catch { }
+                }
+                else
+                {
+                    FilteredProcesses.Clear();
+                }
+            }
+        }
+        else
+        {
+            FilteredProcesses.Clear();
         }
     }
 
@@ -811,6 +1081,7 @@ public class ProcessListViewModel : ViewModelBase
                 "StartTime" => Nullable.Compare(a.StartTime, b.StartTime),
                 "DiskBytesPerSec" => CompareWithDeadband(a.DiskBytesPerSec, b.DiskBytesPerSec, 10240.0), // 10 KB/s noise threshold
                 "RamBytes" => CompareWithDeadband(a.RamBytes, b.RamBytes, RamNoiseThreshold),
+                "Network" => 0, // Per-process network telemetry unavailable; preserve stable order
                 _ => CompareWithDeadband(a.CpuPercent, b.CpuPercent, CpuNoiseThreshold) // "CpuPercent"
             };
 

@@ -45,7 +45,7 @@ public class ExportService : IExportService
                 ramBytes = p.RamBytes,
                 ramMb = Math.Round(p.RamBytes / (1024.0 * 1024.0), 2),
                 diskBytesPerSec = Math.Round(p.DiskBytesPerSec, 2),
-                networkBytesPerSec = Math.Round(p.NetworkBytesPerSec, 2),
+                networkBytesPerSec = p.NetworkBytesPerSec.HasValue ? Math.Round(p.NetworkBytesPerSec.Value, 2) : (double?)null,
                 executablePath = p.ExecutablePath,
                 isAccessDenied = p.IsAccessDenied,
                 heuristicFlags = flags
@@ -116,7 +116,7 @@ public class ExportService : IExportService
             sb.Append(p.RamBytes.ToString(CultureInfo.InvariantCulture)).Append(',');
             sb.Append(ramMb.ToString("F2", CultureInfo.InvariantCulture)).Append(',');
             sb.Append(p.DiskBytesPerSec.ToString("F2", CultureInfo.InvariantCulture)).Append(',');
-            sb.Append(p.NetworkBytesPerSec.ToString("F2", CultureInfo.InvariantCulture)).Append(',');
+            sb.Append(p.NetworkBytesPerSec.HasValue ? p.NetworkBytesPerSec.Value.ToString("F2", CultureInfo.InvariantCulture) : string.Empty).Append(',');
             sb.Append(EscapeCsvField(p.ExecutablePath ?? string.Empty)).Append(',');
             sb.Append(p.IsAccessDenied ? "True" : "False").Append(',');
             sb.Append(EscapeCsvField(flagsString));

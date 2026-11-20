@@ -12,7 +12,7 @@ using NeuralTask.Core.Services;
 
 namespace NeuralTask.App.ViewModels;
 
-public class DashboardViewModel : ViewModelBase
+public class DashboardViewModel : ViewModelBase, IDisposable
 {
     private double _chartViewportWidth = 1000.0;
     private double _chartViewportHeight = 180.0;
@@ -124,14 +124,14 @@ public class DashboardViewModel : ViewModelBase
     private double _primaryLiveY = 100.0;
     private double _secondaryLiveY = 50.0;
     private string _activeChannelName = "System Telemetry";
-    private string _activeChannelTag = "DUAL LIVE STREAM";
+    private string _activeChannelTag = "Dual Live Stream";
     private string _activeChannelValue = "0.0%";
     private string _activeChannelSubtext = "Kernel hardware sensors";
     private string _activeChannelPeak = "0.0%";
     private string _activeChannelAverage = "0.0%";
     private string _activeChannelMin = "0.0%";
     private string _activeChannelStatus = "Optimal Workload";
-    private string _activeChannelColor = "#00FF41";
+    private string _activeChannelColor = "#8389FF";
     private bool _isOverviewChannel = true;
 
     // 5. Timeline Scrubber State
@@ -1041,14 +1041,14 @@ public class DashboardViewModel : ViewModelBase
             IsOverviewChannel = true;
             CurrentMetricDisplay = "Overview • CPU & Memory Telemetry";
             ActiveChannelName = "System Telemetry";
-            ActiveChannelTag = "SYSTEM TELEMETRY";
+            ActiveChannelTag = "System Telemetry";
             ActiveChannelValue = CpuDisplay;
             ActiveChannelSubtext = $"CPU: {CpuDisplay} • RAM: {RamDisplay} ({RamPercent:F0}%)";
             ActiveChannelPeak = $"{_cpuHistory.GetPeak():F1}%";
             ActiveChannelAverage = $"{_cpuHistory.GetAverage():F1}%";
             ActiveChannelMin = $"{_cpuHistory.GetMinimum():F1}%";
             ActiveChannelStatus = "60s Window • 3s Buffer Delay";
-            ActiveChannelColor = "#00FF41";
+            ActiveChannelColor = "#8389FF";
         }
         else if (SelectedMetric == "Cpu")
         {
@@ -1056,14 +1056,14 @@ public class DashboardViewModel : ViewModelBase
             IsOverviewChannel = false;
             CurrentMetricDisplay = $"CPU Utilization • {CpuDisplay}";
             ActiveChannelName = "CPU Utilization";
-            ActiveChannelTag = "PROCESSOR ARRAY";
+            ActiveChannelTag = "Processor Array";
             ActiveChannelValue = CpuDisplay;
             ActiveChannelSubtext = ProcessorModel;
             ActiveChannelPeak = $"{_cpuHistory.GetPeak():F1}%";
             ActiveChannelAverage = $"{_cpuHistory.GetAverage():F1}%";
             ActiveChannelMin = $"{_cpuHistory.GetMinimum():F1}%";
             ActiveChannelStatus = _cpuHistory.GetPeak() > 80.0 ? "High Workload Detected" : "Optimal Processing";
-            ActiveChannelColor = "#00FF41";
+            ActiveChannelColor = "#8389FF";
         }
         else if (SelectedMetric == "Memory")
         {
@@ -1071,14 +1071,14 @@ public class DashboardViewModel : ViewModelBase
             IsOverviewChannel = false;
             CurrentMetricDisplay = $"Physical Memory • {RamDisplay} ({RamPercent:F1}%)";
             ActiveChannelName = "Memory Allocation";
-            ActiveChannelTag = "DDR PHYSICAL RAM";
+            ActiveChannelTag = "Physical Memory";
             ActiveChannelValue = RamDisplay;
             ActiveChannelSubtext = RamDetailDisplay;
             ActiveChannelPeak = $"{_ramHistory.GetPeak():F1}%";
             ActiveChannelAverage = $"{_ramHistory.GetAverage():F1}%";
             ActiveChannelMin = $"{_ramHistory.GetMinimum():F1}%";
             ActiveChannelStatus = "Stable Memory Footprint";
-            ActiveChannelColor = "#00E5FF";
+            ActiveChannelColor = "#2DD4C6";
         }
         else if (SelectedMetric == "Gpu")
         {
@@ -1086,14 +1086,14 @@ public class DashboardViewModel : ViewModelBase
             IsOverviewChannel = false;
             CurrentMetricDisplay = $"GPU 3D Engine • {GpuDisplay}";
             ActiveChannelName = "GPU 3D Engine";
-            ActiveChannelTag = "GRAPHICS PIPELINE";
+            ActiveChannelTag = "Graphics Pipeline";
             ActiveChannelValue = GpuDisplay;
             ActiveChannelSubtext = GpuSubtext;
             ActiveChannelPeak = $"{_gpuHistory.GetPeak():F1}%";
             ActiveChannelAverage = $"{_gpuHistory.GetAverage():F1}%";
             ActiveChannelMin = $"{_gpuHistory.GetMinimum():F1}%";
             ActiveChannelStatus = IsGpuSupported ? "DirectX Accelerated" : "Integrated / Software";
-            ActiveChannelColor = "#A855F7";
+            ActiveChannelColor = "#8389FF";
         }
         else if (SelectedMetric == "Disk")
         {
@@ -1101,14 +1101,14 @@ public class DashboardViewModel : ViewModelBase
             IsOverviewChannel = false;
             CurrentMetricDisplay = $"Disk Throughput • {DiskIoDisplay}";
             ActiveChannelName = "Disk Throughput";
-            ActiveChannelTag = "STORAGE I/O PIPELINE";
+            ActiveChannelTag = "Storage I/O";
             ActiveChannelValue = DiskIoDisplay;
             ActiveChannelSubtext = DiskIoDetailDisplay;
             ActiveChannelPeak = $"{_diskHistory.GetPeak():F1} MB/s";
             ActiveChannelAverage = $"{_diskHistory.GetAverage():F1} MB/s";
             ActiveChannelMin = $"{_diskHistory.GetMinimum():F1} MB/s";
             ActiveChannelStatus = "Storage Controller Active";
-            ActiveChannelColor = "#F59E0B";
+            ActiveChannelColor = "#F0A94E";
         }
         else if (SelectedMetric == "Network")
         {
@@ -1116,14 +1116,14 @@ public class DashboardViewModel : ViewModelBase
             IsOverviewChannel = false;
             CurrentMetricDisplay = $"Network Traffic • {NetworkDisplay}";
             ActiveChannelName = "Network Throughput";
-            ActiveChannelTag = "NETWORK INTERFACE";
+            ActiveChannelTag = "Network Interface";
             ActiveChannelValue = NetworkDisplay;
             ActiveChannelSubtext = NetworkDetailDisplay;
             ActiveChannelPeak = $"{_netHistory.GetPeak():F2} MB/s";
             ActiveChannelAverage = $"{_netHistory.GetAverage():F2} MB/s";
             ActiveChannelMin = $"{_netHistory.GetMinimum():F2} MB/s";
             ActiveChannelStatus = $"{NetworkAdapterName} • {NetworkLinkSpeed}";
-            ActiveChannelColor = "#F43F5E";
+            ActiveChannelColor = "#F2777C";
         }
     }
 
@@ -1369,5 +1369,30 @@ public class DashboardViewModel : ViewModelBase
             return $"{kb / 1024.0:F1} MB/s";
         }
         return $"{kb:F1} KB/s";
+    }
+
+    public void Dispose()
+    {
+        _cpuHistory.Clear();
+        _ramHistory.Clear();
+        _gpuHistory.Clear();
+        _diskHistory.Clear();
+        _netHistory.Clear();
+
+        void SafeClear<T>(System.Collections.ObjectModel.ObservableCollection<T> collection)
+        {
+            if (System.Windows.Application.Current?.Dispatcher is { } d && !d.CheckAccess())
+            {
+                d.Invoke(collection.Clear);
+            }
+            else
+            {
+                collection.Clear();
+            }
+        }
+
+        SafeClear(TopCpuProcesses);
+        SafeClear(TopRamProcesses);
+        SafeClear(TopGpuProcesses);
     }
 }

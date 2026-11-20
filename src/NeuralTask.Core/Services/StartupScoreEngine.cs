@@ -251,22 +251,61 @@ public class StartupScoreEngine : IStartupScoreEngine
             }
             else if (entry.SourceType == StartupSourceType.StartupFolderUser || entry.SourceType == StartupSourceType.StartupFolderCommon)
             {
-                if (!string.IsNullOrEmpty(entry.Location) && File.Exists(entry.Location))
+                var currentPath = entry.FilePath ?? entry.Command;
+                if (string.IsNullOrEmpty(currentPath) || !File.Exists(currentPath))
                 {
-                    if (!enable && !entry.Location.EndsWith(".disabled", StringComparison.OrdinalIgnoreCase))
+                    return false;
+                }
+
+                if (!enable)
+                {
+                    if (currentPath.EndsWith(".disabled", StringComparison.OrdinalIgnoreCase))
                     {
-                        var newPath = entry.Location + ".disabled";
-                        File.Move(entry.Location, newPath);
                         entry.IsEnabled = false;
                         return true;
                     }
-                    else if (enable && entry.Location.EndsWith(".disabled", StringComparison.OrdinalIgnoreCase))
+
+                    var newPath = currentPath + ".disabled";
+                    // Safety rule: Never delete an existing destination file. If destination exists, abort safely.
+                    if (File.Exists(newPath))
                     {
-                        var newPath = entry.Location.Substring(0, entry.Location.Length - ".disabled".Length);
-                        File.Move(entry.Location, newPath);
+                        return false;
+                    }
+
+                    File.Move(currentPath, newPath);
+                    entry.FilePath = newPath;
+                    entry.Command = newPath;
+                    if (entry.ExecutablePath == currentPath)
+                    {
+                        entry.ExecutablePath = newPath;
+                    }
+                    entry.IsEnabled = false;
+                    return true;
+                }
+                else
+                {
+                    if (!currentPath.EndsWith(".disabled", StringComparison.OrdinalIgnoreCase))
+                    {
                         entry.IsEnabled = true;
                         return true;
                     }
+
+                    var newPath = currentPath.Substring(0, currentPath.Length - ".disabled".Length);
+                    // Safety rule: Never delete an existing destination file. If destination exists, abort safely.
+                    if (File.Exists(newPath))
+                    {
+                        return false;
+                    }
+
+                    File.Move(currentPath, newPath);
+                    entry.FilePath = newPath;
+                    entry.Command = newPath;
+                    if (entry.ExecutablePath == currentPath)
+                    {
+                        entry.ExecutablePath = newPath;
+                    }
+                    entry.IsEnabled = true;
+                    return true;
                 }
             }
         }
@@ -339,9 +378,12 @@ public class StartupScoreEngine : IStartupScoreEngine
                 if (fileName.Equals("desktop.ini", StringComparison.OrdinalIgnoreCase)) continue;
 
                 bool isEnabled = !fileName.EndsWith(".disabled", StringComparison.OrdinalIgnoreCase);
-                var cleanName = isEnabled ? Path.GetFileNameWithoutExtension(file) : Path.GetFileNameWithoutExtension(fileName.Substring(0, fileName.Length - 9));
+                var effectiveFileName = isEnabled ? fileName : fileName.Substring(0, fileName.Length - 9);
+                var cleanName = Path.GetFileNameWithoutExtension(effectiveFileName);
 
-                var id = $"{sourceType}_{cleanName}";
+                // Use stable unique ID based on source type and the full effective filename (including extension)
+                // to prevent collisions between distinct items like App.exe and App.lnk while preserving readable Name.
+                var id = $"{sourceType}_{effectiveFileName}";
                 if (!destination.ContainsKey(id))
                 {
                     destination[id] = new StartupEntry(
@@ -351,7 +393,8 @@ public class StartupScoreEngine : IStartupScoreEngine
                         executablePath: file.EndsWith(".lnk", StringComparison.OrdinalIgnoreCase) ? null : file,
                         location: folderPath,
                         sourceType: sourceType,
-                        isEnabled: isEnabled
+                        isEnabled: isEnabled,
+                        filePath: file
                     );
                 }
             }

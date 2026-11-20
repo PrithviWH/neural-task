@@ -26,6 +26,9 @@ public class GpuMetricsService : IGpuMetricsService, IDisposable
     private readonly List<PerformanceCounter> _memoryDedicatedCounters = new();
     private readonly Dictionary<string, PerformanceCounter> _processCounters = new();
     private bool _countersInitialized;
+    private DateTime _lastDiscoveryAttempt = DateTime.MinValue;
+    private readonly TimeSpan _rediscoveryCooldown = TimeSpan.FromSeconds(10);
+    private int _consecutiveFailures = 0;
 
     public bool IsSupported => _isSupported;
 
@@ -100,19 +103,45 @@ public class GpuMetricsService : IGpuMetricsService, IDisposable
         }
     }
 
-    private void EnsureCountersInitialized()
+    private void DisposeCountersLocked()
     {
-        if (_countersInitialized) return;
-        _countersInitialized = true;
+        foreach (var c in _totalEngineCounters)
+        {
+            try { c.Dispose(); } catch { }
+        }
+        _totalEngineCounters.Clear();
+
+        foreach (var c in _memoryDedicatedCounters)
+        {
+            try { c.Dispose(); } catch { }
+        }
+        _memoryDedicatedCounters.Clear();
+
+        foreach (var c in _processCounters.Values)
+        {
+            try { c.Dispose(); } catch { }
+        }
+        _processCounters.Clear();
+
+        _countersInitialized = false;
+    }
+
+    public void EnsureCountersInitialized(bool force = false)
+    {
+        if (_countersInitialized && !force) return;
+        DisposeCountersLocked();
+        _lastDiscoveryAttempt = DateTime.UtcNow;
 
         try
         {
             if (!OperatingSystem.IsWindows() || !PerformanceCounterCategory.Exists("GPU Engine"))
             {
                 _isSupported = false;
+                _countersInitialized = true;
                 return;
             }
 
+            _isSupported = true;
             var category = new PerformanceCounterCategory("GPU Engine");
             var instanceNames = category.GetInstanceNames();
 
@@ -158,6 +187,10 @@ public class GpuMetricsService : IGpuMetricsService, IDisposable
         {
             _isSupported = false;
         }
+        finally
+        {
+            _countersInitialized = true;
+        }
     }
 
     public GpuMetricsSnapshot CollectSnapshot(IReadOnlyList<ProcessSnapshot> processes)
@@ -169,7 +202,13 @@ public class GpuMetricsService : IGpuMetricsService, IDisposable
                 InitializeAdapterInfo();
             }
 
-            EnsureCountersInitialized();
+            bool needsRetry = !_countersInitialized ||
+                (_totalEngineCounters.Count == 0 && (DateTime.UtcNow - _lastDiscoveryAttempt) > _rediscoveryCooldown);
+
+            if (needsRetry)
+            {
+                EnsureCountersInitialized(force: true);
+            }
 
             if (!_isSupported)
             {
@@ -177,6 +216,9 @@ public class GpuMetricsService : IGpuMetricsService, IDisposable
             }
 
             double totalUtil = 0.0;
+            int successfulReads = 0;
+            int failedReads = 0;
+
             try
             {
                 foreach (var counter in _totalEngineCounters)
@@ -184,6 +226,7 @@ public class GpuMetricsService : IGpuMetricsService, IDisposable
                     try
                     {
                         var val = counter.NextValue();
+                        successfulReads++;
                         if (val > totalUtil)
                         {
                             totalUtil = val;
@@ -191,11 +234,26 @@ public class GpuMetricsService : IGpuMetricsService, IDisposable
                     }
                     catch
                     {
+                        failedReads++;
                     }
                 }
             }
             catch
             {
+            }
+
+            if (_totalEngineCounters.Count > 0 && successfulReads == 0 && failedReads > 0)
+            {
+                _consecutiveFailures++;
+                if (_consecutiveFailures >= 3)
+                {
+                    DisposeCountersLocked();
+                    _consecutiveFailures = 0;
+                }
+            }
+            else if (successfulReads > 0)
+            {
+                _consecutiveFailures = 0;
             }
 
             totalUtil = Math.Clamp(Math.Round(totalUtil, 1), 0.0, 100.0);
@@ -311,29 +369,26 @@ public class GpuMetricsService : IGpuMetricsService, IDisposable
         }
     }
 
+    public void ResetAndRediscover(bool force = true)
+    {
+        lock (_syncLock)
+        {
+            _checkedWmi = false;
+            InitializeAdapterInfo();
+            EnsureCountersInitialized(force: force);
+        }
+    }
+
+    public Task ResetAndRediscoverAsync(bool force = true)
+    {
+        return Task.Run(() => ResetAndRediscover(force));
+    }
+
     public void Dispose()
     {
         lock (_syncLock)
         {
-            foreach (var c in _totalEngineCounters)
-            {
-                try { c.Dispose(); } catch { }
-            }
-            _totalEngineCounters.Clear();
-
-            foreach (var c in _memoryDedicatedCounters)
-            {
-                try { c.Dispose(); } catch { }
-            }
-            _memoryDedicatedCounters.Clear();
-
-            foreach (var c in _processCounters.Values)
-            {
-                try { c.Dispose(); } catch { }
-            }
-            _processCounters.Clear();
-
-            _countersInitialized = false;
+            DisposeCountersLocked();
         }
     }
 }

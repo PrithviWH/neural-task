@@ -13,7 +13,7 @@ public record HistoricalProcessMetrics(
     double CpuPercent,
     long RamBytes,
     double DiskBytesPerSec,
-    double NetworkBytesPerSec,
+    double? NetworkBytesPerSec = null,
     string? FlagReason = null
 );
 

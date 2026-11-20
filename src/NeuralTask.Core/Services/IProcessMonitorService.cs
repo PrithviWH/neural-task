@@ -9,7 +9,7 @@ namespace NeuralTask.Core.Services;
 /// <summary>
 /// Headless service interface for monitoring running system processes in real-time.
 /// </summary>
-public interface IProcessMonitorService : IDisposable
+public interface IProcessMonitorService : IDisposable, IAsyncDisposable
 {
     /// <summary>
     /// Reactive stream of process snapshots emitted on each sampling tick.
@@ -44,7 +44,7 @@ public interface IProcessMonitorService : IDisposable
     /// <summary>
     /// Stops the background monitoring loop.
     /// </summary>
-    Task StopAsync();
+    Task StopAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Executes a single sampling pass immediately and returns the resulting snapshots.

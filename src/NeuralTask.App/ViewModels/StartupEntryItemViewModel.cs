@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Windows.Input;
 using System.Windows.Media;
+using NeuralTask.App.Services;
 using NeuralTask.Core.Models;
 using NeuralTask.Core.Services;
 
@@ -13,6 +14,7 @@ public class StartupEntryItemViewModel : ViewModelBase
     private readonly IStartupScoreEngine _engine;
     private readonly Action<string, bool> _onStatusNotification;
     private bool _isExpanded;
+    private ImageSource? _icon;
 
     public StartupEntry Entry => _entry;
 
@@ -23,6 +25,29 @@ public class StartupEntryItemViewModel : ViewModelBase
     public string Location => _entry.Location;
     public StartupSourceType SourceType => _entry.SourceType;
 
+    public ImageSource? Icon
+    {
+        get
+        {
+            if (_icon == null && !string.IsNullOrWhiteSpace(ExecutablePath))
+            {
+                _icon = ProcessIconCache.GetIcon(ExecutablePath, loaded =>
+                {
+                    _icon = loaded;
+                    OnPropertyChanged(nameof(Icon));
+                    OnPropertyChanged(nameof(HasIcon));
+                });
+            }
+            return _icon;
+        }
+    }
+
+    public bool HasIcon => Icon != null;
+
+    public string CleanExecutableName => !string.IsNullOrWhiteSpace(ExecutablePath)
+        ? Path.GetFileName(ExecutablePath)
+        : "App Binary";
+
     public string SourceTypeDisplay => _entry.SourceType switch
     {
         StartupSourceType.RegistryRunCurrentUser => "User registry (HKCU)",
@@ -30,6 +55,15 @@ public class StartupEntryItemViewModel : ViewModelBase
         StartupSourceType.StartupFolderUser => "Startup folder (User)",
         StartupSourceType.StartupFolderCommon => "Startup folder (All users)",
         _ => "Scheduled task"
+    };
+
+    public string SourceTypeBadgeText => _entry.SourceType switch
+    {
+        StartupSourceType.RegistryRunCurrentUser => "HKCU Registry",
+        StartupSourceType.RegistryRunLocalMachine => "HKLM System",
+        StartupSourceType.StartupFolderUser => "User Folder",
+        StartupSourceType.StartupFolderCommon => "Common Folder",
+        _ => "Scheduled Task"
     };
 
     public bool IsEnabled
@@ -57,6 +91,7 @@ public class StartupEntryItemViewModel : ViewModelBase
 
     public int? AssociatedPid => _entry.AssociatedPid;
     public bool IsRunning => _entry.AssociatedPid.HasValue;
+    public string RunningDisplay => _entry.AssociatedPid.HasValue ? $"PID {_entry.AssociatedPid.Value}" : string.Empty;
 
     public int Score => _entry.Score?.TotalScore ?? 0;
     public double TimeScore => _entry.Score?.TimeScore ?? 0.0;
@@ -90,14 +125,31 @@ public class StartupEntryItemViewModel : ViewModelBase
         {
             return Score switch
             {
-                >= 80 => new SolidColorBrush(Color.FromRgb(0xDD, 0x4F, 0x55)), // Severe: Clarity Rose Red
-                >= 60 => new SolidColorBrush(Color.FromRgb(0xD9, 0x8C, 0x1F)), // High: Clarity Amber
-                >= 40 => new SolidColorBrush(Color.FromRgb(0x5B, 0x61, 0xF1)), // Moderate: Clarity Indigo
-                >= 20 => new SolidColorBrush(Color.FromRgb(0x11, 0xA6, 0x9C)), // Low: Clarity Teal
-                _ => new SolidColorBrush(Color.FromRgb(0x16, 0xA3, 0x4A))      // Minimal: Calm Green
+                >= 80 => new SolidColorBrush(Color.FromRgb(0xF2, 0x77, 0x7C)), // Severe: Red
+                >= 60 => new SolidColorBrush(Color.FromRgb(0xF0, 0xA9, 0x4E)), // High: Amber
+                >= 40 => new SolidColorBrush(Color.FromRgb(0x83, 0x89, 0xFF)), // Moderate: Indigo
+                >= 20 => new SolidColorBrush(Color.FromRgb(0x2D, 0xD4, 0xC6)), // Low: Teal
+                _ => new SolidColorBrush(Color.FromRgb(0x10, 0xB9, 0x81))      // Minimal: Emerald
             };
         }
     }
+
+    public Brush ImpactBadgeBackground
+    {
+        get
+        {
+            return Score switch
+            {
+                >= 80 => new SolidColorBrush(Color.FromArgb(0x22, 0xF2, 0x77, 0x7C)),
+                >= 60 => new SolidColorBrush(Color.FromArgb(0x22, 0xF0, 0xA9, 0x4E)),
+                >= 40 => new SolidColorBrush(Color.FromArgb(0x22, 0x83, 0x89, 0xFF)),
+                >= 20 => new SolidColorBrush(Color.FromArgb(0x22, 0x2D, 0xD4, 0xC6)),
+                _ => new SolidColorBrush(Color.FromArgb(0x22, 0x10, 0xB9, 0x81))
+            };
+        }
+    }
+
+    public Brush ImpactBadgeForeground => ImpactBrush;
 
     public bool IsExpanded
     {

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using NeuralTask.Core.Models;
 using NeuralTask.Core.Services;
@@ -13,13 +14,51 @@ public class ProcessActionTests
     private readonly ProcessActionService _service = new();
 
     [Fact]
-    public async Task TerminateProcessAsync_InvalidPid_ReturnsAlreadyExitedOrFailed()
+    public async Task TerminateProcessAsync_InvalidPid_WithIdentity_ReturnsAlreadyExitedOrFailed()
     {
-        // PID 9999999 is nonexistent
-        var result = await _service.TerminateProcessAsync(9999999);
+        // PID 9999999 is nonexistent, but provided with explicit expected identity
+        var result = await _service.TerminateProcessAsync(
+            9999999,
+            expectedProcessName: "nonexistent.exe",
+            expectedStartTime: DateTimeOffset.UtcNow);
 
         Assert.Equal(ProcessTerminationStatus.AlreadyExited, result.Status);
         Assert.Contains("already exited", result.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task TerminateProcessAsync_MissingExpectedProcessName_ReturnsRefusedAmbiguousIdentity()
+    {
+        var currentProc = Process.GetCurrentProcess();
+        var result = await _service.TerminateProcessAsync(
+            currentProc.Id,
+            expectedProcessName: null,
+            expectedStartTime: DateTimeOffset.UtcNow);
+
+        Assert.Equal(ProcessTerminationStatus.RefusedAmbiguousIdentity, result.Status);
+        Assert.Contains("refused", result.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task TerminateProcessAsync_MissingExpectedStartTime_ReturnsRefusedAmbiguousIdentity()
+    {
+        var currentProc = Process.GetCurrentProcess();
+        var result = await _service.TerminateProcessAsync(
+            currentProc.Id,
+            expectedProcessName: currentProc.ProcessName,
+            expectedStartTime: null);
+
+        Assert.Equal(ProcessTerminationStatus.RefusedAmbiguousIdentity, result.Status);
+        Assert.Contains("refused", result.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task TerminateProcessAsync_NoIdentityParameters_ReturnsRefusedAmbiguousIdentity()
+    {
+        var result = await _service.TerminateProcessAsync(1234);
+
+        Assert.Equal(ProcessTerminationStatus.RefusedAmbiguousIdentity, result.Status);
+        Assert.Contains("refused", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -109,5 +148,119 @@ public class ProcessActionTests
                 try { parentProc.Kill(true); } catch { }
             }
         }
+    }
+
+    [Fact]
+    public async Task TerminateProcessAsync_CancelledToken_ReturnsCancelled()
+    {
+        using var cts = new System.Threading.CancellationTokenSource();
+        cts.Cancel();
+
+        var result = await _service.TerminateProcessAsync(1234, cancellationToken: cts.Token);
+
+        Assert.Equal(ProcessTerminationStatus.Cancelled, result.Status);
+        Assert.Contains("cancelled", result.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task TerminateTreeAsync_CancelledToken_AbortsEarly()
+    {
+        var snapshots = new List<ProcessSnapshot>
+        {
+            new ProcessSnapshot(2000, "root.exe", 0, 1.0, 100, 0, 0, DateTime.Now, null, false),
+            new ProcessSnapshot(2001, "child.exe", 2000, 1.0, 100, 0, 0, DateTime.Now.AddSeconds(1), null, false)
+        };
+
+        using var cts = new System.Threading.CancellationTokenSource();
+        cts.Cancel();
+
+        var result = await _service.TerminateTreeAsync(2000, snapshots, cancellationToken: cts.Token);
+
+        Assert.False(result.OverallSuccess);
+        Assert.NotEmpty(result.ProcessResults);
+        Assert.Equal(ProcessTerminationStatus.Cancelled, result.ProcessResults[0].Status);
+    }
+
+    [Fact]
+    public async Task TerminateProcessAsync_ExecutesAsynchronouslyOffCallerThread()
+    {
+        var task = Task.Run(async () =>
+        {
+            var res = await _service.TerminateProcessAsync(
+                9999999,
+                expectedProcessName: "nonexistent.exe",
+                expectedStartTime: DateTimeOffset.UtcNow);
+            return res;
+        });
+
+        var result = await task;
+        Assert.Equal(ProcessTerminationStatus.AlreadyExited, result.Status);
+    }
+
+    [Fact]
+    public async Task TerminateProcessAsync_SameNameDifferentStartTime_DetectsPidRecyclingAndAborts()
+    {
+        // Target current process with its exact name, but with an old start time -> simulated PID recycling
+        var currentProc = Process.GetCurrentProcess();
+        var mismatchedStartTime = DateTimeOffset.UtcNow.AddHours(-2);
+
+        var result = await _service.TerminateProcessAsync(
+            currentProc.Id,
+            expectedProcessName: currentProc.ProcessName,
+            expectedStartTime: mismatchedStartTime);
+
+        Assert.Equal(ProcessTerminationStatus.IdentityMismatch, result.Status);
+        Assert.Contains("PID recycling detected", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("aborted for safety", result.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task TerminateProcessAsync_MismatchedProcessName_DetectsIdentityMismatchAndAborts()
+    {
+        // Use current process PID but with an entirely mismatched process name
+        var currentProc = Process.GetCurrentProcess();
+
+        var result = await _service.TerminateProcessAsync(
+            currentProc.Id,
+            expectedProcessName: "totally_unrelated_process_xyz.exe",
+            expectedStartTime: currentProc.StartTime);
+
+        Assert.Equal(ProcessTerminationStatus.IdentityMismatch, result.Status);
+        Assert.Contains("Identity mismatch detected", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("aborted for safety", result.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task TerminateProcessAsync_InaccessibleStartTime_RefusesAmbiguousIdentity()
+    {
+        // When StartTime access is denied (Win32Exception AccessDenied), termination must be refused rather than falling back to name-only
+        var currentProc = Process.GetCurrentProcess();
+        var restrictedService = new ProcessActionService(_ => throw new System.ComponentModel.Win32Exception(5, "Access is denied"));
+
+        var result = await restrictedService.TerminateProcessAsync(
+            currentProc.Id,
+            expectedProcessName: currentProc.ProcessName,
+            expectedStartTime: DateTimeOffset.UtcNow);
+
+        Assert.Equal(ProcessTerminationStatus.RefusedAmbiguousIdentity, result.Status);
+        Assert.Contains("unable to verify start time", result.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task TerminateTreeAsync_DescendantMissingIdentity_RefusesAmbiguousIdentity()
+    {
+        // Child 2001 in topology has no start time in snapshot -> must be refused for ambiguous identity
+        var snapshots = new List<ProcessSnapshot>
+        {
+            new ProcessSnapshot(2000, "root.exe", 0, 1.0, 100, 0, 0, DateTime.Now, null, false),
+            new ProcessSnapshot(2001, "child.exe", 2000, 1.0, 100, 0, 0, null, null, false)
+        };
+
+        var result = await _service.TerminateTreeAsync(2000, snapshots);
+
+        Assert.False(result.OverallSuccess);
+        var childResult = result.ProcessResults.FirstOrDefault(r => r.Pid == 2001);
+        Assert.NotNull(childResult);
+        Assert.Equal(ProcessTerminationStatus.RefusedAmbiguousIdentity, childResult.Status);
     }
 }

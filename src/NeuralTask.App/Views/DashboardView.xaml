@@ -127,6 +127,50 @@
                           Direction="270"
                           Color="#000000"
                           Opacity="0.04" />
+
+        <!-- Clarity Timeline Scrubber Slider Style (PRD §6) -->
+        <Style x:Key="ClarityTimelineScrubberStyle" TargetType="Slider">
+            <Setter Property="Height" Value="24" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Slider">
+                        <Grid VerticalAlignment="Center">
+                            <!-- Track Background -->
+                            <Border Height="4" CornerRadius="2" Background="{DynamicResource BrushBorderSubtle}" />
+                            <!-- Played Track Indicator -->
+                            <Track x:Name="PART_Track">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="Slider.DecreaseLarge" Focusable="False">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate TargetType="RepeatButton">
+                                                <Border Height="4" CornerRadius="2" Background="{DynamicResource BrushAccentPrimary}" />
+                                            </ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.DecreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Width="14" Height="14" Cursor="Hand">
+                                        <Thumb.Template>
+                                            <ControlTemplate TargetType="Thumb">
+                                                <Ellipse Width="14" Height="14" Fill="{DynamicResource BrushSurface}" Stroke="{DynamicResource BrushAccentPrimary}" StrokeThickness="2">
+                                                    <Ellipse.Effect>
+                                                        <DropShadowEffect BlurRadius="6" ShadowDepth="1" Direction="270" Color="#000000" Opacity="0.15" />
+                                                    </Ellipse.Effect>
+                                                </Ellipse>
+                                            </ControlTemplate>
+                                        </Thumb.Template>
+                                    </Thumb>
+                                </Track.Thumb>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="Slider.IncreaseLarge" Focusable="False" Opacity="0" />
+                                </Track.IncreaseRepeatButton>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </UserControl.Resources>
 
     <ScrollViewer x:Name="DashboardScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
@@ -433,17 +477,19 @@
                 </Border>
             </Grid>
 
-            <!-- 2. Advanced Telemetry: Multi-Channel Timelines (One by one beside each other) -->
+            <!-- 2. Advanced Telemetry: Multi-Channel Timelines (Beside each other, smoothed gradient rendering, PRD §6) -->
             <Grid Grid.Row="2" Margin="0,0,0,20">
                 <Grid.RowDefinitions>
                     <!-- Header Row: Title, Channels Count & Legend -->
+                    <RowDefinition Height="Auto" />
+                    <!-- Scrubber Row: 4px rounded track with live value announcement -->
                     <RowDefinition Height="Auto" />
                     <!-- 3x2 Grid of Timeline Cards Beside Each Other -->
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
                 <!-- Section Header -->
-                <Grid Grid.Row="0" Margin="0,0,0,12">
+                <Grid Grid.Row="0" Margin="0,0,0,10">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
@@ -479,23 +525,70 @@
                         </Border>
                     </StackPanel>
 
-                    <!-- Right: Color Legend Indicators -->
+                    <!-- Right: Clarity Series Legend Indicators (System-wide color mapping) -->
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Ellipse Width="7" Height="7" Fill="#00FF41" Margin="0,0,5,0" VerticalAlignment="Center" />
+                        <Ellipse Width="6" Height="6" Fill="{DynamicResource BrushAccentPrimary}" Margin="0,0,5,0" VerticalAlignment="Center" />
                         <TextBlock Text="CPU" FontSize="11" FontWeight="Medium" FontFamily="{DynamicResource FontFamilyUI}" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,12,0" VerticalAlignment="Center" />
-                        <Ellipse Width="7" Height="7" Fill="#00E5FF" Margin="0,0,5,0" VerticalAlignment="Center" />
+                        <Ellipse Width="6" Height="6" Fill="{DynamicResource BrushAccentSecondary}" Margin="0,0,5,0" VerticalAlignment="Center" />
                         <TextBlock Text="RAM" FontSize="11" FontWeight="Medium" FontFamily="{DynamicResource FontFamilyUI}" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,12,0" VerticalAlignment="Center" />
-                        <Ellipse Width="7" Height="7" Fill="#A855F7" Margin="0,0,5,0" VerticalAlignment="Center" />
+                        <Ellipse Width="6" Height="6" Fill="{DynamicResource BrushAccentPrimary}" Margin="0,0,5,0" VerticalAlignment="Center" />
                         <TextBlock Text="GPU" FontSize="11" FontWeight="Medium" FontFamily="{DynamicResource FontFamilyUI}" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,12,0" VerticalAlignment="Center" />
-                        <Ellipse Width="7" Height="7" Fill="#F59E0B" Margin="0,0,5,0" VerticalAlignment="Center" />
+                        <Ellipse Width="6" Height="6" Fill="{DynamicResource BrushAccentWarning}" Margin="0,0,5,0" VerticalAlignment="Center" />
                         <TextBlock Text="Disk" FontSize="11" FontWeight="Medium" FontFamily="{DynamicResource FontFamilyUI}" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,12,0" VerticalAlignment="Center" />
-                        <Ellipse Width="7" Height="7" Fill="#EC4899" Margin="0,0,5,0" VerticalAlignment="Center" />
+                        <Ellipse Width="6" Height="6" Fill="{DynamicResource BrushAccentDanger}" Margin="0,0,5,0" VerticalAlignment="Center" />
                         <TextBlock Text="Net" FontSize="11" FontWeight="Medium" FontFamily="{DynamicResource FontFamilyUI}" Foreground="{DynamicResource BrushTextSecondary}" VerticalAlignment="Center" />
                     </StackPanel>
                 </Grid>
 
+                <!-- Interactive Timeline Scrubber (PRD §6: 4px rounded track + live value announcement) -->
+                <Border Grid.Row="1"
+                        Background="{DynamicResource BrushSurface}"
+                        BorderBrush="{DynamicResource BrushBorderSubtle}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="14,6"
+                        Margin="0,0,0,12">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Left: Live / Scrubbing Status Indicator -->
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,14,0">
+                            <Ellipse Width="6" Height="6" Fill="{DynamicResource BrushAccentSecondary}" Margin="0,0,6,0" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding TimelineTimeDisplay, FallbackValue='Live • Streaming'}"
+                                       FontSize="11"
+                                       FontWeight="Medium"
+                                       FontFamily="{DynamicResource FontFamilyUI}"
+                                       Foreground="{DynamicResource BrushTextSecondary}"
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+
+                        <!-- Center: Scrubber Slider with Smooth Track -->
+                        <Slider Grid.Column="1"
+                                Style="{StaticResource ClarityTimelineScrubberStyle}"
+                                Minimum="0.0" Maximum="1.0"
+                                Value="{Binding ScrubberValue, Mode=TwoWay}"
+                                ToolTip="{Binding TimelineTimeDisplay}"
+                                AutomationProperties.Name="Telemetry history timeline scrubber"
+                                AutomationProperties.HelpText="Drag to scrub through historical telemetry buffer"
+                                VerticalAlignment="Center" />
+
+                        <!-- Right: Window Duration Tag -->
+                        <TextBlock Grid.Column="2"
+                                   Text="{Binding TimelineWindowDisplay, FallbackValue='-30m 00s'}"
+                                   FontSize="11"
+                                   FontFamily="{DynamicResource FontFamilyNumeric}"
+                                   Foreground="{DynamicResource BrushTextTertiary}"
+                                   Margin="14,0,0,0"
+                                   VerticalAlignment="Center" />
+                    </Grid>
+                </Border>
+
                 <!-- 3 Columns x 2 Rows Grid of Timeline Cards Beside Each Other -->
-                <Grid Grid.Row="1">
+                <Grid Grid.Row="2">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="14" />
@@ -525,8 +618,8 @@
 
                             <Grid Grid.Row="0" Margin="0,0,0,8">
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Ellipse Width="6" Height="6" Fill="#00FF41" Margin="0,0,3,0" VerticalAlignment="Center" />
-                                    <Ellipse Width="6" Height="6" Fill="#00E5FF" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                    <Ellipse Width="6" Height="6" Fill="{DynamicResource BrushAccentPrimary}" Margin="0,0,3,0" VerticalAlignment="Center" />
+                                    <Ellipse Width="6" Height="6" Fill="{DynamicResource BrushAccentSecondary}" Margin="0,0,6,0" VerticalAlignment="Center" />
                                     <TextBlock Text="Overview Timeline"
                                                FontSize="11.5"
                                                FontWeight="SemiBold"
@@ -536,53 +629,46 @@
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                                     <TextBlock Text="{Binding CpuDisplay, FallbackValue='0.0%'}"
-                                               FontSize="12" FontWeight="SemiBold" FontFamily="{DynamicResource FontFamilyNumeric}" Foreground="#00FF41" />
+                                               FontSize="12" FontWeight="SemiBold" FontFamily="{DynamicResource FontFamilyNumeric}" Foreground="{DynamicResource BrushAccentPrimary}" />
                                     <TextBlock Text=" • " FontSize="11" Foreground="{DynamicResource BrushTextTertiary}" />
                                     <TextBlock Text="{Binding RamPercentDisplay, FallbackValue='0.0%'}"
-                                               FontSize="12" FontWeight="SemiBold" FontFamily="{DynamicResource FontFamilyNumeric}" Foreground="#00E5FF" />
+                                               FontSize="12" FontWeight="SemiBold" FontFamily="{DynamicResource FontFamilyNumeric}" Foreground="{DynamicResource BrushAccentSecondary}" />
                                 </StackPanel>
                             </Grid>
 
-                            <Border Grid.Row="1" Background="#090C10" BorderBrush="#17261C" BorderThickness="1" CornerRadius="6" ClipToBounds="True">
+                            <Border Grid.Row="1" Background="{DynamicResource BrushSurfaceRaised}" BorderBrush="{DynamicResource BrushBorderSubtle}" BorderThickness="1" CornerRadius="6" ClipToBounds="True">
                                 <Grid x:Name="ChartCardGrid0" ClipToBounds="True" SizeChanged="ChartCardGrid_SizeChanged">
-                                    <Line X1="0" Y1="25" X2="{Binding CardViewportWidth}" Y2="25" Stroke="#00FF41" StrokeThickness="1" StrokeDashArray="3 3" Opacity="0.08" />
-                                    <Line X1="0" Y1="55" X2="{Binding CardViewportWidth}" Y2="55" Stroke="#00FF41" StrokeThickness="1" StrokeDashArray="3 3" Opacity="0.08" />
-                                    <Line X1="0" Y1="80" X2="{Binding CardViewportWidth}" Y2="80" Stroke="#00FF41" StrokeThickness="1" StrokeDashArray="3 3" Opacity="0.05" />
+                                    <!-- Horizontal Gridlines Only (PRD §6) -->
+                                    <Line X1="0" Y1="25" X2="{Binding CardViewportWidth}" Y2="25" Stroke="{DynamicResource BrushBorderSubtle}" StrokeThickness="1" StrokeDashArray="3 3" Opacity="0.4" />
+                                    <Line X1="0" Y1="55" X2="{Binding CardViewportWidth}" Y2="55" Stroke="{DynamicResource BrushBorderSubtle}" StrokeThickness="1" StrokeDashArray="3 3" Opacity="0.4" />
+                                    <Line X1="0" Y1="80" X2="{Binding CardViewportWidth}" Y2="80" Stroke="{DynamicResource BrushBorderSubtle}" StrokeThickness="1" StrokeDashArray="3 3" Opacity="0.25" />
 
                                     <Grid ClipToBounds="False">
                                         <Grid.RenderTransform>
                                             <TranslateTransform x:Name="ChartTranslateTransform0" X="0" />
                                         </Grid.RenderTransform>
 
+                                        <!-- Smoothed Monotone-Cubic Curves with Soft Gradient Fills (PRD §6) -->
                                         <Path Data="{Binding CpuAreaGeometry}">
                                             <Path.Fill>
                                                 <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                                    <GradientStop Color="#3500FF41" Offset="0.0" />
-                                                    <GradientStop Color="#1000661A" Offset="0.5" />
-                                                    <GradientStop Color="#00000000" Offset="1.0" />
+                                                    <GradientStop Color="#338389FF" Offset="0.0" />
+                                                    <GradientStop Color="#008389FF" Offset="1.0" />
                                                 </LinearGradientBrush>
                                             </Path.Fill>
                                         </Path>
                                         <Path Data="{Binding RamAreaGeometry}">
                                             <Path.Fill>
                                                 <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                                    <GradientStop Color="#2500E5FF" Offset="0.0" />
-                                                    <GradientStop Color="#00000000" Offset="1.0" />
+                                                    <GradientStop Color="#252DD4C6" Offset="0.0" />
+                                                    <GradientStop Color="#002DD4C6" Offset="1.0" />
                                                 </LinearGradientBrush>
                                             </Path.Fill>
                                         </Path>
-                                        <Path Data="{Binding CpuCurveGeometry}" Stroke="#00FF41" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round">
-                                            <Path.Effect>
-                                                <DropShadowEffect Color="#00FF41" BlurRadius="6" ShadowDepth="0" Opacity="0.75" />
-                                            </Path.Effect>
-                                        </Path>
-                                        <Path Data="{Binding RamCurveGeometry}" Stroke="#00E5FF" StrokeThickness="1.75" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round">
-                                            <Path.Effect>
-                                                <DropShadowEffect Color="#00E5FF" BlurRadius="5" ShadowDepth="0" Opacity="0.65" />
-                                            </Path.Effect>
-                                        </Path>
+                                        <Path Data="{Binding CpuCurveGeometry}" Stroke="{DynamicResource BrushAccentPrimary}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" />
+                                        <Path Data="{Binding RamCurveGeometry}" Stroke="{DynamicResource BrushAccentSecondary}" StrokeThickness="1.75" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" />
                                     </Grid>
-                                    <Border HorizontalAlignment="Right" Width="1" Background="#00FF41" Opacity="0.25" IsHitTestVisible="False" />
+                                    <Border HorizontalAlignment="Right" Width="1" Background="{DynamicResource BrushAccentPrimary}" Opacity="0.3" IsHitTestVisible="False" />
                                 </Grid>
                             </Border>
                         </Grid>
@@ -604,7 +690,7 @@
 
                             <Grid Grid.Row="0" Margin="0,0,0,8">
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Ellipse Width="6" Height="6" Fill="#00FF41" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                    <Ellipse Width="6" Height="6" Fill="{DynamicResource BrushAccentPrimary}" Margin="0,0,6,0" VerticalAlignment="Center" />
                                     <TextBlock Text="CPU Utilization"
                                                FontSize="11.5"
                                                FontWeight="SemiBold"
@@ -617,15 +703,15 @@
                                            FontSize="13"
                                            FontWeight="SemiBold"
                                            FontFamily="{DynamicResource FontFamilyNumeric}"
-                                           Foreground="#00FF41"
+                                           Foreground="{DynamicResource BrushAccentPrimary}"
                                            VerticalAlignment="Center" />
                             </Grid>
 
-                            <Border Grid.Row="1" Background="#090C10" BorderBrush="#17261C" BorderThickness="1" CornerRadius="6" ClipToBounds="True">
+                            <Border Grid.Row="1" Background="{DynamicResource BrushSurfaceRaised}" BorderBrush="{DynamicResource BrushBorderSubtle}" BorderThickness="1" CornerRadius="6" ClipToBounds="True">
                                 <Grid x:Name="ChartCardGrid1" ClipToBounds="True" SizeChanged="ChartCardGrid_SizeChanged">
-                                    <Line X1="0" Y1="25" X2="{Binding CardViewportWidth}" Y2="25" Stroke="#00FF41" StrokeThickness="1" StrokeDashArray="3 3" Opacity="0.08" />
-                                    <Line X1="0" Y1="55" X2="{Binding CardViewportWidth}" Y2="55" Stroke="#00FF41" StrokeThickness="1" StrokeDashArray="3 3" Opacity="0.08" />
-                                    <Line X1="0" Y1="80" X2="{Binding CardViewportWidth}" Y2="80" Stroke="#00FF41" StrokeThickness="1" StrokeDashArray="3 3" Opacity="0.05" />
+                                    <Line X1="0" Y1="25" X2="{Binding CardViewportWidth}" Y2="25" Stroke="{DynamicResource BrushBorderSubtle}" StrokeThickness="1" StrokeDashArray="3 3" Opacity="0.4" />
+                                    <Line X1="0" Y1="55" X2="{Binding CardViewportWidth}" Y2="55" Stroke="{DynamicResource BrushBorderSubtle}" StrokeThickness="1" StrokeDashArray="3 3" Opacity="0.4" />
+                                    <Line X1="0" Y1="80" X2="{Binding CardViewportWidth}" Y2="80" Stroke="{DynamicResource BrushBorderSubtle}" StrokeThickness="1" StrokeDashArray="3 3" Opacity="0.25" />
 
                                     <Grid ClipToBounds="False">
                                         <Grid.RenderTransform>
@@ -635,19 +721,14 @@
                                         <Path Data="{Binding CpuAreaGeometry}">
                                             <Path.Fill>
                                                 <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                                    <GradientStop Color="#4000FF41" Offset="0.0" />
-                                                    <GradientStop Color="#1500661A" Offset="0.5" />
-                                                    <GradientStop Color="#00000000" Offset="1.0" />
+                                                    <GradientStop Color="#338389FF" Offset="0.0" />
+                                                    <GradientStop Color="#008389FF" Offset="1.0" />
                                                 </LinearGradientBrush>
                                             </Path.Fill>
                                         </Path>
-                                        <Path Data="{Binding CpuCurveGeometry}" Stroke="#00FF41" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round">
-                                            <Path.Effect>
-                                                <DropShadowEffect Color="#00FF41" BlurRadius="6" ShadowDepth="0" Opacity="0.75" />
-                                            </Path.Effect>
-                                        </Path>
+                                        <Path Data="{Binding CpuCurveGeometry}" Stroke="{DynamicResource BrushAccentPrimary}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" />
                                     </Grid>
-                                    <Border HorizontalAlignment="Right" Width="1" Background="#00FF41" Opacity="0.25" IsHitTestVisible="False" />
+                                    <Border HorizontalAlignment="Right" Width="1" Background="{DynamicResource BrushAccentPrimary}" Opacity="0.3" IsHitTestVisible="False" />
                                 </Grid>
                             </Border>
                         </Grid>
@@ -669,7 +750,7 @@
 
                             <Grid Grid.Row="0" Margin="0,0,0,8">
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Ellipse Width="6" Height="6" Fill="#00E5FF" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                    <Ellipse Width="6" Height="6" Fill="{DynamicResource BrushAccentSecondary}" Margin="0,0,6,0" VerticalAlignment="Center" />
                                     <TextBlock Text="Memory Allocation"
                                                FontSize="11.5"
                                                FontWeight="SemiBold"
@@ -682,15 +763,15 @@
                                            FontSize="13"
                                            FontWeight="SemiBold"
                                            FontFamily="{DynamicResource FontFamilyNumeric}"
-                                           Foreground="#00E5FF"
+                                           Foreground="{DynamicResource BrushAccentSecondary}"
                                            VerticalAlignment="Center" />
                             </Grid>
 
-                            <Border Grid.Row="1" Background="#090C10" BorderBrush="#17261C" BorderThickness="1" CornerRadius="6" ClipToBounds="True">
+                            <Border Grid.Row="1" Background="{DynamicResource BrushSurfaceRaised}" BorderBrush="{DynamicResource BrushBorderSubtle}" BorderThickness="1" CornerRadius="6" ClipToBounds="True">
                                 <Grid x:Name="ChartCardGrid2" ClipToBounds="True" SizeChanged="ChartCardGrid_SizeChanged">
-                                    <Line X1="0" Y1="25" X2="{Binding CardViewportWidth}" Y2="25" Stroke="#00E5FF" StrokeThickness="1" StrokeDashArray="3 3" Opacity="0.08" />
-                                    <Line X1="0" Y1="55" X2="{Binding CardViewportWidth}" Y2="55" Stroke="#00E5FF" StrokeThickness="1" StrokeDashArray="3 3" Opacity="0.08" />
-                                    <Line X1="0" Y1="80" X2="{Binding CardViewportWidth}" Y2="80" Stroke="#00E5FF" StrokeThickness="1" StrokeDashArray="3 3" Opacity="0.05" />
+                                    <Line X1="0" Y1="25" X2="{Binding CardViewportWidth}" Y2="25" Stroke="{DynamicResource BrushBorderSubtle}" StrokeThickness="1" StrokeDashArray="3 3" Opacity="0.4" />
+                                    <Line X1="0" Y1="55" X2="{Binding CardViewportWidth}" Y2="55" Stroke="{DynamicResource BrushBorderSubtle}" StrokeThickness="1" StrokeDashArray="3 3" Opacity="0.4" />
+                                    <Line X1="0" Y1="80" X2="{Binding CardViewportWidth}" Y2="80" Stroke="{DynamicResource BrushBorderSubtle}" StrokeThickness="1" StrokeDashArray="3 3" Opacity="0.25" />
 
                                     <Grid ClipToBounds="False">
                                         <Grid.RenderTransform>
@@ -700,19 +781,14 @@
                                         <Path Data="{Binding RamAreaGeometry}">
                                             <Path.Fill>
                                                 <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                                    <GradientStop Color="#3500E5FF" Offset="0.0" />
-                                                    <GradientStop Color="#10006680" Offset="0.5" />
-                                                    <GradientStop Color="#00000000" Offset="1.0" />
+                                                    <GradientStop Color="#332DD4C6" Offset="0.0" />
+                                                    <GradientStop Color="#002DD4C6" Offset="1.0" />
                                                 </LinearGradientBrush>
                                             </Path.Fill>
                                         </Path>
-                                        <Path Data="{Binding RamCurveGeometry}" Stroke="#00E5FF" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round">
-                                            <Path.Effect>
-                                                <DropShadowEffect Color="#00E5FF" BlurRadius="6" ShadowDepth="0" Opacity="0.75" />
-                                            </Path.Effect>
-                                        </Path>
+                                        <Path Data="{Binding RamCurveGeometry}" Stroke="{DynamicResource BrushAccentSecondary}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" />
                                     </Grid>
-                                    <Border HorizontalAlignment="Right" Width="1" Background="#00E5FF" Opacity="0.25" IsHitTestVisible="False" />
+                                    <Border HorizontalAlignment="Right" Width="1" Background="{DynamicResource BrushAccentSecondary}" Opacity="0.3" IsHitTestVisible="False" />
                                 </Grid>
                             </Border>
                         </Grid>
@@ -734,7 +810,7 @@
 
                             <Grid Grid.Row="0" Margin="0,0,0,8">
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Ellipse Width="6" Height="6" Fill="#A855F7" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                    <Ellipse Width="6" Height="6" Fill="{DynamicResource BrushAccentPrimary}" Margin="0,0,6,0" VerticalAlignment="Center" />
                                     <TextBlock Text="GPU 3D Engine"
                                                FontSize="11.5"
                                                FontWeight="SemiBold"
@@ -747,15 +823,15 @@
                                            FontSize="13"
                                            FontWeight="SemiBold"
                                            FontFamily="{DynamicResource FontFamilyNumeric}"
-                                           Foreground="#A855F7"
+                                           Foreground="{DynamicResource BrushAccentPrimary}"
                                            VerticalAlignment="Center" />
                             </Grid>
 
-                            <Border Grid.Row="1" Background="#090C10" BorderBrush="#17261C" BorderThickness="1" CornerRadius="6" ClipToBounds="True">
+                            <Border Grid.Row="1" Background="{DynamicResource BrushSurfaceRaised}" BorderBrush="{DynamicResource BrushBorderSubtle}" BorderThickness="1" CornerRadius="6" ClipToBounds="True">
                                 <Grid x:Name="ChartCardGrid3" ClipToBounds="True" SizeChanged="ChartCardGrid_SizeChanged">
-                                    <Line X1="0" Y1="25" X2="{Binding CardViewportWidth}" Y2="25" Stroke="#A855F7" StrokeThickness="1" StrokeDashArray="3 3" Opacity="0.08" />
-                                    <Line X1="0" Y1="55" X2="{Binding CardViewportWidth}" Y2="55" Stroke="#A855F7" StrokeThickness="1" StrokeDashArray="3 3" Opacity="0.08" />
-                                    <Line X1="0" Y1="80" X2="{Binding CardViewportWidth}" Y2="80" Stroke="#A855F7" StrokeThickness="1" StrokeDashArray="3 3" Opacity="0.05" />
+                                    <Line X1="0" Y1="25" X2="{Binding CardViewportWidth}" Y2="25" Stroke="{DynamicResource BrushBorderSubtle}" StrokeThickness="1" StrokeDashArray="3 3" Opacity="0.4" />
+                                    <Line X1="0" Y1="55" X2="{Binding CardViewportWidth}" Y2="55" Stroke="{DynamicResource BrushBorderSubtle}" StrokeThickness="1" StrokeDashArray="3 3" Opacity="0.4" />
+                                    <Line X1="0" Y1="80" X2="{Binding CardViewportWidth}" Y2="80" Stroke="{DynamicResource BrushBorderSubtle}" StrokeThickness="1" StrokeDashArray="3 3" Opacity="0.25" />
 
                                     <Grid ClipToBounds="False">
                                         <Grid.RenderTransform>
@@ -765,19 +841,14 @@
                                         <Path Data="{Binding GpuAreaGeometry}">
                                             <Path.Fill>
                                                 <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                                    <GradientStop Color="#35A855F7" Offset="0.0" />
-                                                    <GradientStop Color="#10581C87" Offset="0.5" />
-                                                    <GradientStop Color="#00000000" Offset="1.0" />
+                                                    <GradientStop Color="#338389FF" Offset="0.0" />
+                                                    <GradientStop Color="#008389FF" Offset="1.0" />
                                                 </LinearGradientBrush>
                                             </Path.Fill>
                                         </Path>
-                                        <Path Data="{Binding GpuCurveGeometry}" Stroke="#A855F7" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round">
-                                            <Path.Effect>
-                                                <DropShadowEffect Color="#A855F7" BlurRadius="6" ShadowDepth="0" Opacity="0.75" />
-                                            </Path.Effect>
-                                        </Path>
+                                        <Path Data="{Binding GpuCurveGeometry}" Stroke="{DynamicResource BrushAccentPrimary}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" />
                                     </Grid>
-                                    <Border HorizontalAlignment="Right" Width="1" Background="#A855F7" Opacity="0.25" IsHitTestVisible="False" />
+                                    <Border HorizontalAlignment="Right" Width="1" Background="{DynamicResource BrushAccentPrimary}" Opacity="0.3" IsHitTestVisible="False" />
                                 </Grid>
                             </Border>
                         </Grid>
@@ -799,7 +870,7 @@
 
                             <Grid Grid.Row="0" Margin="0,0,0,8">
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Ellipse Width="6" Height="6" Fill="#F59E0B" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                    <Ellipse Width="6" Height="6" Fill="{DynamicResource BrushAccentWarning}" Margin="0,0,6,0" VerticalAlignment="Center" />
                                     <TextBlock Text="Disk I/O Throughput"
                                                FontSize="11.5"
                                                FontWeight="SemiBold"
@@ -812,15 +883,15 @@
                                            FontSize="13"
                                            FontWeight="SemiBold"
                                            FontFamily="{DynamicResource FontFamilyNumeric}"
-                                           Foreground="#F59E0B"
+                                           Foreground="{DynamicResource BrushAccentWarning}"
                                            VerticalAlignment="Center" />
                             </Grid>
 
-                            <Border Grid.Row="1" Background="#090C10" BorderBrush="#17261C" BorderThickness="1" CornerRadius="6" ClipToBounds="True">
+                            <Border Grid.Row="1" Background="{DynamicResource BrushSurfaceRaised}" BorderBrush="{DynamicResource BrushBorderSubtle}" BorderThickness="1" CornerRadius="6" ClipToBounds="True">
                                 <Grid x:Name="ChartCardGrid4" ClipToBounds="True" SizeChanged="ChartCardGrid_SizeChanged">
-                                    <Line X1="0" Y1="25" X2="{Binding CardViewportWidth}" Y2="25" Stroke="#F59E0B" StrokeThickness="1" StrokeDashArray="3 3" Opacity="0.08" />
-                                    <Line X1="0" Y1="55" X2="{Binding CardViewportWidth}" Y2="55" Stroke="#F59E0B" StrokeThickness="1" StrokeDashArray="3 3" Opacity="0.08" />
-                                    <Line X1="0" Y1="80" X2="{Binding CardViewportWidth}" Y2="80" Stroke="#F59E0B" StrokeThickness="1" StrokeDashArray="3 3" Opacity="0.05" />
+                                    <Line X1="0" Y1="25" X2="{Binding CardViewportWidth}" Y2="25" Stroke="{DynamicResource BrushBorderSubtle}" StrokeThickness="1" StrokeDashArray="3 3" Opacity="0.4" />
+                                    <Line X1="0" Y1="55" X2="{Binding CardViewportWidth}" Y2="55" Stroke="{DynamicResource BrushBorderSubtle}" StrokeThickness="1" StrokeDashArray="3 3" Opacity="0.4" />
+                                    <Line X1="0" Y1="80" X2="{Binding CardViewportWidth}" Y2="80" Stroke="{DynamicResource BrushBorderSubtle}" StrokeThickness="1" StrokeDashArray="3 3" Opacity="0.25" />
 
                                     <Grid ClipToBounds="False">
                                         <Grid.RenderTransform>
@@ -830,19 +901,14 @@
                                         <Path Data="{Binding DiskAreaGeometry}">
                                             <Path.Fill>
                                                 <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                                    <GradientStop Color="#35F59E0B" Offset="0.0" />
-                                                    <GradientStop Color="#1078350F" Offset="0.5" />
-                                                    <GradientStop Color="#00000000" Offset="1.0" />
+                                                    <GradientStop Color="#33F0A94E" Offset="0.0" />
+                                                    <GradientStop Color="#00F0A94E" Offset="1.0" />
                                                 </LinearGradientBrush>
                                             </Path.Fill>
                                         </Path>
-                                        <Path Data="{Binding DiskCurveGeometry}" Stroke="#F59E0B" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round">
-                                            <Path.Effect>
-                                                <DropShadowEffect Color="#F59E0B" BlurRadius="6" ShadowDepth="0" Opacity="0.75" />
-                                            </Path.Effect>
-                                        </Path>
+                                        <Path Data="{Binding DiskCurveGeometry}" Stroke="{DynamicResource BrushAccentWarning}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" />
                                     </Grid>
-                                    <Border HorizontalAlignment="Right" Width="1" Background="#F59E0B" Opacity="0.25" IsHitTestVisible="False" />
+                                    <Border HorizontalAlignment="Right" Width="1" Background="{DynamicResource BrushAccentWarning}" Opacity="0.3" IsHitTestVisible="False" />
                                 </Grid>
                             </Border>
                         </Grid>
@@ -864,7 +930,7 @@
 
                             <Grid Grid.Row="0" Margin="0,0,0,8">
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Ellipse Width="6" Height="6" Fill="#EC4899" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                    <Ellipse Width="6" Height="6" Fill="{DynamicResource BrushAccentDanger}" Margin="0,0,6,0" VerticalAlignment="Center" />
                                     <TextBlock Text="Network Activity"
                                                FontSize="11.5"
                                                FontWeight="SemiBold"
@@ -877,15 +943,15 @@
                                            FontSize="13"
                                            FontWeight="SemiBold"
                                            FontFamily="{DynamicResource FontFamilyNumeric}"
-                                           Foreground="#EC4899"
+                                           Foreground="{DynamicResource BrushAccentDanger}"
                                            VerticalAlignment="Center" />
                             </Grid>
 
-                            <Border Grid.Row="1" Background="#090C10" BorderBrush="#17261C" BorderThickness="1" CornerRadius="6" ClipToBounds="True">
+                            <Border Grid.Row="1" Background="{DynamicResource BrushSurfaceRaised}" BorderBrush="{DynamicResource BrushBorderSubtle}" BorderThickness="1" CornerRadius="6" ClipToBounds="True">
                                 <Grid x:Name="ChartCardGrid5" ClipToBounds="True" SizeChanged="ChartCardGrid_SizeChanged">
-                                    <Line X1="0" Y1="25" X2="{Binding CardViewportWidth}" Y2="25" Stroke="#EC4899" StrokeThickness="1" StrokeDashArray="3 3" Opacity="0.08" />
-                                    <Line X1="0" Y1="55" X2="{Binding CardViewportWidth}" Y2="55" Stroke="#EC4899" StrokeThickness="1" StrokeDashArray="3 3" Opacity="0.08" />
-                                    <Line X1="0" Y1="80" X2="{Binding CardViewportWidth}" Y2="80" Stroke="#EC4899" StrokeThickness="1" StrokeDashArray="3 3" Opacity="0.05" />
+                                    <Line X1="0" Y1="25" X2="{Binding CardViewportWidth}" Y2="25" Stroke="{DynamicResource BrushBorderSubtle}" StrokeThickness="1" StrokeDashArray="3 3" Opacity="0.4" />
+                                    <Line X1="0" Y1="55" X2="{Binding CardViewportWidth}" Y2="55" Stroke="{DynamicResource BrushBorderSubtle}" StrokeThickness="1" StrokeDashArray="3 3" Opacity="0.4" />
+                                    <Line X1="0" Y1="80" X2="{Binding CardViewportWidth}" Y2="80" Stroke="{DynamicResource BrushBorderSubtle}" StrokeThickness="1" StrokeDashArray="3 3" Opacity="0.25" />
 
                                     <Grid ClipToBounds="False">
                                         <Grid.RenderTransform>
@@ -895,19 +961,14 @@
                                         <Path Data="{Binding NetAreaGeometry}">
                                             <Path.Fill>
                                                 <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                                    <GradientStop Color="#35EC4899" Offset="0.0" />
-                                                    <GradientStop Color="#10831843" Offset="0.5" />
-                                                    <GradientStop Color="#00000000" Offset="1.0" />
+                                                    <GradientStop Color="#33F2777C" Offset="0.0" />
+                                                    <GradientStop Color="#00F2777C" Offset="1.0" />
                                                 </LinearGradientBrush>
                                             </Path.Fill>
                                         </Path>
-                                        <Path Data="{Binding NetCurveGeometry}" Stroke="#EC4899" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round">
-                                            <Path.Effect>
-                                                <DropShadowEffect Color="#EC4899" BlurRadius="6" ShadowDepth="0" Opacity="0.75" />
-                                            </Path.Effect>
-                                        </Path>
+                                        <Path Data="{Binding NetCurveGeometry}" Stroke="{DynamicResource BrushAccentDanger}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" />
                                     </Grid>
-                                    <Border HorizontalAlignment="Right" Width="1" Background="#EC4899" Opacity="0.25" IsHitTestVisible="False" />
+                                    <Border HorizontalAlignment="Right" Width="1" Background="{DynamicResource BrushAccentDanger}" Opacity="0.3" IsHitTestVisible="False" />
                                 </Grid>
                             </Border>
                         </Grid>

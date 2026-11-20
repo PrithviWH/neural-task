@@ -396,83 +396,91 @@
                            Margin="0,3,0,0" />
             </StackPanel>
 
-            <!-- Action Toolbar (View Mode, Audit, Copy, Columns, Inspector, End Tree, End Task) -->
+            <!-- Action Toolbar (Grouped: Safe Utilities | Destructive Actions) -->
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                <!-- Flat vs Tree View Mode Toggle -->
-                <Button Style="{StaticResource ClarityButtonStyle}"
-                        Margin="0,0,6,0"
-                        Command="{Binding ToggleTreeViewCommand}"
-                        ToolTip="Toggle between Flat Sort and Parent-Child Tree Hierarchy"
-                        AutomationProperties.Name="Toggle process view hierarchy">
-                    <StackPanel Orientation="Horizontal">
-                        <Path Data="{StaticResource IconTreeGeometry}"
-                              Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
-                              StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
-                              Width="13" Height="13" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center" />
-                        <TextBlock Text="{Binding ViewModeDisplay, FallbackValue='Flat'}" VerticalAlignment="Center" />
-                    </StackPanel>
-                </Button>
+                <!-- Group 1: Navigation & Diagnostic Utilities -->
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- Flat vs Tree View Mode Toggle -->
+                    <Button Style="{StaticResource ClarityButtonStyle}"
+                            Margin="0,0,6,0"
+                            Command="{Binding ToggleTreeViewCommand}"
+                            ToolTip="Toggle between Flat Sort and Parent-Child Tree Hierarchy"
+                            AutomationProperties.Name="Toggle process view hierarchy">
+                        <StackPanel Orientation="Horizontal">
+                            <Path Data="{StaticResource IconTreeGeometry}"
+                                  Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
+                                  StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                  Width="13" Height="13" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding ViewModeDisplay, FallbackValue='Flat'}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
 
-                <!-- Re-Scan Heuristics Button -->
-                <Button Style="{StaticResource ClarityButtonStyle}"
-                        Margin="0,0,6,0"
-                        Click="OnReScanClick"
-                        ToolTip="Run local heuristic security triage (Not an antivirus)"
-                        AutomationProperties.Name="Re-scan heuristic anomalies">
-                    <StackPanel Orientation="Horizontal">
-                        <Path Data="{StaticResource IconScanGeometry}"
-                              Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
-                              StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
-                              Width="13" Height="13" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center" />
-                        <TextBlock Text="Audit" VerticalAlignment="Center" />
-                    </StackPanel>
-                </Button>
+                    <!-- Re-Scan Heuristics Button -->
+                    <Button Style="{StaticResource ClarityButtonStyle}"
+                            Margin="0,0,6,0"
+                            Click="OnReScanClick"
+                            ToolTip="Run local heuristic security triage (Not an antivirus)"
+                            AutomationProperties.Name="Re-scan heuristic anomalies">
+                        <StackPanel Orientation="Horizontal">
+                            <Path Data="{StaticResource IconScanGeometry}"
+                                  Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
+                                  StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                  Width="13" Height="13" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center" />
+                            <TextBlock Text="Audit" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
 
-                <!-- Copy Process Telemetry Info Button -->
-                <Button Style="{StaticResource ClarityButtonStyle}"
-                        Margin="0,0,8,0"
-                        Click="OnCopyInfoClick"
-                        ToolTip="Copy diagnostic report with SHA-256 hash (Ctrl+C)"
-                        AutomationProperties.Name="Copy process diagnostics">
-                    <StackPanel Orientation="Horizontal">
-                        <Path Data="{StaticResource IconCopyGeometry}"
-                              Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
-                              StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
-                              Width="13" Height="13" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center" />
-                        <TextBlock Text="Copy" VerticalAlignment="Center" />
-                    </StackPanel>
-                </Button>
+                    <!-- Copy Process Telemetry Info Button -->
+                    <Button Style="{StaticResource ClarityButtonStyle}"
+                            Click="OnCopyInfoClick"
+                            ToolTip="Copy diagnostic report with SHA-256 hash (Ctrl+C)"
+                            AutomationProperties.Name="Copy process diagnostics">
+                        <StackPanel Orientation="Horizontal">
+                            <Path Data="{StaticResource IconCopyGeometry}"
+                                  Stroke="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}"
+                                  StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                  Width="13" Height="13" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center" />
+                            <TextBlock Text="Copy" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
 
-                <!-- End Process Tree Button (Disabled when nothing selected or protected) -->
-                <Button Style="{StaticResource ClarityButtonStyle}"
-                        Margin="0,0,6,0"
-                        Command="{Binding EndTreeCommand}"
-                        IsEnabled="{Binding CanTerminateTreeSelected}"
-                        ToolTip="Terminate selected process and its verified descendant tree"
-                        AutomationProperties.Name="Terminate process tree">
-                    <StackPanel Orientation="Horizontal">
-                        <Path Data="{StaticResource IconKillGeometry}"
-                              Stroke="{DynamicResource BrushAccentWarning}"
-                              StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
-                              Width="13" Height="13" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center" />
-                        <TextBlock Text="End Tree" VerticalAlignment="Center" />
-                    </StackPanel>
-                </Button>
+                <!-- Visual Group Divider -->
+                <Rectangle Width="1" Height="22" Fill="{DynamicResource BrushBorderSubtle}" Margin="8,0,10,0" VerticalAlignment="Center" />
 
-                <!-- End Single Process Button (Disabled when nothing selected or protected) -->
-                <Button Style="{StaticResource ClarityDangerButtonStyle}"
-                        Command="{Binding EndTaskCommand}"
-                        IsEnabled="{Binding CanTerminateSelected}"
-                        ToolTip="Terminate selected process (Delete key)"
-                        AutomationProperties.Name="End task">
-                    <StackPanel Orientation="Horizontal">
-                        <Path Data="{StaticResource IconKillGeometry}"
-                              Stroke="#FFFFFFFF"
-                              StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
-                              Width="13" Height="13" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center" />
-                        <TextBlock Text="End Task" VerticalAlignment="Center" />
-                    </StackPanel>
-                </Button>
+                <!-- Group 2: Process Termination Actions (Clear Safety Hierarchy) -->
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- End Process Tree Button (Disabled when nothing selected or protected) -->
+                    <Button Style="{StaticResource ClarityButtonStyle}"
+                            Margin="0,0,6,0"
+                            Command="{Binding EndTreeCommand}"
+                            IsEnabled="{Binding CanTerminateTreeSelected}"
+                            ToolTip="Terminate selected process and its verified descendant tree"
+                            AutomationProperties.Name="Terminate process tree">
+                        <StackPanel Orientation="Horizontal">
+                            <Path Data="{StaticResource IconKillGeometry}"
+                                  Stroke="{DynamicResource BrushAccentWarning}"
+                                  StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                  Width="13" Height="13" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center" />
+                            <TextBlock Text="End Tree" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+
+                    <!-- End Single Process Button (Disabled when nothing selected or protected) -->
+                    <Button Style="{StaticResource ClarityDangerButtonStyle}"
+                            Command="{Binding EndTaskCommand}"
+                            IsEnabled="{Binding CanTerminateSelected}"
+                            ToolTip="Terminate selected process (Delete key)"
+                            AutomationProperties.Name="End task">
+                        <StackPanel Orientation="Horizontal">
+                            <Path Data="{StaticResource IconKillGeometry}"
+                                  Stroke="#FFFFFFFF"
+                                  StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                  Width="13" Height="13" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center" />
+                            <TextBlock Text="End Task" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
             </StackPanel>
         </Grid>
 
@@ -751,7 +759,7 @@
                                     <GridViewColumn.Header>
                                         <Grid Tag="Name" HorizontalAlignment="Left">
                                             <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="PROCESS NAME" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextSecondary}" />
+                                                <TextBlock Text="Process Name" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextSecondary}" />
                                                 <TextBlock Text="{Binding DataContext.NameSortGlyph, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                            Foreground="{DynamicResource BrushAccentPrimary}" Margin="4,0,0,0" />
                                             </StackPanel>
@@ -800,20 +808,44 @@
                                                            Foreground="{DynamicResource BrushTextPrimary}"
                                                            VerticalAlignment="Center" />
 
-                                                <!-- Windows System Process Badge -->
-                                                <Border Background="{DynamicResource BrushSurfaceRaised}"
-                                                        BorderBrush="{DynamicResource BrushBorderSubtle}"
+                                                <!-- Protected Critical Windows Process Badge (High-Visibility Safety Weight) -->
+                                                <Border Background="{DynamicResource BrushAccentWarningSoft}"
+                                                        BorderBrush="{DynamicResource BrushAccentWarning}"
                                                         BorderThickness="1"
                                                         CornerRadius="4"
-                                                        Padding="4,1"
+                                                        Padding="5,1.5"
                                                         Margin="6,0,0,0"
-                                                        ToolTip="Windows system service or kernel component"
-                                                        Visibility="{Binding IsSystemProcess, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                    <TextBlock Text="{Binding SystemBadgeText, FallbackValue='System'}"
+                                                        ToolTip="Protected critical Windows kernel component • Protected against termination"
+                                                        Visibility="{Binding IsCriticalSystemProcess, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                        <Path Data="{StaticResource IconShieldGeometry}"
+                                                              Stroke="{DynamicResource BrushAccentWarning}"
+                                                              StrokeThickness="1.5" Width="8.5" Height="8.5" Stretch="Uniform"
+                                                              Margin="0,0,3.5,0" VerticalAlignment="Center" />
+                                                        <TextBlock Text="Protected"
+                                                                   FontSize="9"
+                                                                   FontWeight="SemiBold"
+                                                                   FontFamily="{DynamicResource FontFamilyUI}"
+                                                                   Foreground="{DynamicResource BrushAccentWarning}"
+                                                                   VerticalAlignment="Center" />
+                                                    </StackPanel>
+                                                </Border>
+
+                                                <!-- Standard System Service Process Badge -->
+                                                <Border Background="{DynamicResource BrushSurfaceRaised}"
+                                                        BorderBrush="{DynamicResource BrushBorderStrong}"
+                                                        BorderThickness="1"
+                                                        CornerRadius="4"
+                                                        Padding="5,1.5"
+                                                        Margin="6,0,0,0"
+                                                        ToolTip="Windows system service or background component"
+                                                        Visibility="{Binding IsSystemOnlyProcess, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                    <TextBlock Text="System"
                                                                FontSize="9"
-                                                               FontWeight="Medium"
+                                                               FontWeight="SemiBold"
                                                                FontFamily="{DynamicResource FontFamilyUI}"
-                                                               Foreground="{DynamicResource BrushTextTertiary}" />
+                                                               Foreground="{DynamicResource BrushTextSecondary}"
+                                                               VerticalAlignment="Center" />
                                                 </Border>
 
                                                 <!-- Heuristic Anomaly Flag Badge -->
@@ -928,25 +960,17 @@
                                                         </Style>
                                                     </TextBlock.Style>
                                                 </TextBlock>
-
-                                                <!-- Subtle Progress Bar -->
-                                                <ProgressBar Style="{StaticResource ClarityMiniProgressBarStyle}"
-                                                             Minimum="0" Maximum="100"
-                                                             Value="{Binding CpuBarPercent, Mode=OneWay}"
-                                                             Foreground="{DynamicResource BrushAccentPrimary}"
-                                                             Margin="6,0,0,0"
-                                                             VerticalAlignment="Center" />
                                             </StackPanel>
                                         </DataTemplate>
                                     </GridViewColumn.CellTemplate>
                                 </GridViewColumn>
 
-                                <!-- 4. Memory Column (with subtle allocation bar) -->
+                                <!-- 4. Memory Column -->
                                 <GridViewColumn x:Name="ColRam" Width="120">
                                     <GridViewColumn.Header>
                                         <Grid Tag="RamBytes" HorizontalAlignment="Right">
                                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                                <TextBlock Text="MEMORY" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextSecondary}" />
+                                                <TextBlock Text="Memory" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextSecondary}" />
                                                 <TextBlock Text="{Binding DataContext.RamSortGlyph, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                            Foreground="{DynamicResource BrushAccentPrimary}" Margin="3,0,0,0" />
                                             </StackPanel>
@@ -966,20 +990,12 @@
                                                             <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}" />
                                                             <Style.Triggers>
                                                                 <DataTrigger Binding="{Binding IsHighRam}" Value="True">
-                                                                    <Setter Property="Foreground" Value="{DynamicResource BrushAccentCyan}" />
+                                                                    <Setter Property="Foreground" Value="{DynamicResource BrushAccentSecondary}" />
                                                                 </DataTrigger>
                                                             </Style.Triggers>
                                                         </Style>
                                                     </TextBlock.Style>
                                                 </TextBlock>
-
-                                                <!-- Subtle Memory Allocation Bar -->
-                                                <ProgressBar Style="{StaticResource ClarityMiniProgressBarStyle}"
-                                                             Minimum="0" Maximum="100"
-                                                             Value="{Binding RamBarPercent, Mode=OneWay}"
-                                                             Foreground="{DynamicResource BrushAccentCyan}"
-                                                             Margin="6,0,0,0"
-                                                             VerticalAlignment="Center" />
                                             </StackPanel>
                                         </DataTemplate>
                                     </GridViewColumn.CellTemplate>
@@ -990,7 +1006,7 @@
                                     <GridViewColumn.Header>
                                         <Grid Tag="DiskBytesPerSec" HorizontalAlignment="Right">
                                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                                <TextBlock Text="DISK I/O" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextSecondary}" />
+                                                <TextBlock Text="Disk I/O" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextSecondary}" />
                                                 <TextBlock Text="{Binding DataContext.IoSortGlyph, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                            Foreground="{DynamicResource BrushAccentPrimary}" Margin="3,0,0,0" />
                                             </StackPanel>
@@ -1013,13 +1029,13 @@
                                 <!-- 6. Network Column -->
                                 <GridViewColumn x:Name="ColNet" Width="75">
                                     <GridViewColumn.Header>
-                                        <Grid HorizontalAlignment="Right">
-                                            <TextBlock Text="NETWORK" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextSecondary}" HorizontalAlignment="Right" />
+                                        <Grid HorizontalAlignment="Right" ToolTip="Per-process network bandwidth is not directly available via Win32 IO counters. System-wide network telemetry is available on the Dashboard.">
+                                            <TextBlock Text="Network" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextSecondary}" HorizontalAlignment="Right" />
                                         </Grid>
                                     </GridViewColumn.Header>
                                     <GridViewColumn.CellTemplate>
                                         <DataTemplate DataType="{x:Type vm:ProcessItemViewModel}">
-                                            <Grid HorizontalAlignment="Right">
+                                            <Grid HorizontalAlignment="Right" ToolTip="Per-process network telemetry unavailable. Win32 IO_COUNTERS does not distinguish network sockets from other non-disk IO.">
                                                 <TextBlock Text="{Binding NetworkDisplay}"
                                                            TextAlignment="Right"
                                                            FontSize="11"
@@ -1037,7 +1053,7 @@
                                     <GridViewColumn.Header>
                                         <Grid Tag="StartTime" HorizontalAlignment="Right">
                                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                                <TextBlock Text="START TIME" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextSecondary}" />
+                                                <TextBlock Text="Start Time" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource BrushTextSecondary}" />
                                                 <TextBlock Text="{Binding DataContext.StartTimeSortGlyph, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                            Foreground="{DynamicResource BrushAccentPrimary}" Margin="3,0,0,0" />
                                             </StackPanel>
@@ -1329,7 +1345,7 @@
                                     </StackPanel>
                                 </Border>
 
-                                <!-- Memory HUD Tile -->
+                                <!-- Memory HUD Tile (Teal - System Mapping) -->
                                 <Border Grid.Row="0" Grid.Column="2"
                                         Background="{DynamicResource BrushSurfaceRaised}"
                                         BorderBrush="{DynamicResource BrushBorderSubtle}"
@@ -1348,26 +1364,26 @@
                                                        FontFamily="{DynamicResource FontFamilyCode}"
                                                        Foreground="{DynamicResource BrushTextTertiary}" />
                                             <Path Grid.Column="1"
-                                              Data="{StaticResource IconRamGeometry}"
-                                              Stroke="{DynamicResource BrushAccentCyan}"
-                                              StrokeThickness="1.5"
-                                              Width="12" Height="12" Stretch="Uniform"
-                                              Opacity="0.85" />
+                                                  Data="{StaticResource IconRamGeometry}"
+                                                  Stroke="{DynamicResource BrushAccentSecondary}"
+                                                  StrokeThickness="1.5"
+                                                  Width="12" Height="12" Stretch="Uniform"
+                                                  Opacity="0.85" />
                                         </Grid>
                                         <TextBlock Text="{Binding RamDisplay}"
                                                    FontSize="18"
                                                    FontWeight="Bold"
                                                    FontFamily="{DynamicResource FontFamilyCode}"
-                                                   Foreground="{DynamicResource BrushAccentCyan}"
+                                                   Foreground="{DynamicResource BrushAccentSecondary}"
                                                    Margin="0,2,0,6" />
                                         <ProgressBar Style="{StaticResource ClarityHudProgressBarStyle}"
                                                      Minimum="0" Maximum="100"
                                                      Value="{Binding RamBarPercent, Mode=OneWay}"
-                                                     Foreground="{DynamicResource BrushAccentCyan}" />
+                                                     Foreground="{DynamicResource BrushAccentSecondary}" />
                                     </StackPanel>
                                 </Border>
 
-                                <!-- Disk I/O HUD Tile -->
+                                <!-- Disk I/O HUD Tile (Amber - System Mapping) -->
                                 <Border Grid.Row="2" Grid.Column="0"
                                         Background="{DynamicResource BrushSurfaceRaised}"
                                         BorderBrush="{DynamicResource BrushBorderSubtle}"
@@ -1387,16 +1403,16 @@
                                                        Foreground="{DynamicResource BrushTextTertiary}" />
                                             <Path Grid.Column="1"
                                                   Data="{StaticResource IconDatabaseGeometry}"
-                                                  Stroke="{DynamicResource BrushTextSecondary}"
+                                                  Stroke="{DynamicResource BrushAccentWarning}"
                                                   StrokeThickness="1.5"
                                                   Width="12" Height="12" Stretch="Uniform"
-                                                  Opacity="0.75" />
+                                                  Opacity="0.85" />
                                         </Grid>
                                         <TextBlock Text="{Binding IoDisplay}"
                                                    FontSize="14"
                                                    FontWeight="Bold"
                                                    FontFamily="{DynamicResource FontFamilyCode}"
-                                                   Foreground="{DynamicResource BrushTextPrimary}"
+                                                   Foreground="{DynamicResource BrushAccentWarning}"
                                                    Margin="0,2,0,2" />
                                         <TextBlock Text="Realtime Throughput"
                                                    FontSize="9"

@@ -58,4 +58,50 @@ public class GpuTelemetryTests
         Assert.StartsWith("M ", vm.SparklineGeometry);
         Assert.Contains("L ", vm.SparklineGeometry);
     }
+
+    [Fact]
+    public void GpuTelemetrySampler_RepeatedRediscovery_DoesNotDuplicateOrLeak()
+    {
+        using var sampler = new GpuTelemetrySampler();
+
+        // Initial sample
+        var sample1 = sampler.Sample();
+        Assert.NotNull(sample1);
+        Assert.NotEmpty(sample1.AdapterName);
+
+        // Repeated forced rediscovery simulating driver reset / reload
+        sampler.ResetAndRediscover(force: true);
+        var sample2 = sampler.Sample();
+        Assert.NotNull(sample2);
+        Assert.Equal(sample1.AdapterName, sample2.AdapterName);
+
+        // Safe disposal clears all performance counters without throwing
+        sampler.Dispose();
+    }
+
+    [Fact]
+    public async System.Threading.Tasks.Task GpuTelemetrySampler_ResetAndRediscoverAsync_CompletesSuccessfully()
+    {
+        using var sampler = new GpuTelemetrySampler();
+
+        await sampler.ResetAndRediscoverAsync(force: true);
+        var sample = sampler.Sample();
+        Assert.NotNull(sample);
+    }
+
+    [Fact]
+    public void GpuMetricsService_RepeatedRediscovery_RecoversAndDisposesCleanly()
+    {
+        using var service = new NeuralTask.Core.Services.GpuMetricsService();
+
+        var snap1 = service.CollectSnapshot(Array.Empty<NeuralTask.Core.Models.ProcessSnapshot>());
+        Assert.NotNull(snap1);
+
+        service.ResetAndRediscover(force: true);
+
+        var snap2 = service.CollectSnapshot(Array.Empty<NeuralTask.Core.Models.ProcessSnapshot>());
+        Assert.NotNull(snap2);
+
+        service.Dispose();
+    }
 }

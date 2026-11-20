@@ -24,8 +24,11 @@ public partial class MainWindow : FluentWindow
 {
     private int _currentTabIndex = 0;
     private bool _isExplicitExit = false;
+    private readonly IAppShutdownCoordinator _shutdownCoordinator;
     private readonly List<(SafePluginPanel Panel, Border NavBorder, System.Windows.Shapes.Path Icon, System.Windows.Controls.TextBlock Label)> _pluginNavItems = new();
     private SafePluginPanel? _activePluginPanel;
+    private readonly Action<SafePluginPanel> _pluginPanelLoadedHandler;
+    private readonly Action<SafePluginPanel> _pluginPanelFaultedHandler;
 
     [System.Runtime.InteropServices.DllImport("user32.dll")]
     private static extern bool SetForegroundWindow(IntPtr hWnd);
@@ -35,12 +38,30 @@ public partial class MainWindow : FluentWindow
 
     public MainWindowViewModel ViewModel { get; }
 
-    public MainWindow(MainWindowViewModel? viewModel = null)
+    public MainWindow(MainWindowViewModel? viewModel = null, IAppShutdownCoordinator? shutdownCoordinator = null)
     {
         InitializeComponent();
 
         ViewModel = viewModel ?? AppHost.Services.GetRequiredService<MainWindowViewModel>();
         DataContext = ViewModel;
+
+        var historyStore = AppHost.Services.GetService<NeuralTask.Core.Services.IHistoryStore>();
+        var settingsService = AppHost.Services.GetRequiredService<ISettingsService>();
+
+        _shutdownCoordinator = shutdownCoordinator ?? new AppShutdownCoordinator(
+            settingsService,
+            historyStore,
+            ViewModel,
+            historyLoadTaskProvider: () => App.HistoryLoadTask,
+            closeAction: () =>
+            {
+                _isExplicitExit = true;
+                Dispatcher.Invoke(() =>
+                {
+                    Close();
+                    Application.Current?.Shutdown(0);
+                });
+            });
 
         ViewDashboard.DataContext = ViewModel.Dashboard;
         ViewProcesses.DataContext = ViewModel.ProcessList;
@@ -66,7 +87,19 @@ public partial class MainWindow : FluentWindow
             {
                 e.Cancel = true;
                 Hide();
+                return;
             }
+
+            if (_shutdownCoordinator.ShutdownState == 0)
+            {
+                e.Cancel = true;
+                _ = _shutdownCoordinator.ExecuteShutdownAsync();
+            }
+            else if (_shutdownCoordinator.ShutdownState == 1)
+            {
+                e.Cancel = true;
+            }
+            // If ShutdownState == 2, allow the window to close normally
         };
 
         Loaded += async (_, _) =>
@@ -91,21 +124,22 @@ public partial class MainWindow : FluentWindow
             }
         };
 
-        Closed += async (_, _) =>
+        _pluginPanelLoadedHandler = _ => Dispatcher.BeginInvoke(BuildPluginNavigationRail);
+        _pluginPanelFaultedHandler = _ => Dispatcher.BeginInvoke(BuildPluginNavigationRail);
+
+        Closed += (_, _) =>
         {
-            try
-            {
-                await ViewModel.StopMonitoringAsync();
-            }
-            catch
-            {
-            }
+            ThemeManager.ThemeChanged -= OnThemeChanged;
+            ViewModel.RequestRestoreWindow -= RestoreAndShowWindow;
+            ViewModel.RequestExitApplication -= ExitApplication;
+            ViewModel.PluginManager.PanelLoaded -= _pluginPanelLoadedHandler;
+            ViewModel.PluginManager.PanelFaulted -= _pluginPanelFaultedHandler;
         };
 
         SelectTab(0);
         BuildPluginNavigationRail();
-        ViewModel.PluginManager.PanelLoaded += _ => Dispatcher.BeginInvoke(BuildPluginNavigationRail);
-        ViewModel.PluginManager.PanelFaulted += _ => Dispatcher.BeginInvoke(BuildPluginNavigationRail);
+        ViewModel.PluginManager.PanelLoaded += _pluginPanelLoadedHandler;
+        ViewModel.PluginManager.PanelFaulted += _pluginPanelFaultedHandler;
     }
 
     protected override void OnPreviewKeyDown(System.Windows.Input.KeyEventArgs e)
@@ -152,11 +186,23 @@ public partial class MainWindow : FluentWindow
         }
     }
 
+    public Task ExecuteAsyncShutdownAsync()
+    {
+        return _shutdownCoordinator.ExecuteShutdownAsync();
+    }
+
     public void ExitApplication()
     {
         _isExplicitExit = true;
-        Close();
-        Application.Current.Shutdown();
+        if (_shutdownCoordinator.ShutdownState == 0)
+        {
+            _ = ExecuteAsyncShutdownAsync();
+        }
+        else if (_shutdownCoordinator.ShutdownState == 2)
+        {
+            Close();
+            Application.Current?.Shutdown(0);
+        }
     }
 
     private void OnThemeChanged(object? sender, ThemeMode theme)
@@ -471,6 +517,18 @@ public partial class MainWindow : FluentWindow
             SelectPluginTab(gpuPluginDark);
             await Task.Delay(400);
             SaveBitmap(Path.Combine(outputDir, "screen_gpu_dark.png"));
+
+            if (PluginViewportPresenter.Content is DependencyObject depObj)
+            {
+                var sv = FindVisualChild<ScrollViewer>(depObj);
+                if (sv != null)
+                {
+                    sv.ScrollToBottom();
+                    await Task.Delay(300);
+                    SaveBitmap(Path.Combine(outputDir, "screen_gpu_processes_dark.png"));
+                    sv.ScrollToTop();
+                }
+            }
         }
 
         // 6. Light Theme - Dashboard
@@ -539,6 +597,18 @@ public partial class MainWindow : FluentWindow
             SelectPluginTab(gpuPluginLight);
             await Task.Delay(400);
             SaveBitmap(Path.Combine(outputDir, "screen_gpu_light.png"));
+
+            if (PluginViewportPresenter.Content is DependencyObject depObjLight)
+            {
+                var sv = FindVisualChild<ScrollViewer>(depObjLight);
+                if (sv != null)
+                {
+                    sv.ScrollToBottom();
+                    await Task.Delay(300);
+                    SaveBitmap(Path.Combine(outputDir, "screen_gpu_processes_light.png"));
+                    sv.ScrollToTop();
+                }
+            }
         }
 
         // Revert to Dark
@@ -576,5 +646,17 @@ public partial class MainWindow : FluentWindow
 
         using var stream = File.Create(filePath);
         encoder.Save(stream);
+    }
+
+    private static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
+    {
+        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, i);
+            if (child is T typedChild) return typedChild;
+            var descendant = FindVisualChild<T>(child);
+            if (descendant != null) return descendant;
+        }
+        return null;
     }
 }

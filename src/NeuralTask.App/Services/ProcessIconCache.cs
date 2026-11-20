@@ -18,10 +18,6 @@ public static class ProcessIconCache
 {
     private static readonly ConcurrentDictionary<string, ImageSource?> Cache = new(StringComparer.OrdinalIgnoreCase);
 
-    [DllImport("user32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool DestroyIcon(IntPtr hIcon);
-
     /// <summary>
     /// Synchronously retrieves the cached icon, or queues background extraction if not yet cached.
     /// </summary>
@@ -40,14 +36,26 @@ public static class ProcessIconCache
         // Fire asynchronous background extraction to prevent UI hitching
         _ = Task.Run(() =>
         {
-            var extracted = ExtractFromFile(executablePath);
-            Cache[executablePath] = extracted;
-            if (extracted != null && onLoaded != null)
+            try
             {
-                Application.Current?.Dispatcher.BeginInvoke(() =>
+                var extracted = ExtractFromFile(executablePath);
+                Cache[executablePath] = extracted;
+                if (extracted != null && onLoaded != null)
                 {
-                    onLoaded(extracted);
-                });
+                    Application.Current?.Dispatcher.BeginInvoke(() =>
+                    {
+                        try
+                        {
+                            onLoaded(extracted);
+                        }
+                        catch
+                        {
+                        }
+                    });
+                }
+            }
+            catch
+            {
             }
         });
 
@@ -79,7 +87,6 @@ public static class ProcessIconCache
             // Freezing enables cross-thread WPF rendering and high performance
             bitmapSource.Freeze();
 
-            DestroyIcon(hIcon);
             return bitmapSource;
         }
         catch

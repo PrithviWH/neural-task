@@ -9,4 +9,7 @@ public partial class GpuPanelView : UserControl
         InitializeComponent();
         DataContext = viewModel;
     }
+
+    public void ScrollToTop() => GpuScrollViewer?.ScrollToTop();
+    public void ScrollToBottom() => GpuScrollViewer?.ScrollToBottom();
 }
